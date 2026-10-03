@@ -36,11 +36,11 @@ export async function montarPdv(container: HTMLElement): Promise<void> {
 
   const areaVenda = document.createElement("div");
   const areaUltimas = document.createElement("div");
-  const tituloUltimas = document.createElement("h2");
-  tituloUltimas.className = "secao-painel__titulo";
+  // Recolhido por padrão: no dia a dia o caixa só precisa da venda atual.
+  const tituloUltimas = document.createElement("summary");
   tituloUltimas.textContent = "Últimas vendas do caixa";
-  const secaoUltimas = document.createElement("section");
-  secaoUltimas.className = "secao-painel";
+  const secaoUltimas = document.createElement("details");
+  secaoUltimas.className = "secao-recolhivel";
   secaoUltimas.append(tituloUltimas, areaUltimas);
 
   container.replaceChildren(cabecalho, areaVenda, secaoUltimas);
@@ -94,7 +94,17 @@ function montarVenda(area: HTMLElement, produtos: Produto[], aoVender: () => voi
   const rotuloTotal = document.createElement("p");
   rotuloTotal.className = "pdv__rotulo-total";
   rotuloTotal.textContent = "Total da venda";
-  colunaPagamento.append(rotuloTotal, total, pagamento.elemento, cliente.elemento, cpf.container, erro, finalizar);
+  // Cliente e CPF na nota são opcionais: ficam recolhidos para não poluir o fechamento da venda.
+  const resumoOpcionais = document.createElement("summary");
+  resumoOpcionais.textContent = "Cliente e CPF na nota (opcional)";
+  const opcionais = document.createElement("details");
+  opcionais.className = "pdv__opcionais";
+  opcionais.append(resumoOpcionais, cliente.elemento, cpf.container);
+
+  const blocoTotal = document.createElement("div");
+  blocoTotal.className = "pdv__bloco-total";
+  blocoTotal.append(rotuloTotal, total);
+  colunaPagamento.append(blocoTotal, pagamento.elemento, opcionais, erro, finalizar);
 
   const grade = document.createElement("div");
   grade.className = "pdv";

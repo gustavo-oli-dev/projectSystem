@@ -1,12 +1,11 @@
 import { alterarQuantidade, itensDoCarrinho, type ItemCarrinho } from "../../state/caixaState.js";
-import { cartaoEstado } from "../estadoCard.js";
 import { formatarMoeda } from "../formatarMoeda.js";
 
 /** Lista da venda em andamento. Quantidade acima do estoque fica marcada (o servidor também recusa). */
 export function renderizarCarrinho(area: HTMLElement): void {
   const itens = itensDoCarrinho();
   if (itens.length === 0) {
-    area.replaceChildren(cartaoEstado("Leia o primeiro produto para começar a venda."));
+    area.replaceChildren(criarCarrinhoVazio());
     return;
   }
   const lista = document.createElement("ul");
@@ -56,4 +55,18 @@ function criarLinha(item: ItemCarrinho): HTMLLIElement {
     linha.append(alerta);
   }
   return linha;
+}
+
+/** Estado vazio leve (sem caixa tracejada): só a orientação do que fazer. */
+function criarCarrinhoVazio(): HTMLElement {
+  const titulo = document.createElement("p");
+  titulo.className = "carrinho-vazio__titulo";
+  titulo.textContent = "Nenhum produto na venda";
+  const dica = document.createElement("p");
+  dica.className = "carrinho-vazio__dica";
+  dica.textContent = "Leia o código de barras com o leitor ou digite o nome do produto acima.";
+  const bloco = document.createElement("div");
+  bloco.className = "carrinho-vazio";
+  bloco.append(titulo, dica);
+  return bloco;
 }
