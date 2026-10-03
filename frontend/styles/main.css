@@ -2,14 +2,16 @@
    Tokens
    ========================================================================= */
 :root {
-  --cor-fundo: #f6f7f9;
-  --cor-superficie: #ffffff;
-  --cor-superficie-suave: #f1f3f6;
+  /* Fundo cinza médio: os cartões claros se destacam sem a tela ficar ofuscante. */
+  --cor-fundo: #e4e8ee;
+  --cor-superficie: #fbfcfd;
+  --cor-superficie-suave: #eff2f6;
   --cor-texto: #1a1f2b;
-  --cor-texto-suave: #5f6878;
-  --cor-texto-fraco: #8a93a3;
-  --cor-borda: #e2e5ea;
-  --cor-borda-forte: #cfd4dc;
+  --cor-texto-suave: #4f5869;
+  --cor-texto-fraco: #6f7888;
+  /* Divisórias e bordas de cartão: visíveis sobre o fundo e entre linhas de tabela. */
+  --cor-borda: #d5dae2;
+  --cor-borda-forte: #b6bdc9;
   /* Borda de campo de formulário: mais escura que as divisórias, para o campo se destacar do fundo. */
   --cor-borda-campo: #8a93a3;
   --cor-borda-campo-hover: #5f6878;
@@ -22,6 +24,7 @@
   --cor-sucesso: #16a34a;
   --cor-aviso: #d97706;
   --cor-erro: #dc2626;
+  --cor-erro-suave: #fef2f2;
   --cor-neutra: #94a3b8;
 
   --sidebar-fundo: #121a2c;
@@ -103,13 +106,28 @@ h2 {
   background: var(--cor-primaria-hover);
 }
 
+/* Secundário: sempre com borda, para nunca parecer texto solto. */
 .btn-ghost {
-  color: var(--cor-texto-suave);
+  color: var(--cor-texto);
+  border: 1px solid var(--cor-borda-forte);
+  background: var(--cor-superficie);
 }
 
 .btn-ghost:hover:not(:disabled) {
   background: var(--cor-superficie-suave);
-  color: var(--cor-texto);
+  border-color: var(--cor-borda-campo);
+}
+
+/* Ações que desfazem ou removem algo (tirar de venda, cancelar, desativar, excluir). */
+.btn-perigo {
+  color: var(--cor-erro);
+  border: 1px solid #f1a9a9;
+  background: var(--cor-superficie);
+}
+
+.btn-perigo:hover:not(:disabled) {
+  background: var(--cor-erro-suave);
+  border-color: var(--cor-erro);
 }
 
 .btn-outline {
@@ -411,6 +429,7 @@ form p[role="alert"] {
 
 .conteudo-principal {
   flex: 1;
+  min-width: 0;
   padding: 1.75rem 2rem 3rem;
 }
 
@@ -441,7 +460,7 @@ form p[role="alert"] {
 }
 
 .formulario-cartao {
-  max-width: 30rem;
+  max-width: none;
   background: var(--cor-superficie);
   border: 1px solid var(--cor-borda);
   border-radius: var(--raio-cartao);
@@ -536,7 +555,7 @@ form p[role="alert"] {
 }
 
 .secao-painel {
-  margin-top: 2rem;
+  margin-top: 1.75rem;
 }
 
 .secao-painel__titulo {
@@ -598,17 +617,20 @@ form p[role="alert"] {
 
 .tabela th {
   text-align: left;
-  font-size: 0.8125rem;
-  font-weight: 650;
-  color: var(--cor-texto);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--cor-texto-suave);
   background: var(--cor-superficie-suave);
-  padding: 0.625rem 1.25rem;
-  border-bottom: 1px solid var(--cor-borda);
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--cor-borda-forte);
   white-space: nowrap;
 }
 
 .tabela td {
-  padding: 0.6875rem 1.25rem;
+  padding: 0.8125rem 1.25rem;
+  vertical-align: middle;
   border-bottom: 1px solid var(--cor-borda);
   font-size: 0.875rem;
   color: var(--cor-texto);
@@ -619,7 +641,7 @@ form p[role="alert"] {
 }
 
 .tabela tbody tr:hover {
-  background: #fafbfc;
+  background: #f7f9fc;
 }
 
 /* =========================================================================
@@ -2256,5 +2278,374 @@ form p[role="alert"] {
 @media (max-width: 768px) {
   .formulario-produto {
     grid-template-columns: 1fr;
+  }
+}
+
+/* =========================================================================
+   Revisão de layout: formulários em tela cheia, barra lateral recolhível,
+   busca dentro da tabela
+   ========================================================================= */
+
+/* Formulário de cadastro: campos em colunas que ocupam a largura útil. Tudo que não é campo
+   (erro, ações, títulos, avisos, grupos) ocupa a linha inteira. */
+form.formulario-cartao {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1rem 1.5rem;
+  align-items: start;
+}
+
+form.formulario-cartao > :not(.campo-formulario) {
+  grid-column: 1 / -1;
+}
+
+form.formulario-produto {
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+}
+
+form.formulario-produto > .formulario-produto__dados,
+form.formulario-produto > .formulario-produto__fotos {
+  grid-column: auto;
+}
+
+.formulario-produto__dados {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem 1.25rem;
+  align-content: start;
+}
+
+/* Edição do produto: dados e fotos lado a lado, estoque na largura toda. */
+.edicao-produto {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  max-width: none;
+}
+
+.edicao-produto > .secao-edicao:last-child {
+  grid-column: 1 / -1;
+}
+
+.edicao-produto .secao-edicao:only-child {
+  grid-column: 1 / -1;
+}
+
+.formulario-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 1rem 1.25rem;
+}
+
+.formulario-grade > :not(.campo-formulario) {
+  grid-column: 1 / -1;
+}
+
+/* Busca dentro da tabela (substitui a busca da barra do topo). */
+.barra-tabela {
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.barra-tabela__busca {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: min(22rem, 100%);
+  padding: 0 0.75rem;
+  border: 1px solid var(--cor-borda-campo);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+  color: var(--cor-texto-fraco);
+}
+
+.barra-tabela__busca:focus-within {
+  border-color: var(--cor-primaria);
+  box-shadow: 0 0 0 3px var(--cor-primaria-suave);
+}
+
+.barra-tabela__busca input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  padding: 0.5rem 0;
+  background: transparent;
+}
+
+.barra-tabela__busca input:focus-visible {
+  box-shadow: none;
+}
+
+.barra-tabela__nada {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--cor-texto-suave);
+}
+
+/* Botão de recolher a barra lateral. */
+.topbar__esquerda {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.botao-recolher {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+}
+
+.botao-recolher:hover {
+  background: var(--cor-superficie-suave);
+}
+
+.app-shell--recolhida .sidebar {
+  width: 4.25rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.app-shell--recolhida .sidebar__marca span:not(.sidebar__logo),
+.app-shell--recolhida .sidebar__grupo,
+.app-shell--recolhida .sidebar__link span,
+.app-shell--recolhida .sidebar__usuario {
+  display: none;
+}
+
+.app-shell--recolhida .sidebar__marca {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.app-shell--recolhida .sidebar__link {
+  justify-content: center;
+  padding: 0.625rem 0;
+}
+
+.app-shell--recolhida .sidebar__nav {
+  gap: 0.25rem;
+}
+
+.app-shell--recolhida .sidebar__rodape {
+  padding-left: 0;
+  padding-right: 0;
+  text-align: center;
+}
+
+/* Gaveta do assistente fechada não ocupa espaço (evita rolagem lateral fantasma). */
+.gaveta {
+  display: none;
+}
+
+.gaveta--aberta {
+  display: flex;
+}
+
+@media (max-width: 1024px) {
+  form.formulario-produto,
+  .edicao-produto {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Tabela larga rola dentro do próprio cartão, nunca empurra a página para o lado. */
+.bloco-tabela__rolagem {
+  overflow-x: auto;
+}
+
+.estoque__colunas {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.estoque__controles {
+  display: flex;
+  flex-direction: column;
+}
+
+.secao-edicao {
+  padding: 1.5rem;
+}
+
+.secao-edicao > .secao-painel__titulo {
+  padding-bottom: 0.875rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.cabecalho-pagina .barra-acoes,
+.cabecalho-pagina > .btn {
+  flex-shrink: 0;
+}
+
+@media (max-width: 1024px) {
+  .estoque__colunas {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Caixa: total, dinheiro + troco, contingência, maquininha, cliente */
+.pdv__rotulo-total {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cor-texto-suave);
+}
+
+.pdv__pagamento > * + * {
+  margin-top: 0.25rem;
+}
+
+.bloco-dinheiro {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.caixa-troco {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.125rem;
+  min-height: 2.75rem;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid #9fd6b3;
+  border-radius: var(--raio);
+  background: #edf9f1;
+}
+
+.caixa-troco__rotulo {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cor-texto-suave);
+}
+
+.caixa-troco__valor {
+  font-size: 1.125rem;
+  color: var(--cor-sucesso);
+}
+
+.caixa-troco--falta {
+  border-color: #f1a9a9;
+  background: var(--cor-erro-suave);
+}
+
+.caixa-troco--falta .caixa-troco__valor {
+  color: var(--cor-erro);
+  font-size: 0.9375rem;
+}
+
+.link-discreto {
+  padding: 0;
+  color: var(--cor-primaria);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.contingencia {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding: 0.875rem;
+  border: 1px dashed var(--cor-aviso);
+  border-radius: var(--raio);
+  background: #fffaf0;
+}
+
+.maquininha {
+  max-width: 32rem;
+}
+
+.maquininha h2 {
+  margin-top: 0;
+}
+
+.maquininha__situacao {
+  margin: 0 0 1rem;
+  padding: 1rem;
+  border-radius: var(--raio);
+  background: var(--cor-primaria-suave);
+  color: var(--cor-primaria);
+  font-weight: 600;
+}
+
+.maquininha__situacao--recusado {
+  background: var(--cor-erro-suave);
+  color: var(--cor-erro);
+}
+
+.cliente-caixa {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--cor-borda);
+}
+
+.cliente-caixa:empty {
+  display: none;
+}
+
+.cliente-caixa .subtitulo-bloco {
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+.cliente-caixa__escolhido {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.cliente-caixa__escolhido:empty {
+  display: none;
+}
+
+.cliente-caixa__escolhido div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cliente-caixa__escolhido span {
+  font-size: 0.75rem;
+  color: var(--cor-texto-suave);
+}
+
+.cadastro-rapido {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.875rem;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-superficie-suave);
+}
+
+.formas-pagamento {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 1400px) {
+  .formas-pagamento {
+    grid-template-columns: 1fr 1fr;
   }
 }

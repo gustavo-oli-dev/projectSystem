@@ -16,7 +16,8 @@ export const ROTULO_FORMA: Record<VendaBalcao["formaPagamento"], string> = {
 };
 
 const SITUACAO_VENDA: Record<VendaBalcao["statusPagamento"], { rotulo: string; modificador: string }> = {
-  AGUARDANDO: { rotulo: "Aguardando Pix", modificador: "pendente" },
+  AGUARDANDO: { rotulo: "Aguardando pagamento", modificador: "pendente" },
+  RECUSADO: { rotulo: "Cartão recusado", modificador: "vencida" },
   APROVADO: { rotulo: "Concluída", modificador: "concluido" },
   ESTORNADO: { rotulo: "Cancelada", modificador: "cancelado" },
 };
@@ -61,7 +62,7 @@ function criarAcoes(venda: VendaBalcao, area: HTMLElement, erro: HTMLElement): H
   if (venda.statusPagamento !== "ESTORNADO" && possui("PDV_CANCELAR")) {
     const cancelar = document.createElement("button");
     cancelar.type = "button";
-    cancelar.className = "btn btn-ghost btn-pequeno";
+    cancelar.className = "btn btn-perigo btn-pequeno";
     cancelar.textContent = "Cancelar";
     cancelar.addEventListener("click", () => {
       if (!window.confirm(mensagemCancelamento(venda))) {

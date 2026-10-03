@@ -16,7 +16,8 @@ import java.util.UUID;
 
 /**
  * formaPagamento: DINHEIRO, CARTAO_CREDITO, CARTAO_DEBITO, PIX (maquininha) ou PIX_QR (QR na tela).
- * statusPagamento: AGUARDANDO (Pix ainda não pago), APROVADO ou ESTORNADO.
+ * statusPagamento: AGUARDANDO (Pix ou maquininha esperando o cliente), RECUSADO (cartão recusado na
+ * maquininha — dá para tentar de novo), APROVADO ou ESTORNADO.
  */
 public record VendaBalcaoResponse(
         UUID pedidoId,
@@ -38,6 +39,7 @@ public record VendaBalcaoResponse(
     private static final String FORMA_PIX_NA_TELA = "PIX_QR";
     private static final String AGUARDANDO = "AGUARDANDO";
     private static final String APROVADO = "APROVADO";
+    private static final String RECUSADO = "RECUSADO";
     private static final String ESTORNADO = "ESTORNADO";
 
     public static VendaBalcaoResponse de(VendaBalcao venda) {
@@ -56,7 +58,7 @@ public record VendaBalcaoResponse(
                 pagamento.maquininhaIntegrada(),
                 pagamento.valorRecebido().map(Dinheiro::valor).orElse(null),
                 pagamento.troco().map(Dinheiro::valor).orElse(null),
-                pagamento.status() == StatusPagamentoPresencial.ESTORNADO ? ESTORNADO : APROVADO,
+                statusPresencial(pagamento.status()),
                 pagamento.operador(),
                 pagamento.criadoEm());
     }
@@ -69,6 +71,15 @@ public record VendaBalcaoResponse(
                 statusDoPix(cobranca.status()),
                 null,
                 cobranca.criadoEm());
+    }
+
+    private static String statusPresencial(StatusPagamentoPresencial status) {
+        return switch (status) {
+            case AGUARDANDO_MAQUININHA -> AGUARDANDO;
+            case RECUSADO -> RECUSADO;
+            case APROVADO -> APROVADO;
+            case CANCELADO, ESTORNADO -> ESTORNADO;
+        };
     }
 
     private static String statusDoPix(StatusCobranca status) {

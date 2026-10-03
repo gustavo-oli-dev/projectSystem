@@ -81,6 +81,7 @@ function criarSecaoDados(produto: Produto, recarregar: () => Promise<void>): HTM
   acoes.append(botaoSalvar);
 
   const formulario = document.createElement("form");
+  formulario.className = "formulario-grade";
   formulario.append(nome.container, descricao.container, preco.container, codigoBarras.container, fiscal, erro, acoes);
   formulario.addEventListener("submit", (evento) => {
     evento.preventDefault();
@@ -106,7 +107,7 @@ function criarSecaoDados(produto: Produto, recarregar: () => Promise<void>): HTM
 function criarBotaoSituacao(produto: Produto, recarregar: () => Promise<void>): HTMLElement {
   const botao = document.createElement("button");
   botao.type = "button";
-  botao.className = produto.ativo ? "btn btn-ghost btn-pequeno" : "btn btn-primary btn-pequeno";
+  botao.className = produto.ativo ? "btn btn-perigo btn-pequeno" : "btn btn-primary btn-pequeno";
   botao.textContent = produto.ativo ? "Tirar de venda" : "Colocar à venda";
   botao.addEventListener("click", () => {
     if (produto.ativo && !window.confirm(`Tirar "${produto.nome}" de venda? Ele some da loja e do bot.`)) {

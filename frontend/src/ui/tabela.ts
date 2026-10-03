@@ -1,6 +1,12 @@
+import { criarIcone } from "./icones.js";
+
+/** Abaixo disso a busca não aparece: com poucas linhas ela só ocupa espaço. */
+const MINIMO_LINHAS_PARA_BUSCA = 2;
+
 /**
- * Tabela padrão de listagem: barra com contagem de registros + cabeçalho em <thead> + linhas.
- * Compartilhada por todas as telas de lista para manter densidade e aparência iguais.
+ * Tabela padrão de listagem: barra com contagem + busca, cabeçalho em <thead> e linhas.
+ * Compartilhada por todas as telas de lista para manter densidade e aparência iguais. A busca
+ * filtra as linhas desta tabela pelo texto (fica junto da lista que ela filtra).
  */
 export function criarTabela(
   colunas: readonly string[],
@@ -32,10 +38,51 @@ export function criarTabela(
   tabela.className = "tabela";
   tabela.append(cabecalho, corpo);
 
+  const nadaEncontrado = document.createElement("p");
+  nadaEncontrado.className = "barra-tabela__nada";
+  nadaEncontrado.textContent = "Nada encontrado para essa busca.";
+  nadaEncontrado.hidden = true;
+
+  if (linhas.length >= MINIMO_LINHAS_PARA_BUSCA) {
+    barra.append(criarBusca(linhas, (visiveis) => {
+      contagem.textContent = visiveis === linhas.length
+        ? `${linhas.length} ${rotuloContagem}`
+        : `${visiveis} de ${linhas.length} ${rotuloContagem}`;
+      nadaEncontrado.hidden = visiveis > 0;
+    }));
+  }
+
+  const rolagem = document.createElement("div");
+  rolagem.className = "bloco-tabela__rolagem";
+  rolagem.append(tabela);
+
   const bloco = document.createElement("div");
   bloco.className = "bloco-tabela";
-  bloco.append(barra, tabela);
+  bloco.append(barra, rolagem, nadaEncontrado);
   return bloco;
+}
+
+function criarBusca(linhas: HTMLTableRowElement[], aoFiltrar: (visiveis: number) => void): HTMLElement {
+  const campo = document.createElement("input");
+  campo.type = "search";
+  campo.placeholder = "Buscar nesta lista";
+  campo.setAttribute("aria-label", "Buscar nesta lista");
+
+  campo.addEventListener("input", () => {
+    const termo = campo.value.trim().toLowerCase();
+    let visiveis = 0;
+    for (const linha of linhas) {
+      const corresponde = termo === "" || (linha.textContent ?? "").toLowerCase().includes(termo);
+      linha.hidden = !corresponde;
+      visiveis += corresponde ? 1 : 0;
+    }
+    aoFiltrar(visiveis);
+  });
+
+  const caixa = document.createElement("label");
+  caixa.className = "barra-tabela__busca";
+  caixa.append(criarIcone("busca"), campo);
+  return caixa;
 }
 
 export function criarLinha(...celulas: HTMLTableCellElement[]): HTMLTableRowElement {

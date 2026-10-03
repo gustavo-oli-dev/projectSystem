@@ -93,7 +93,7 @@ function criarAcoesCargo(contexto: Contexto, cargo: Cargo): HTMLElement {
 
   const excluir = document.createElement("button");
   excluir.type = "button";
-  excluir.className = "btn btn-ghost btn-pequeno";
+  excluir.className = "btn btn-perigo btn-pequeno";
   excluir.textContent = "Excluir";
   excluir.addEventListener("click", () => {
     if (!window.confirm(`Excluir o perfil de acesso "${cargo.nome}"?`)) {

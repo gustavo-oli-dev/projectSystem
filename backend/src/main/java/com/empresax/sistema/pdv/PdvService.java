@@ -7,8 +7,9 @@ import com.empresax.sistema.cobranca.MeioCobranca;
 import com.empresax.sistema.common.domain.DomainException;
 import com.empresax.sistema.common.domain.EntidadeNaoEncontradaException;
 import com.empresax.sistema.documentofiscal.DocumentoFiscalService;
-import com.empresax.sistema.pedido.ItemPedidoRequerido;
 import com.empresax.sistema.pedido.Pedido;
+import com.empresax.sistema.pdv.maquininha.Maquininha;
+import com.empresax.sistema.pdv.maquininha.SituacaoCobrancaMaquininha;
 import com.empresax.sistema.pedido.PedidoService;
 import com.empresax.sistema.shared.dinheiro.Dinheiro;
 import com.empresax.sistema.shared.documento.Cpf;
@@ -33,41 +34,80 @@ import java.util.stream.Collectors;
 @Service
 public class PdvService {
 
+    private static final String PREFIXO_IDEMPOTENCIA_ESTORNO = "estorno-pdv-";
+
     private final PedidoService pedidoService;
     private final PagamentoPresencialRepository pagamentoRepository;
     private final CobrancaService cobrancaService;
     private final DocumentoFiscalService documentoFiscalService;
     private final CancelamentoVendaService cancelamentoVendaService;
+    private final Maquininha maquininha;
 
     public PdvService(
             PedidoService pedidoService,
             PagamentoPresencialRepository pagamentoRepository,
             CobrancaService cobrancaService,
             DocumentoFiscalService documentoFiscalService,
-            CancelamentoVendaService cancelamentoVendaService
+            CancelamentoVendaService cancelamentoVendaService,
+            Maquininha maquininha
     ) {
         this.pedidoService = pedidoService;
         this.pagamentoRepository = pagamentoRepository;
         this.cobrancaService = cobrancaService;
         this.documentoFiscalService = documentoFiscalService;
         this.cancelamentoVendaService = cancelamentoVendaService;
+        this.maquininha = maquininha;
     }
 
     @Transactional
-    public VendaBalcao vender(
-            List<ItemPedidoRequerido> itens, String cpfNaNota, DadosPagamentoPresencial dadosPagamento, String operador
-    ) {
-        Pedido pedido = criarEConfirmar(itens, cpfNaNota, operador);
+    public VendaBalcao vender(DadosVendaBalcao venda, DadosPagamentoPresencial dadosPagamento, String operador) {
+        Pedido pedido = criarEConfirmar(venda, operador);
         PagamentoPresencial pagamento = pagamentoRepository.save(
                 montarPagamento(pedido.id(), pedido.valorTotal(), dadosPagamento, operador));
         documentoFiscalService.gerarPendentes(pedido.id());
         return VendaBalcao.presencial(pedido, pagamento);
     }
 
+    /**
+     * Maquininha integrada: separa o estoque e manda o valor para a maquininha. Se a maquininha não
+     * responder, nada é gravado (transação única) — o operador pode usar a contingência.
+     */
+    @Transactional
+    public VendaBalcao iniciarNaMaquininha(DadosVendaBalcao venda, FormaPagamentoPresencial forma, String operador) {
+        Pedido pedido = criarEConfirmar(venda, operador);
+        String idTransacao = maquininha.enviarCobranca(pedido.valorTotal(), forma, pedido.id());
+        PagamentoPresencial pagamento = pagamentoRepository.save(
+                PagamentoPresencial.aguardandoMaquininha(pedido.id(), forma, pedido.valorTotal(), idTransacao, operador));
+        return VendaBalcao.presencial(pedido, pagamento);
+    }
+
+    /** O caixa pergunta a cada poucos segundos: aprovado gera a NFC-e; recusado permite tentar de novo. */
+    @Transactional
+    public VendaBalcao acompanharMaquininha(UUID pedidoId) {
+        Pedido pedido = buscarDoBalcao(pedidoId);
+        PagamentoPresencial pagamento = buscarPagamento(pedidoId);
+        if (pagamento.aguardandoMaquininha()) {
+            aplicarResultado(pagamento, maquininha.consultar(pagamento.idTransacaoMaquininha().orElseThrow()));
+        }
+        if (pagamento.aprovado() && documentoFiscalService.listarPorPedido(pedidoId).isEmpty()) {
+            documentoFiscalService.gerarPendentes(pedidoId);
+        }
+        return VendaBalcao.presencial(pedido, pagamento);
+    }
+
+    @Transactional
+    public VendaBalcao tentarDeNovoNaMaquininha(UUID pedidoId) {
+        Pedido pedido = buscarDoBalcao(pedidoId);
+        PagamentoPresencial pagamento = buscarPagamento(pedidoId);
+        String idTransacao = maquininha.enviarCobranca(pagamento.valor(), pagamento.forma(), pedidoId);
+        pagamento.novaTentativaNaMaquininha(idTransacao);
+        return VendaBalcao.presencial(pedido, pagamento);
+    }
+
     /** Falha no Mercado Pago desfaz tudo (inclusive a baixa no estoque): a transação é uma só. */
     @Transactional
-    public CobrancaCriada iniciarVendaComPix(List<ItemPedidoRequerido> itens, String cpfNaNota, String operador) {
-        Pedido pedido = criarEConfirmar(itens, cpfNaNota, operador);
+    public CobrancaCriada iniciarVendaComPix(DadosVendaBalcao venda, String operador) {
+        Pedido pedido = criarEConfirmar(venda, operador);
         return cobrancaService.criar(pedido.id(), MeioCobranca.PIX);
     }
 
@@ -97,7 +137,7 @@ public class PdvService {
         buscarDoBalcao(pedidoId);
         Optional<PagamentoPresencial> presencial = pagamentoRepository.findByPedidoId(pedidoId);
         if (presencial.isPresent()) {
-            presencial.get().estornar();
+            desfazerPagamentoPresencial(presencial.get());
             return VendaBalcao.presencial(cancelamentoVendaService.cancelarVendaDoBalcao(pedidoId, operador), presencial.get());
         }
         Cobranca pix = cobrancaPixMaisRecente(pedidoId)
@@ -106,6 +146,48 @@ public class PdvService {
                 ? cancelamentoVendaService.reembolsar(pedidoId, operador)
                 : cancelamentoVendaService.cancelarVendaDoBalcao(pedidoId, operador);
         return VendaBalcao.porPixNaTela(cancelado, pix);
+    }
+
+    /**
+     * Aguardando na maquininha: tira o valor da tela dela. Aprovado na maquininha integrada: estorna
+     * pelo fornecedor. Dinheiro ou contingência: só registra (o operador devolve ou estorna na mão).
+     */
+    private void desfazerPagamentoPresencial(PagamentoPresencial pagamento) {
+        if (pagamento.aguardandoMaquininha()) {
+            maquininha.cancelarCobranca(pagamento.idTransacaoMaquininha().orElseThrow());
+            pagamento.cancelarAntesDoPagamento();
+            return;
+        }
+        if (!pagamento.aprovado()) {
+            pagamento.cancelarAntesDoPagamento();
+            return;
+        }
+        pagamento.idPagamentoProvedor().ifPresent(idPagamento ->
+                maquininha.estornar(idPagamento, PREFIXO_IDEMPOTENCIA_ESTORNO + pagamento.id()));
+        pagamento.estornar();
+    }
+
+    private static void aplicarResultado(PagamentoPresencial pagamento, SituacaoCobrancaMaquininha situacao) {
+        switch (situacao.status()) {
+            case APROVADA -> pagamento.confirmarPelaMaquininha(
+                    situacao.bandeira(), situacao.codigoAutorizacao(), situacao.idPagamento());
+            case RECUSADA, CANCELADA -> pagamento.recusarPelaMaquininha();
+            case AGUARDANDO -> { /* cliente ainda não passou o cartão */ }
+        }
+    }
+
+    private PagamentoPresencial buscarPagamento(UUID pedidoId) {
+        return pagamentoRepository.findByPedidoId(pedidoId)
+                .orElseThrow(() -> new EntidadeNaoEncontradaException("Pagamento da venda não encontrado: " + pedidoId));
+    }
+
+    /** Uma venda do caixa, para o detalhe do pedido mostrar como foi paga. */
+    @Transactional(readOnly = true)
+    public VendaBalcao buscarVenda(UUID pedidoId) {
+        Pedido pedido = buscarDoBalcao(pedidoId);
+        return montarVenda(pedido, pagamentoRepository.findByPedidoId(pedidoId).orElse(null),
+                cobrancaPixMaisRecente(pedidoId).orElse(null))
+                .orElseThrow(() -> new EntidadeNaoEncontradaException("Pagamento da venda não encontrado: " + pedidoId));
     }
 
     @Transactional(readOnly = true)
@@ -124,9 +206,10 @@ public class PdvService {
                 .toList();
     }
 
-    private Pedido criarEConfirmar(List<ItemPedidoRequerido> itens, String cpfNaNota, String operador) {
+    private Pedido criarEConfirmar(DadosVendaBalcao venda, String operador) {
+        String cpfNaNota = venda.cpfNaNota();
         Cpf cpf = cpfNaNota == null || cpfNaNota.isBlank() ? null : new Cpf(cpfNaNota);
-        Pedido pedido = pedidoService.criarNoBalcao(itens, cpf);
+        Pedido pedido = pedidoService.criarNoBalcao(venda.itens(), cpf, venda.clienteId());
         pedidoService.confirmar(pedido.id(), operador);
         return pedido;
     }

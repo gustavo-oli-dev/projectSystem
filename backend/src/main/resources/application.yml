@@ -26,6 +26,8 @@ seguranca:
 pagamento:
   mercadopago:
     token-acesso: ${MERCADOPAGO_ACCESS_TOKEN}
+    # ID da maquininha Point vinculada à conta (lista em GET /point/integration-api/devices). Vazio = sem maquininha integrada.
+    point-dispositivo: ${MERCADOPAGO_POINT_DISPOSITIVO:}
     segredo-webhook: ${MERCADOPAGO_WEBHOOK_SEGREDO}
 
 whatsapp:

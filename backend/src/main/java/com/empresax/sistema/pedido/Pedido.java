@@ -77,9 +77,9 @@ public class Pedido {
         this.criadoEm = Instant.now();
     }
 
-    /** Venda presencial: cliente não precisa estar cadastrado; o CPF na nota é opcional. */
-    public static Pedido noBalcao(List<ItemPedido> itens, Cpf cpfNaNota) {
-        return new Pedido(null, CanalVenda.BALCAO, cpfNaNota, itens);
+    /** Venda presencial: o cliente cadastrado é opcional (clienteId pode ser nulo), assim como o CPF na nota. */
+    public static Pedido noBalcao(List<ItemPedido> itens, Cpf cpfNaNota, UUID clienteId) {
+        return new Pedido(clienteId, CanalVenda.BALCAO, cpfNaNota, itens);
     }
 
     private static UUID validarCliente(UUID clienteId) {

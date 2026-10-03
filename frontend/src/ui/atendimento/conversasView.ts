@@ -206,7 +206,7 @@ function criarCabecalhoConversa(contexto: Contexto, conversa: Conversa, erro: HT
     if (conversa.modo === "HUMANO") {
       acoes.append(acao("Devolver ao bot", "btn-outline", () => devolverAoBot(conversa.id)));
     }
-    acoes.append(acao("Encerrar", "btn-ghost", () => encerrarConversa(conversa.id)));
+    acoes.append(acao("Encerrar", "btn-perigo", () => encerrarConversa(conversa.id)));
   }
 
   const cabecalho = document.createElement("div");

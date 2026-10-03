@@ -74,6 +74,49 @@ class PagamentoPresencialTest {
         assertThatThrownBy(pagamento::estornar).isInstanceOf(DomainException.class);
     }
 
+    @Test
+    void maquininhaIntegradaAprovaComDadosVindosDaMaquininha() {
+        PagamentoPresencial pagamento = PagamentoPresencial.aguardandoMaquininha(
+                PEDIDO, FormaPagamentoPresencial.CARTAO_CREDITO, TOTAL, "intent-1", OPERADOR);
+
+        pagamento.confirmarPelaMaquininha(BandeiraCartao.MASTERCARD, "778899", "pay-1");
+
+        assertThat(pagamento.aprovado()).isTrue();
+        assertThat(pagamento.maquininhaIntegrada()).isTrue();
+        assertThat(pagamento.bandeira()).contains(BandeiraCartao.MASTERCARD);
+        assertThat(pagamento.idPagamentoProvedor()).contains("pay-1");
+    }
+
+    @Test
+    void cartaoRecusadoPermiteNovaTentativa() {
+        PagamentoPresencial pagamento = PagamentoPresencial.aguardandoMaquininha(
+                PEDIDO, FormaPagamentoPresencial.CARTAO_DEBITO, TOTAL, "intent-1", OPERADOR);
+
+        pagamento.recusarPelaMaquininha();
+        pagamento.novaTentativaNaMaquininha("intent-2");
+
+        assertThat(pagamento.aguardandoMaquininha()).isTrue();
+        assertThat(pagamento.idTransacaoMaquininha()).contains("intent-2");
+    }
+
+    @Test
+    void desistenciaAntesDePagarNaoViraEstorno() {
+        PagamentoPresencial pagamento = PagamentoPresencial.aguardandoMaquininha(
+                PEDIDO, FormaPagamentoPresencial.CARTAO_CREDITO, TOTAL, "intent-1", OPERADOR);
+
+        pagamento.cancelarAntesDoPagamento();
+
+        assertThat(pagamento.status()).isEqualTo(StatusPagamentoPresencial.CANCELADO);
+        assertThatThrownBy(pagamento::estornar).isInstanceOf(DomainException.class);
+    }
+
+    @Test
+    void maquininhaIntegradaNaoCobraPix() {
+        assertThatThrownBy(() -> PagamentoPresencial.aguardandoMaquininha(
+                PEDIDO, FormaPagamentoPresencial.PIX, TOTAL, "intent-1", OPERADOR))
+                .isInstanceOf(DomainException.class);
+    }
+
     private static Dinheiro dinheiro(String valor) {
         return new Dinheiro(new BigDecimal(valor));
     }

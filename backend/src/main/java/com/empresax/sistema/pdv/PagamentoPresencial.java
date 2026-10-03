@@ -20,8 +20,8 @@ import java.util.regex.Pattern;
  * Pagamento de uma venda de balcão. Guarda o que a NFC-e exige no grupo de pagamento: forma,
  * bandeira, código de autorização e se a maquininha estava integrada ao sistema (D19).
  *
- * Por enquanto o código de autorização é digitado pelo operador (maquininha avulsa, integrado =
- * false); quando o fornecedor for escolhido, a maquininha integrada preencherá esses dados.
+ * Maquininha integrada (padrão, D20): o valor vai para a maquininha e o resultado volta sozinho.
+ * Contingência (maquininha sem conexão): o operador digita a autorização — fica integrado = false.
  */
 @Entity
 @Table(name = "pagamentos_presenciais")
@@ -47,12 +47,21 @@ public class PagamentoPresencial {
     @Column(updatable = false)
     private Dinheiro valorRecebido;
 
+    /** Preenchidos pelo operador (contingência) ou pela maquininha integrada ao aprovar. */
     @Enumerated(EnumType.STRING)
-    @Column(updatable = false)
+    @Column
     private BandeiraCartao bandeira;
 
-    @Column(updatable = false, length = 20)
+    @Column(length = 40)
     private String codigoAutorizacao;
+
+    /** Cobrança em andamento na maquininha integrada (muda a cada nova tentativa). */
+    @Column
+    private String idTransacaoMaquininha;
+
+    /** Pagamento aprovado no fornecedor — usado para estornar automaticamente. */
+    @Column
+    private String idPagamentoProvedor;
 
     @Column(nullable = false, updatable = false)
     private boolean maquininhaIntegrada;
@@ -119,12 +128,76 @@ public class PagamentoPresencial {
         return pagamento;
     }
 
-    public void estornar() {
-        if (status == StatusPagamentoPresencial.ESTORNADO) {
-            throw new DomainException("Este pagamento já foi estornado");
+    /**
+     * Maquininha integrada: o valor já está na tela da maquininha, esperando o cartão. Bandeira e
+     * autorização chegam da própria maquininha ao aprovar — ninguém digita.
+     */
+    public static PagamentoPresencial aguardandoMaquininha(
+            UUID pedidoId, FormaPagamentoPresencial forma, Dinheiro valor, String idTransacao, String operador
+    ) {
+        if (forma == null || !forma.exigeBandeira()) {
+            throw new DomainException("A maquininha integrada cobra cartão de crédito ou débito");
         }
+        PagamentoPresencial pagamento = new PagamentoPresencial(pedidoId, forma, valor, operador);
+        pagamento.status = StatusPagamentoPresencial.AGUARDANDO_MAQUININHA;
+        pagamento.maquininhaIntegrada = true;
+        pagamento.idTransacaoMaquininha = exigirIdTransacao(idTransacao);
+        return pagamento;
+    }
+
+    public void confirmarPelaMaquininha(BandeiraCartao bandeiraLida, String autorizacao, String idPagamento) {
+        garantirStatus(StatusPagamentoPresencial.AGUARDANDO_MAQUININHA, "Este pagamento não está aguardando a maquininha");
+        this.bandeira = bandeiraLida;
+        this.codigoAutorizacao = autorizacao;
+        this.idPagamentoProvedor = idPagamento;
+        this.status = StatusPagamentoPresencial.APROVADO;
+    }
+
+    public void recusarPelaMaquininha() {
+        garantirStatus(StatusPagamentoPresencial.AGUARDANDO_MAQUININHA, "Este pagamento não está aguardando a maquininha");
+        this.status = StatusPagamentoPresencial.RECUSADO;
+    }
+
+    /** Cartão recusado: manda o valor de novo para a maquininha (outro cartão, por exemplo). */
+    public void novaTentativaNaMaquininha(String novoIdTransacao) {
+        garantirStatus(StatusPagamentoPresencial.RECUSADO, "Só dá para tentar de novo depois de uma recusa");
+        this.idTransacaoMaquininha = exigirIdTransacao(novoIdTransacao);
+        this.status = StatusPagamentoPresencial.AGUARDANDO_MAQUININHA;
+    }
+
+    /** Cliente desistiu antes de pagar: nada foi cobrado, nada a estornar. */
+    public void cancelarAntesDoPagamento() {
+        if (status != StatusPagamentoPresencial.AGUARDANDO_MAQUININHA && status != StatusPagamentoPresencial.RECUSADO) {
+            throw new DomainException("Este pagamento já foi concluído — use o estorno");
+        }
+        this.status = StatusPagamentoPresencial.CANCELADO;
+    }
+
+    public void estornar() {
+        garantirStatus(StatusPagamentoPresencial.APROVADO, "Só um pagamento aprovado pode ser estornado");
         this.status = StatusPagamentoPresencial.ESTORNADO;
         this.estornadoEm = Instant.now();
+    }
+
+    public boolean aguardandoMaquininha() {
+        return status == StatusPagamentoPresencial.AGUARDANDO_MAQUININHA;
+    }
+
+    public boolean aprovado() {
+        return status == StatusPagamentoPresencial.APROVADO;
+    }
+
+    private void garantirStatus(StatusPagamentoPresencial esperado, String mensagem) {
+        if (status != esperado) {
+            throw new DomainException(mensagem);
+        }
+    }
+
+    private static String exigirIdTransacao(String idTransacao) {
+        if (idTransacao == null || idTransacao.isBlank()) {
+            throw new DomainException("A maquininha não devolveu o identificador da cobrança");
+        }
+        return idTransacao;
     }
 
     public Optional<Dinheiro> troco() {
@@ -157,6 +230,14 @@ public class PagamentoPresencial {
 
     public Optional<String> codigoAutorizacao() {
         return Optional.ofNullable(codigoAutorizacao);
+    }
+
+    public Optional<String> idTransacaoMaquininha() {
+        return Optional.ofNullable(idTransacaoMaquininha);
+    }
+
+    public Optional<String> idPagamentoProvedor() {
+        return Optional.ofNullable(idPagamentoProvedor);
     }
 
     public boolean maquininhaIntegrada() {

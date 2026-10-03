@@ -7,6 +7,7 @@ import {
   type DocumentoFiscal,
 } from "../../api/fiscalApi.js";
 import { buscarPedido, cancelarPedido, confirmarPedido, reembolsarPedido, type Pedido } from "../../api/pedidosApi.js";
+import { buscarVendaDoBalcao, type VendaBalcao } from "../../api/pdvApi.js";
 import type { Permissao } from "../../api/sessaoApi.js";
 import { navegarPara } from "../../router.js";
 import { possui } from "../../state/sessaoState.js";
@@ -14,6 +15,14 @@ import { elementoCarregando } from "../estadoCarregamento.js";
 import { cartaoEstado } from "../estadoCard.js";
 import { formatarMoeda } from "../formatarMoeda.js";
 import { celula, celulaSelo, criarLinha, criarTabela, formatarDataCurta } from "../tabela.js";
+import { ROTULO_FORMA } from "../pdv/ultimasVendasView.js";
+
+const ROTULO_SITUACAO_PAGAMENTO: Record<VendaBalcao["statusPagamento"], string> = {
+  AGUARDANDO: "Aguardando pagamento",
+  RECUSADO: "Cartão recusado",
+  APROVADO: "Aprovado",
+  ESTORNADO: "Estornado / cancelado",
+};
 
 const ROTULO_STATUS_PEDIDO: Record<string, string> = {
   ABERTO: "Aberto",
@@ -41,6 +50,8 @@ interface DadosPedido {
   cliente: Cliente | null;
   cobrancas: Cobranca[] | null;
   documentos: DocumentoFiscal[] | null;
+  /** Só na venda de balcão: como foi paga no caixa. */
+  vendaBalcao: VendaBalcao | null;
 }
 
 function seTiverPermissao<T>(permissao: Permissao, carregar: () => Promise<T>): Promise<T | null> {
@@ -58,14 +69,15 @@ export async function montarDetalhePedido(container: HTMLElement, pedidoId: stri
 
   try {
     const pedido = await buscarPedido(pedidoId);
-    const [cliente, cobrancas, documentos] = await Promise.all([
+    const [cliente, cobrancas, documentos, vendaBalcao] = await Promise.all([
       pedido.clienteId === null
         ? Promise.resolve(null)
         : seTiverPermissao("CLIENTES_VER", () => buscarCliente(pedido.clienteId ?? "")),
       seTiverPermissao("COBRANCAS_VER", () => listarCobrancasDoPedido(pedidoId)),
       seTiverPermissao("FISCAL_VER", () => listarDocumentosDoPedido(pedidoId)),
+      pedido.canal === "BALCAO" ? buscarVendaDoBalcao(pedidoId) : Promise.resolve(null),
     ]);
-    renderizar(container, { pedido, cliente, cobrancas, documentos });
+    renderizar(container, { pedido, cliente, cobrancas, documentos, vendaBalcao });
   } catch {
     container.replaceChildren(voltar, cartaoEstado("Não foi possível carregar este pedido.", "erro"));
   }
@@ -99,7 +111,10 @@ function renderizar(container: HTMLElement, dados: DadosPedido): void {
   const principal = document.createElement("div");
   principal.className = "detalhe-principal";
   principal.append(criarSecao("Itens", criarTabelaItens(pedido)));
-  if (dados.cobrancas !== null) {
+  // Venda de balcão é paga no caixa: "Cobranças" (online) só aparece se houver alguma (Pix com QR).
+  const mostrarCobrancas = dados.cobrancas !== null
+    && (pedido.canal !== "BALCAO" || dados.cobrancas.length > 0);
+  if (mostrarCobrancas && dados.cobrancas !== null) {
     principal.append(criarSecao("Cobranças", criarTabelaCobrancas(dados.cobrancas)));
   }
   if (dados.documentos !== null) {
@@ -116,6 +131,9 @@ function renderizar(container: HTMLElement, dados: DadosPedido): void {
       ["Consumidor", pedido.clienteId === null ? "Não identificado" : "Cliente cadastrado"],
       ["CPF na nota", pedido.cpfNaNota ?? "—"],
     ]));
+  }
+  if (dados.vendaBalcao !== null) {
+    lateral.append(criarCartaoPagamentoCaixa(dados.vendaBalcao));
   }
   lateral.append(criarCartaoResumo(pedido));
 
@@ -144,7 +162,7 @@ function criarAcoes(dados: DadosPedido, erroAcao: HTMLElement, recarregar: () =>
 
   if (pedido.status === "ABERTO" && gerenciaPedidos) {
     acoes.append(
-      executar("Cancelar pedido", "btn-ghost", () => confirmarECancelar(pedido.id)),
+      executar("Cancelar pedido", "btn-perigo", () => confirmarECancelar(pedido.id)),
       executar("Confirmar pedido", "btn-primary", () => confirmarPedido(pedido.id))
     );
   }
@@ -160,11 +178,11 @@ function criarAcoes(dados: DadosPedido, erroAcao: HTMLElement, recarregar: () =>
   if (pedido.status === "AGUARDANDO_EMISSAO") {
     const pago = dados.cobrancas !== null && dados.cobrancas.some((cobranca) => cobranca.status === "PAGA");
     if (pago && gerenciaPedidos && possui("COBRANCAS_GERENCIAR")) {
-      acoes.append(executar(`Reembolsar ${formatarMoeda(pedido.valorTotal)}`, "btn-ghost",
+      acoes.append(executar(`Reembolsar ${formatarMoeda(pedido.valorTotal)}`, "btn-perigo",
         () => confirmarEReembolsar(pedido)));
     }
     if (!pago && gerenciaPedidos) {
-      acoes.append(executar("Cancelar pedido", "btn-ghost", () => confirmarECancelar(pedido.id)));
+      acoes.append(executar("Cancelar pedido", "btn-perigo", () => confirmarECancelar(pedido.id)));
     }
     if (dados.cobrancas !== null && dados.cobrancas.length === 0 && possui("COBRANCAS_GERENCIAR")) {
       acoes.append(
@@ -259,6 +277,32 @@ function criarTabelaDocumentos(documentos: DocumentoFiscal[]): HTMLElement {
     )
   );
   return criarTabela(["Tipo", "Status", "Protocolo", "Atualizado em"], linhas, "documento(s)");
+}
+
+function criarCartaoPagamentoCaixa(venda: VendaBalcao): HTMLElement {
+  const linhas: Array<[string, string]> = [
+    ["Forma", ROTULO_FORMA[venda.formaPagamento]],
+    ["Situação", ROTULO_SITUACAO_PAGAMENTO[venda.statusPagamento]],
+  ];
+  if (venda.bandeira !== null) {
+    linhas.push(["Bandeira", venda.bandeira.replace("_", " ")]);
+  }
+  if (venda.codigoAutorizacao !== null) {
+    linhas.push(["Autorização", venda.codigoAutorizacao]);
+  }
+  if (venda.formaPagamento !== "DINHEIRO" && venda.formaPagamento !== "PIX_QR") {
+    linhas.push(["Maquininha", venda.maquininhaIntegrada ? "Integrada" : "Avulsa (contingência)"]);
+  }
+  if (venda.valorRecebido !== null) {
+    linhas.push(["Recebido", formatarMoeda(venda.valorRecebido)]);
+  }
+  if (venda.troco !== null) {
+    linhas.push(["Troco", formatarMoeda(venda.troco)]);
+  }
+  if (venda.operador !== null) {
+    linhas.push(["Operador", venda.operador]);
+  }
+  return criarCartaoLateral("Pagamento no caixa", linhas);
 }
 
 function criarCartaoCliente(cliente: Cliente): HTMLElement {

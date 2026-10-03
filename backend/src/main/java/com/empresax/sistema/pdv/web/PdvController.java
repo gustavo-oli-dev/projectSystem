@@ -2,6 +2,7 @@ package com.empresax.sistema.pdv.web;
 
 import com.empresax.sistema.acesso.RegraAcesso;
 import com.empresax.sistema.pdv.DadosPagamentoPresencial;
+import com.empresax.sistema.pdv.DadosVendaBalcao;
 import com.empresax.sistema.pdv.PdvService;
 import com.empresax.sistema.pedido.ItemPedidoRequerido;
 import com.empresax.sistema.pedido.TipoItem;
@@ -38,13 +39,35 @@ public class PdvController {
     public VendaBalcaoResponse vender(
             @Valid @RequestBody VendaBalcaoRequest requisicao, @AuthenticationPrincipal UserDetails operador
     ) {
-        List<ItemPedidoRequerido> itens = requisicao.itens().stream()
-                .map(item -> new ItemPedidoRequerido(TipoItem.PRODUTO, item.produtoId(), item.quantidade()))
-                .toList();
+        DadosVendaBalcao venda = dadosDaVenda(requisicao.itens(), requisicao.cpfNaNota(), requisicao.clienteId());
         PagamentoPresencialRequest pagamento = requisicao.pagamento();
         DadosPagamentoPresencial dados = new DadosPagamentoPresencial(
                 pagamento.forma(), pagamento.valorRecebido(), pagamento.bandeira(), pagamento.codigoAutorizacao());
-        return VendaBalcaoResponse.de(pdvService.vender(itens, requisicao.cpfNaNota(), dados, operador.getUsername()));
+        return VendaBalcaoResponse.de(pdvService.vender(venda, dados, operador.getUsername()));
+    }
+
+    /** Maquininha integrada: separa o estoque e manda o valor para a maquininha. */
+    @PreAuthorize(RegraAcesso.PDV_VENDER)
+    @PostMapping("/maquininha")
+    @ResponseStatus(HttpStatus.CREATED)
+    public VendaBalcaoResponse iniciarNaMaquininha(
+            @Valid @RequestBody VendaMaquininhaRequest requisicao, @AuthenticationPrincipal UserDetails operador
+    ) {
+        DadosVendaBalcao venda = dadosDaVenda(requisicao.itens(), requisicao.cpfNaNota(), requisicao.clienteId());
+        return VendaBalcaoResponse.de(pdvService.iniciarNaMaquininha(venda, requisicao.forma(), operador.getUsername()));
+    }
+
+    @PreAuthorize(RegraAcesso.PDV_VENDER)
+    @GetMapping("/{pedidoId}/maquininha")
+    public VendaBalcaoResponse acompanharMaquininha(@PathVariable UUID pedidoId) {
+        return VendaBalcaoResponse.de(pdvService.acompanharMaquininha(pedidoId));
+    }
+
+    /** Cartão recusado: manda o valor de novo (outro cartão). */
+    @PreAuthorize(RegraAcesso.PDV_VENDER)
+    @PostMapping("/{pedidoId}/maquininha/tentar-de-novo")
+    public VendaBalcaoResponse tentarDeNovoNaMaquininha(@PathVariable UUID pedidoId) {
+        return VendaBalcaoResponse.de(pdvService.tentarDeNovoNaMaquininha(pedidoId));
     }
 
     /** Pix com QR code na tela: separa os produtos do estoque e devolve o QR para o cliente pagar. */
@@ -54,10 +77,8 @@ public class PdvController {
     public VendaPixResponse iniciarComPix(
             @Valid @RequestBody VendaPixRequest requisicao, @AuthenticationPrincipal UserDetails operador
     ) {
-        List<ItemPedidoRequerido> itens = requisicao.itens().stream()
-                .map(item -> new ItemPedidoRequerido(TipoItem.PRODUTO, item.produtoId(), item.quantidade()))
-                .toList();
-        return VendaPixResponse.de(pdvService.iniciarVendaComPix(itens, requisicao.cpfNaNota(), operador.getUsername()));
+        DadosVendaBalcao venda = dadosDaVenda(requisicao.itens(), requisicao.cpfNaNota(), requisicao.clienteId());
+        return VendaPixResponse.de(pdvService.iniciarVendaComPix(venda, operador.getUsername()));
     }
 
     /** O caixa consulta a cada poucos segundos até o Pix cair (ou o operador cancelar). */
@@ -73,9 +94,23 @@ public class PdvController {
         return pdvService.ultimasVendas().stream().map(VendaBalcaoResponse::de).toList();
     }
 
+    /** Como a venda foi paga — usado no detalhe do pedido. */
+    @PreAuthorize(RegraAcesso.PDV_VENDER + " or " + RegraAcesso.PDV_CANCELAR + " or " + RegraAcesso.PEDIDOS_VER)
+    @GetMapping("/{pedidoId}")
+    public VendaBalcaoResponse buscar(@PathVariable UUID pedidoId) {
+        return VendaBalcaoResponse.de(pdvService.buscarVenda(pedidoId));
+    }
+
     @PreAuthorize(RegraAcesso.PDV_CANCELAR)
     @PostMapping("/{pedidoId}/cancelar")
     public VendaBalcaoResponse cancelar(@PathVariable UUID pedidoId, @AuthenticationPrincipal UserDetails operador) {
         return VendaBalcaoResponse.de(pdvService.cancelar(pedidoId, operador.getUsername()));
+    }
+
+    private static DadosVendaBalcao dadosDaVenda(List<ItemVendaBalcaoRequest> itens, String cpfNaNota, UUID clienteId) {
+        List<ItemPedidoRequerido> requeridos = itens.stream()
+                .map(item -> new ItemPedidoRequerido(TipoItem.PRODUTO, item.produtoId(), item.quantidade()))
+                .toList();
+        return new DadosVendaBalcao(requeridos, cpfNaNota, clienteId);
     }
 }

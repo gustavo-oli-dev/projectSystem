@@ -117,7 +117,7 @@ class CancelamentoVendaServiceTest {
 
     @Test
     void vendaDeBalcaoNaoSeCancelaPeloPedidoSemEstornarOPagamento() {
-        Pedido balcao = Pedido.noBalcao(List.of(new ItemPedido(TipoItem.PRODUTO, PRODUTO_ID, "Caneca", PRECO, 1)), null);
+        Pedido balcao = Pedido.noBalcao(List.of(new ItemPedido(TipoItem.PRODUTO, PRODUTO_ID, "Caneca", PRECO, 1)), null, null);
         balcao.confirmar();
         prepararPedido(balcao, List.of());
 

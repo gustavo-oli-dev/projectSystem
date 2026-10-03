@@ -96,7 +96,7 @@ class PedidoTest {
         ItemPedido arte = new ItemPedido(
                 TipoItem.SERVICO, UUID.randomUUID(), "Arte", new Dinheiro(new BigDecimal("25.00")), 1);
 
-        Pedido pedido = Pedido.noBalcao(List.of(caneca, arte), null);
+        Pedido pedido = Pedido.noBalcao(List.of(caneca, arte), null, null);
 
         assertThat(pedido.documentosFiscaisNecessarios())
                 .containsExactlyInAnyOrder(TipoDocumentoFiscal.NFCE, TipoDocumentoFiscal.NFSE);
@@ -104,7 +104,7 @@ class PedidoTest {
 
     @Test
     void vendaNoBalcaoNaoPrecisaDeClienteEGuardaOCpfNaNota() {
-        Pedido pedido = Pedido.noBalcao(List.of(itemCaneca()), new Cpf("111.444.777-35"));
+        Pedido pedido = Pedido.noBalcao(List.of(itemCaneca()), new Cpf("111.444.777-35"), null);
 
         assertThat(pedido.clienteId()).isEmpty();
         assertThat(pedido.vendidoNoBalcao()).isTrue();

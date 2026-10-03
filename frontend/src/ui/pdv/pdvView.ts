@@ -1,4 +1,10 @@
-import { iniciarVendaComPix, venderNoBalcao, type VendaBalcao } from "../../api/pdvApi.js";
+import {
+  iniciarNaMaquininha,
+  iniciarVendaComPix,
+  venderNoBalcao,
+  type DadosVendaBalcao,
+  type VendaBalcao,
+} from "../../api/pdvApi.js";
 import { listarProdutos, type Produto } from "../../api/produtosApi.js";
 import {
   adicionarAoCarrinho,
@@ -14,7 +20,9 @@ import { cartaoEstado } from "../estadoCard.js";
 import { formatarMoeda } from "../formatarMoeda.js";
 import { renderizarCarrinho } from "./carrinhoView.js";
 import { criarCampoLeitura } from "./leituraView.js";
-import { criarPainelPagamento } from "./pagamentoView.js";
+import { criarSeletorCliente } from "./clienteCaixaView.js";
+import { criarPainelMaquininha } from "./maquininhaView.js";
+import { criarPainelPagamento, type ModoFechamento } from "./pagamentoView.js";
 import { criarPainelPix } from "./pixNaTelaView.js";
 import { carregarUltimasVendas, ROTULO_FORMA } from "./ultimasVendasView.js";
 
@@ -64,11 +72,18 @@ function montarVenda(area: HTMLElement, produtos: Produto[], aoVender: () => voi
   cpf.entrada.inputMode = "numeric";
   cpf.entrada.maxLength = 14;
 
+  const cliente = criarSeletorCliente((cpfDoCliente) => {
+    cpf.entrada.value = cpfDoCliente;
+  });
+
   const erro = criarMensagemErro();
   const finalizar = document.createElement("button");
   finalizar.type = "button";
   finalizar.className = "btn btn-primary pdv__finalizar";
-  finalizar.textContent = "Finalizar venda";
+  finalizar.textContent = pagamento.rotuloFinalizar();
+  pagamento.aoMudarModo(() => {
+    finalizar.textContent = pagamento.rotuloFinalizar();
+  });
 
   const colunaItens = document.createElement("section");
   colunaItens.className = "pdv__itens";
@@ -76,7 +91,10 @@ function montarVenda(area: HTMLElement, produtos: Produto[], aoVender: () => voi
 
   const colunaPagamento = document.createElement("aside");
   colunaPagamento.className = "pdv__pagamento";
-  colunaPagamento.append(total, pagamento.elemento, cpf.container, erro, finalizar);
+  const rotuloTotal = document.createElement("p");
+  rotuloTotal.className = "pdv__rotulo-total";
+  rotuloTotal.textContent = "Total da venda";
+  colunaPagamento.append(rotuloTotal, total, pagamento.elemento, cliente.elemento, cpf.container, erro, finalizar);
 
   const grade = document.createElement("div");
   grade.className = "pdv";
@@ -103,20 +121,30 @@ function montarVenda(area: HTMLElement, produtos: Produto[], aoVender: () => voi
   finalizar.addEventListener("click", () => {
     erro.hidden = true;
     finalizar.disabled = true;
-    const itens = itensDoCarrinho().map((item) => ({ produtoId: item.produto.id, quantidade: item.quantidade }));
-    const cpfNaNota = textoOuNulo(cpf.entrada.value);
+    const dados: DadosVendaBalcao = {
+      itens: itensDoCarrinho().map((item) => ({ produtoId: item.produto.id, quantidade: item.quantidade })),
+      cpfNaNota: textoOuNulo(cpf.entrada.value),
+      clienteId: cliente.clienteId(),
+    };
+    const aoDesistir = (): void => {
+      novaVenda();
+      aoVender();
+    };
+    const mostrarEspera = (painel: HTMLElement): void => {
+      area.replaceChildren(painel);
+      aoVender();
+    };
 
-    const venda: Promise<unknown> = pagamento.pixNaTela()
-      ? iniciarVendaComPix(itens, cpfNaNota).then((pix) => {
-        area.replaceChildren(criarPainelPix(pix, mostrarRecibo, () => {
-          novaVenda();
-          aoVender();
-        }));
-        aoVender();
-      })
-      : venderNoBalcao({ itens, cpfNaNota, pagamento: pagamento.lerPagamento() }).then(mostrarRecibo);
+    const fechamentos: Record<ModoFechamento, () => Promise<unknown>> = {
+      PIX_QR: () => iniciarVendaComPix(dados)
+        .then((pix) => mostrarEspera(criarPainelPix(pix, mostrarRecibo, aoDesistir))),
+      MAQUININHA: () => iniciarNaMaquininha(dados, pagamento.formaCartao())
+        .then((venda) => mostrarEspera(criarPainelMaquininha(venda, mostrarRecibo, aoDesistir))),
+      DINHEIRO: () => venderNoBalcao({ ...dados, pagamento: pagamento.lerPagamento() }).then(mostrarRecibo),
+      CONTINGENCIA: () => venderNoBalcao({ ...dados, pagamento: pagamento.lerPagamento() }).then(mostrarRecibo),
+    };
 
-    venda.catch((falha: unknown) => {
+    fechamentos[pagamento.modo()]().catch((falha: unknown) => {
       mostrarErro(erro, falha, "Não foi possível finalizar a venda.");
       finalizar.disabled = false;
     });
@@ -133,6 +161,9 @@ function criarRecibo(venda: VendaBalcao, novaVenda: () => void): HTMLElement {
   ];
   if (venda.troco !== null) {
     linhas.push(["Troco", formatarMoeda(venda.troco)]);
+  }
+  if (venda.bandeira !== null) {
+    linhas.push(["Bandeira", venda.bandeira.replace("_", " ")]);
   }
   if (venda.codigoAutorizacao !== null) {
     linhas.push(["Autorização", venda.codigoAutorizacao]);

@@ -11,9 +11,14 @@ export interface PagamentoPresencial {
   codigoAutorizacao: string | null;
 }
 
-export interface NovaVendaBalcao {
+/** Comum a toda venda do caixa: produtos, CPF na nota e cliente cadastrado (os dois opcionais). */
+export interface DadosVendaBalcao {
   itens: Array<{ produtoId: string; quantidade: number }>;
   cpfNaNota: string | null;
+  clienteId: string | null;
+}
+
+export interface NovaVendaBalcao extends DadosVendaBalcao {
   pagamento: PagamentoPresencial;
 }
 
@@ -32,7 +37,7 @@ export interface VendaBalcao {
   maquininhaIntegrada: boolean;
   valorRecebido: number | null;
   troco: number | null;
-  statusPagamento: "AGUARDANDO" | "APROVADO" | "ESTORNADO";
+  statusPagamento: "AGUARDANDO" | "RECUSADO" | "APROVADO" | "ESTORNADO";
   operador: string | null;
   criadaEm: string;
 }
@@ -57,11 +62,30 @@ export interface VendaPixIniciada {
 }
 
 /** Separa os produtos do estoque e cria o Pix no Mercado Pago; devolve o QR para o cliente pagar. */
-export function iniciarVendaComPix(itens: NovaVendaBalcao["itens"], cpfNaNota: string | null): Promise<VendaPixIniciada> {
-  return httpClient.post<VendaPixIniciada>("/pdv/vendas/pix", { itens, cpfNaNota });
+export function iniciarVendaComPix(venda: DadosVendaBalcao): Promise<VendaPixIniciada> {
+  return httpClient.post<VendaPixIniciada>("/pdv/vendas/pix", venda);
 }
 
 /** Confere com o Mercado Pago se o Pix já caiu. */
 export function acompanharPix(pedidoId: string): Promise<VendaBalcao> {
   return httpClient.get<VendaBalcao>(`/pdv/vendas/${pedidoId}/pix`);
+}
+
+/** Maquininha integrada: separa o estoque e manda o valor para a maquininha. */
+export function iniciarNaMaquininha(venda: DadosVendaBalcao, forma: FormaPagamentoPresencial): Promise<VendaBalcao> {
+  return httpClient.post<VendaBalcao>("/pdv/vendas/maquininha", { ...venda, forma });
+}
+
+export function acompanharMaquininha(pedidoId: string): Promise<VendaBalcao> {
+  return httpClient.get<VendaBalcao>(`/pdv/vendas/${pedidoId}/maquininha`);
+}
+
+/** Cartão recusado: manda o valor de novo (outro cartão). */
+export function tentarDeNovoNaMaquininha(pedidoId: string): Promise<VendaBalcao> {
+  return httpClient.post<VendaBalcao>(`/pdv/vendas/${pedidoId}/maquininha/tentar-de-novo`, undefined);
+}
+
+/** Como uma venda do caixa foi paga (detalhe do pedido). */
+export function buscarVendaDoBalcao(pedidoId: string): Promise<VendaBalcao> {
+  return httpClient.get<VendaBalcao>(`/pdv/vendas/${pedidoId}`);
 }

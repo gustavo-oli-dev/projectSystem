@@ -17,6 +17,7 @@ import { montarGerenciarProdutos } from "../produtos/gerenciarProdutosView.js";
 import { montarPdv } from "../pdv/pdvView.js";
 import { criarBotaoAssistente } from "../assistente/assistenteChatView.js";
 import { limparToken } from "../../state/authState.js";
+import { barraLateralRecolhida, lembrarBarraLateralRecolhida } from "./barraLateral.js";
 import { possui, possuiAlguma, sessaoAtual } from "../../state/sessaoState.js";
 
 interface ItemNav {
@@ -101,30 +102,22 @@ export function montarShell(raiz: HTMLElement): void {
   const links: HTMLButtonElement[] = [];
   const sidebar = criarSidebar(links);
 
-  const busca = document.createElement("input");
-  busca.type = "search";
-  busca.className = "topbar__busca-campo";
-  busca.placeholder = "Buscar nesta página";
-  busca.setAttribute("aria-label", "Buscar nesta página");
-
   const conteudo = document.createElement("main");
   conteudo.className = "conteudo-principal";
 
-  busca.addEventListener("input", () => filtrarTabelas(conteudo, busca.value));
+  const appShell = document.createElement("div");
+  appShell.className = "app-shell";
+  appShell.classList.toggle("app-shell--recolhida", barraLateralRecolhida());
 
   const areaPrincipal = document.createElement("div");
   areaPrincipal.className = "area-principal";
-  areaPrincipal.append(criarTopbar(busca), conteudo);
-
-  const appShell = document.createElement("div");
-  appShell.className = "app-shell";
+  areaPrincipal.append(criarTopbar(appShell), conteudo);
   appShell.append(sidebar, areaPrincipal);
 
   raiz.replaceChildren(appShell);
 
   function renderizarRota(): void {
     const destino = destinoAtual();
-    busca.value = "";
     atualizarLinkAtivo(links, destino.rota === "pedido-detalhe" ? "pedidos" : destino.rota);
     renderizarConteudo(conteudo, destino);
   }
@@ -197,10 +190,10 @@ function criarIdentificacaoUsuario(): HTMLElement {
   return bloco;
 }
 
-function criarTopbar(busca: HTMLInputElement): HTMLElement {
-  const caixaBusca = document.createElement("label");
-  caixaBusca.className = "topbar__busca";
-  caixaBusca.append(criarIcone("busca"), busca);
+function criarTopbar(appShell: HTMLElement): HTMLElement {
+  const esquerda = document.createElement("div");
+  esquerda.className = "topbar__esquerda";
+  esquerda.append(criarBotaoRecolher(appShell));
 
   const direita = document.createElement("div");
   direita.className = "topbar__direita";
@@ -222,8 +215,31 @@ function criarTopbar(busca: HTMLInputElement): HTMLElement {
 
   const topbar = document.createElement("header");
   topbar.className = "topbar";
-  topbar.append(caixaBusca, direita);
+  topbar.append(esquerda, direita);
   return topbar;
+}
+
+/** Recolhe a barra lateral para só os ícones (mais espaço para o conteúdo). */
+function criarBotaoRecolher(appShell: HTMLElement): HTMLButtonElement {
+  const botao = document.createElement("button");
+  botao.type = "button";
+  botao.className = "botao-recolher";
+  botao.append(criarIcone("menu"));
+
+  const atualizarRotulo = (): void => {
+    const recolhida = appShell.classList.contains("app-shell--recolhida");
+    const rotulo = recolhida ? "Mostrar barra lateral" : "Ocultar barra lateral";
+    botao.title = rotulo;
+    botao.setAttribute("aria-label", rotulo);
+    botao.setAttribute("aria-expanded", String(!recolhida));
+  };
+  botao.addEventListener("click", () => {
+    const recolhida = appShell.classList.toggle("app-shell--recolhida");
+    lembrarBarraLateralRecolhida(recolhida);
+    atualizarRotulo();
+  });
+  atualizarRotulo();
+  return botao;
 }
 
 function criarAvatar(): HTMLElement {
@@ -240,6 +256,7 @@ function criarLinkNav(item: ItemNav): HTMLButtonElement {
   botao.type = "button";
   botao.className = "sidebar__link";
   botao.dataset["rota"] = item.rota;
+  botao.title = item.rotulo;
   botao.append(criarIcone(item.icone), criarSpan(item.rotulo));
   botao.addEventListener("click", () => navegarPara(item.rota));
   return botao;
@@ -255,15 +272,6 @@ function atualizarLinkAtivo(links: HTMLButtonElement[], rotaAtiva: Rota): void {
   for (const link of links) {
     link.classList.toggle("sidebar__link--ativo", link.dataset["rota"] === rotaAtiva);
   }
-}
-
-/** Busca da topbar: filtra as linhas de qualquer tabela da página atual pelo texto. */
-function filtrarTabelas(conteudo: HTMLElement, termo: string): void {
-  const termoNormalizado = termo.trim().toLowerCase();
-  conteudo.querySelectorAll<HTMLTableRowElement>(".tabela tbody tr").forEach((linha) => {
-    const texto = (linha.textContent ?? "").toLowerCase();
-    linha.hidden = termoNormalizado !== "" && !texto.includes(termoNormalizado);
-  });
 }
 
 function renderizarConteudo(conteudo: HTMLElement, destino: Destino): void {

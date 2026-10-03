@@ -1,18 +1,23 @@
-import type { BandeiraCartao, FormaVendaBalcao, PagamentoPresencial } from "../../api/pdvApi.js";
-import { criarCampoTexto, criarCampoSelecao, type OpcaoSelecao } from "../camposFormulario.js";
+import type { BandeiraCartao, FormaPagamentoPresencial, PagamentoPresencial } from "../../api/pdvApi.js";
+import { criarCampoSelecao, criarCampoTexto, type OpcaoSelecao } from "../camposFormulario.js";
 import { formatarMoeda } from "../formatarMoeda.js";
 
-interface OpcaoForma {
-  forma: FormaVendaBalcao;
-  rotulo: string;
-}
+type FormaNoCaixa = "DINHEIRO" | "CARTAO_CREDITO" | "CARTAO_DEBITO" | "PIX_QR";
 
-const FORMAS: readonly OpcaoForma[] = [
+/**
+ * Como a venda vai ser fechada:
+ * - DINHEIRO: valor recebido e troco.
+ * - MAQUININHA: o valor vai para a maquininha integrada; o resultado volta sozinho.
+ * - CONTINGENCIA: maquininha sem conexão — o operador digita bandeira e autorização.
+ * - PIX_QR: QR code na tela, pago pelo celular do cliente.
+ */
+export type ModoFechamento = "DINHEIRO" | "MAQUININHA" | "CONTINGENCIA" | "PIX_QR";
+
+const FORMAS: ReadonlyArray<{ forma: FormaNoCaixa; rotulo: string }> = [
   { forma: "DINHEIRO", rotulo: "Dinheiro" },
   { forma: "CARTAO_CREDITO", rotulo: "Crédito" },
   { forma: "CARTAO_DEBITO", rotulo: "Débito" },
-  { forma: "PIX_QR", rotulo: "Pix (QR na tela)" },
-  { forma: "PIX", rotulo: "Pix (maquininha)" },
+  { forma: "PIX_QR", rotulo: "Pix" },
 ];
 
 const BANDEIRAS: readonly OpcaoSelecao[] = [
@@ -24,89 +29,144 @@ const BANDEIRAS: readonly OpcaoSelecao[] = [
   { valor: "OUTRA", rotulo: "Outra" },
 ];
 
+const ROTULO_FINALIZAR: Record<ModoFechamento, string> = {
+  DINHEIRO: "Finalizar venda",
+  MAQUININHA: "Enviar para a maquininha",
+  CONTINGENCIA: "Finalizar venda",
+  PIX_QR: "Gerar QR code do Pix",
+};
+
 export interface PainelPagamento {
   elemento: HTMLElement;
   /** Chamar quando o total mudar, para recalcular o troco. */
   atualizarTotal: (total: number) => void;
-  /** Pix com QR na tela segue outro fluxo (cobrança no Mercado Pago), sem dados presenciais. */
-  pixNaTela: () => boolean;
+  modo: () => ModoFechamento;
+  /** Crédito ou débito escolhido (para a maquininha). */
+  formaCartao: () => FormaPagamentoPresencial;
+  /** Dados do pagamento em dinheiro ou contingência. */
   lerPagamento: () => PagamentoPresencial;
-  limpar: () => void;
+  rotuloFinalizar: () => string;
+  /** Avisa quando o modo muda (o botão de finalizar troca o texto). */
+  aoMudarModo: (ouvinte: () => void) => void;
 }
 
-/**
- * Forma de pagamento do caixa. Maquininha ainda não integrada (fornecedor a definir, D19): o
- * operador passa o cartão na maquininha e digita a autorização do comprovante.
- */
 export function criarPainelPagamento(): PainelPagamento {
-  let formaEscolhida: FormaVendaBalcao = "DINHEIRO";
+  let formaEscolhida: FormaNoCaixa = "DINHEIRO";
+  let emContingencia = false;
   let totalAtual = 0;
+  let ouvinteModo: () => void = () => undefined;
 
   const botoes = FORMAS.map((opcao) => {
     const botao = document.createElement("button");
     botao.type = "button";
     botao.className = "forma-pagamento";
     botao.textContent = opcao.rotulo;
+    botao.setAttribute("role", "radio");
     botao.addEventListener("click", () => escolher(opcao.forma));
     return { opcao, botao };
   });
-
   const grupoFormas = document.createElement("div");
   grupoFormas.className = "formas-pagamento";
   grupoFormas.setAttribute("role", "radiogroup");
+  grupoFormas.setAttribute("aria-label", "Forma de pagamento");
   grupoFormas.append(...botoes.map((item) => item.botao));
 
+  // Dinheiro: valor recebido + caixa de troco (recebido − total), sempre visível.
   const recebido = criarCampoTexto("pdv-recebido", "Valor recebido (R$)", "number", false);
   recebido.entrada.step = "0.01";
   recebido.entrada.min = "0";
-  const troco = document.createElement("p");
-  troco.className = "troco";
+  recebido.entrada.inputMode = "decimal";
+  const rotuloTroco = document.createElement("span");
+  rotuloTroco.className = "caixa-troco__rotulo";
+  rotuloTroco.textContent = "Troco";
+  const valorTroco = document.createElement("strong");
+  valorTroco.className = "caixa-troco__valor";
+  const caixaTroco = document.createElement("div");
+  caixaTroco.className = "caixa-troco";
+  caixaTroco.setAttribute("aria-live", "polite");
+  caixaTroco.append(rotuloTroco, valorTroco);
   recebido.entrada.addEventListener("input", () => atualizarTroco());
+  const blocoDinheiro = document.createElement("div");
+  blocoDinheiro.className = "bloco-dinheiro";
+  blocoDinheiro.append(recebido.container, caixaTroco);
 
+  // Cartão: maquininha integrada; contingência escondida atrás de um link.
+  const avisoMaquininha = document.createElement("p");
+  avisoMaquininha.className = "nota-campo";
+  avisoMaquininha.textContent = "Ao clicar em \"Enviar para a maquininha\", o valor aparece nela. O cliente passa o cartão e a venda se confirma sozinha.";
+  const linkContingencia = document.createElement("button");
+  linkContingencia.type = "button";
+  linkContingencia.className = "link-discreto";
   const bandeira = criarCampoSelecao("pdv-bandeira", "Bandeira", BANDEIRAS);
   const autorizacao = criarCampoTexto("pdv-autorizacao", "Código de autorização (no comprovante)", "text", false);
   autorizacao.entrada.maxLength = 20;
   autorizacao.entrada.autocomplete = "off";
-  const avisoMaquininha = document.createElement("p");
-  avisoMaquininha.className = "nota-campo";
-  avisoMaquininha.textContent = "Maquininha ainda não integrada: passe o valor na maquininha e digite aqui o código de autorização.";
+  const camposContingencia = document.createElement("div");
+  camposContingencia.className = "contingencia";
+  const avisoContingencia = document.createElement("p");
+  avisoContingencia.className = "nota-campo";
+  avisoContingencia.textContent = "Contingência: passe o cartão na maquininha (modo avulso) e digite os dados do comprovante.";
+  camposContingencia.append(avisoContingencia, bandeira.container, autorizacao.container);
+  linkContingencia.addEventListener("click", () => {
+    emContingencia = !emContingencia;
+    atualizarVisibilidade();
+  });
+  const blocoCartao = document.createElement("div");
+  blocoCartao.append(avisoMaquininha, linkContingencia, camposContingencia);
 
-  const blocoPixNaTela = document.createElement("p");
-  blocoPixNaTela.className = "nota-campo";
-  blocoPixNaTela.textContent = "Ao finalizar, o QR code aparece na tela para o cliente pagar pelo celular. A venda se confirma sozinha quando o Pix cair.";
-
-  const blocoDinheiro = document.createElement("div");
-  blocoDinheiro.append(recebido.container, troco);
-  const blocoMaquininha = document.createElement("div");
-  blocoMaquininha.append(avisoMaquininha, bandeira.container, autorizacao.container);
+  const blocoPix = document.createElement("p");
+  blocoPix.className = "nota-campo";
+  blocoPix.textContent = "O QR code aparece na tela para o cliente pagar pelo celular. A venda se confirma sozinha quando o Pix cair.";
 
   const elemento = document.createElement("div");
   elemento.className = "painel-pagamento";
-  elemento.append(grupoFormas, blocoDinheiro, blocoMaquininha, blocoPixNaTela);
+  elemento.append(grupoFormas, blocoDinheiro, blocoCartao, blocoPix);
 
-  function escolher(forma: FormaVendaBalcao): void {
+  function modoAtual(): ModoFechamento {
+    if (formaEscolhida === "DINHEIRO" || formaEscolhida === "PIX_QR") {
+      return formaEscolhida;
+    }
+    return emContingencia ? "CONTINGENCIA" : "MAQUININHA";
+  }
+
+  function escolher(forma: FormaNoCaixa): void {
     formaEscolhida = forma;
     botoes.forEach(({ opcao, botao }) => {
       const ativa = opcao.forma === forma;
       botao.classList.toggle("forma-pagamento--ativa", ativa);
       botao.setAttribute("aria-checked", String(ativa));
     });
-    blocoDinheiro.hidden = forma !== "DINHEIRO";
-    blocoMaquininha.hidden = forma === "DINHEIRO" || forma === "PIX_QR";
-    blocoPixNaTela.hidden = forma !== "PIX_QR";
-    bandeira.container.hidden = forma === "PIX";
-    autorizacao.container.querySelector("label")?.replaceChildren(
-      forma === "PIX" ? "Identificador do Pix (no comprovante)" : "Código de autorização (no comprovante)");
+    atualizarVisibilidade();
+  }
+
+  function atualizarVisibilidade(): void {
+    const cartao = formaEscolhida === "CARTAO_CREDITO" || formaEscolhida === "CARTAO_DEBITO";
+    blocoDinheiro.hidden = formaEscolhida !== "DINHEIRO";
+    blocoCartao.hidden = !cartao;
+    blocoPix.hidden = formaEscolhida !== "PIX_QR";
+    avisoMaquininha.hidden = emContingencia;
+    camposContingencia.hidden = !emContingencia;
+    linkContingencia.textContent = emContingencia
+      ? "Voltar para a maquininha integrada"
+      : "Maquininha sem conexão? Lançar manualmente";
+    ouvinteModo();
   }
 
   function atualizarTroco(): void {
-    const valor = Number(recebido.entrada.value);
-    troco.textContent = recebido.entrada.value === "" || valor < totalAtual
-      ? ""
-      : `Troco: ${formatarMoeda(valor - totalAtual)}`;
+    const digitado = recebido.entrada.value;
+    const valor = Number(digitado);
+    caixaTroco.classList.toggle("caixa-troco--falta", digitado !== "" && valor < totalAtual);
+    if (digitado === "") {
+      valorTroco.textContent = formatarMoeda(0);
+    } else if (valor < totalAtual) {
+      valorTroco.textContent = `Falta ${formatarMoeda(totalAtual - valor)}`;
+    } else {
+      valorTroco.textContent = formatarMoeda(valor - totalAtual);
+    }
   }
 
   escolher("DINHEIRO");
+  atualizarTroco();
 
   return {
     elemento,
@@ -114,20 +174,25 @@ export function criarPainelPagamento(): PainelPagamento {
       totalAtual = total;
       atualizarTroco();
     },
-    pixNaTela: () => formaEscolhida === "PIX_QR",
-    lerPagamento: () => ({
-      forma: formaEscolhida === "PIX_QR" ? "PIX" : formaEscolhida,
-      valorRecebido: formaEscolhida === "DINHEIRO" && recebido.entrada.value !== "" ? Number(recebido.entrada.value) : null,
-      bandeira: formaEscolhida === "CARTAO_CREDITO" || formaEscolhida === "CARTAO_DEBITO"
-        ? bandeira.selecao.value as BandeiraCartao
-        : null,
-      codigoAutorizacao: formaEscolhida === "DINHEIRO" ? null : autorizacao.entrada.value.trim() || null,
-    }),
-    limpar: () => {
-      recebido.entrada.value = "";
-      autorizacao.entrada.value = "";
-      troco.textContent = "";
-      escolher("DINHEIRO");
+    modo: modoAtual,
+    formaCartao: () => (formaEscolhida === "CARTAO_DEBITO" ? "CARTAO_DEBITO" : "CARTAO_CREDITO"),
+    lerPagamento: () => (formaEscolhida === "DINHEIRO"
+      ? {
+        forma: "DINHEIRO",
+        valorRecebido: recebido.entrada.value === "" ? null : Number(recebido.entrada.value),
+        bandeira: null,
+        codigoAutorizacao: null,
+      }
+      : {
+        forma: formaEscolhida === "CARTAO_DEBITO" ? "CARTAO_DEBITO" : "CARTAO_CREDITO",
+        valorRecebido: null,
+        // Valor vem de uma lista fixa de opções (BANDEIRAS), então sempre é uma bandeira válida.
+        bandeira: bandeira.selecao.value as BandeiraCartao,
+        codigoAutorizacao: autorizacao.entrada.value.trim() || null,
+      }),
+    rotuloFinalizar: () => ROTULO_FINALIZAR[modoAtual()],
+    aoMudarModo: (ouvinte) => {
+      ouvinteModo = ouvinte;
     },
   };
 }

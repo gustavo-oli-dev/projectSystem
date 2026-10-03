@@ -23,7 +23,7 @@ function criarVinculado(painel: HTMLElement, telefone: string): HTMLElement {
   const texto = criarParagrafo(`Ativo no WhatsApp ${formatarTelefone(telefone)}. Mande suas perguntas para o WhatsApp interno (o mesmo que enviou o código), nunca para o número de clientes.`);
   const erro = criarErro();
 
-  const botaoRemover = criarBotao("Desvincular", "btn btn-ghost btn-pequeno");
+  const botaoRemover = criarBotao("Desvincular", "btn btn-perigo btn-pequeno");
   botaoRemover.addEventListener("click", () => {
     void executar(botaoRemover, erro, async () => {
       definirSessao(await desvincularWhatsApp());

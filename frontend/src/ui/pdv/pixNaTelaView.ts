@@ -114,7 +114,7 @@ function criarCopiaECola(pix: VendaPixIniciada): HTMLElement {
 function criarBotaoCancelar(pix: VendaPixIniciada, erro: HTMLElement, aoCancelar: () => void): HTMLButtonElement {
   const botao = document.createElement("button");
   botao.type = "button";
-  botao.className = "btn btn-ghost btn-pequeno";
+  botao.className = "btn btn-perigo btn-pequeno";
   botao.textContent = "Cliente desistiu — cancelar venda";
   botao.addEventListener("click", () => {
     if (!window.confirm("Cancelar esta venda? Os produtos voltam ao estoque e o Pix é cancelado.")) {

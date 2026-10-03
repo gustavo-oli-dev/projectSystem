@@ -141,7 +141,7 @@ function criarBotaoAtivacao(contexto: Contexto, funcionario: Funcionario): HTMLE
   }
   const botao = document.createElement("button");
   botao.type = "button";
-  botao.className = funcionario.ativo ? "btn btn-ghost btn-pequeno" : "btn btn-outline btn-pequeno";
+  botao.className = funcionario.ativo ? "btn btn-perigo btn-pequeno" : "btn btn-outline btn-pequeno";
   botao.textContent = funcionario.ativo ? "Desativar" : "Reativar";
   botao.addEventListener("click", () => {
     if (funcionario.ativo && !window.confirm(`Desativar ${funcionario.nome}? O acesso dele é cortado na hora.`)) {

@@ -41,12 +41,24 @@ export function criarSecaoEstoque(produto: Produto, recarregar: () => Promise<vo
   historico.append(elementoCarregando("Carregando histórico..."));
   void carregarHistorico(produto, historico);
 
-  const conteudo: HTMLElement[] = [saldo];
+  // Controles à esquerda (saldo e entradas), histórico à direita — usa a largura toda da tela.
+  const controles = document.createElement("div");
+  controles.className = "estoque__controles";
+  controles.append(saldo);
   if (possui("ESTOQUE_GERENCIAR")) {
-    conteudo.push(criarEntradaPorLeitura(produto, recarregar), criarFormularioEntrada(produto, recarregar));
+    controles.append(criarEntradaPorLeitura(produto, recarregar), criarFormularioEntrada(produto, recarregar));
   }
-  conteudo.push(historico);
-  return criarSecao("Estoque", ...conteudo);
+
+  const tituloHistorico = document.createElement("p");
+  tituloHistorico.className = "subtitulo-bloco";
+  tituloHistorico.textContent = "Histórico de movimentações";
+  const colunaHistorico = document.createElement("div");
+  colunaHistorico.append(tituloHistorico, historico);
+
+  const colunas = document.createElement("div");
+  colunas.className = "estoque__colunas";
+  colunas.append(controles, colunaHistorico);
+  return criarSecao("Estoque", colunas);
 }
 
 function criarFormularioEntrada(produto: Produto, recarregar: () => Promise<void>): HTMLElement {
