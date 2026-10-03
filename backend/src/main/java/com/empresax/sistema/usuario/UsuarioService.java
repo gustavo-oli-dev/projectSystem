@@ -1,0 +1,114 @@
+package com.empresax.sistema.usuario;
+
+import com.empresax.sistema.acesso.Cargo;
+import com.empresax.sistema.acesso.CargoService;
+import com.empresax.sistema.common.domain.AcessoNegadoException;
+import com.empresax.sistema.common.domain.DomainException;
+import com.empresax.sistema.common.domain.EntidadeNaoEncontradaException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * Gestão de usuários com regras contra escalada de privilégio:
+ * - só quem tem acesso irrestrito cria ou altera outro usuário irrestrito;
+ * - ninguém atribui um cargo com permissões que não tem;
+ * - ninguém altera o próprio cargo nem se desativa.
+ */
+@Service
+public class UsuarioService {
+
+    private final UsuarioRepository usuarioRepository;
+    private final CargoService cargoService;
+    private final PasswordEncoder passwordEncoder;
+
+    public UsuarioService(UsuarioRepository usuarioRepository, CargoService cargoService, PasswordEncoder passwordEncoder) {
+        this.usuarioRepository = usuarioRepository;
+        this.cargoService = cargoService;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    @Transactional(readOnly = true)
+    public Usuario buscarComPermissoes(String email) {
+        return usuarioRepository.findComPermissoesByEmail(email)
+                .orElseThrow(() -> new EntidadeNaoEncontradaException("Usuário não encontrado: " + email));
+    }
+
+    @Transactional(readOnly = true)
+    public List<Usuario> listarTodos() {
+        return usuarioRepository.findAllByOrderByNomeAsc();
+    }
+
+    @Transactional
+    public Usuario cadastrar(String emailAtor, NovoUsuario novo) {
+        Usuario ator = buscarComPermissoes(emailAtor);
+        usuarioRepository.findByEmail(novo.email()).ifPresent(existente -> {
+            throw new DomainException("Já existe um usuário cadastrado com este e-mail");
+        });
+
+        String senhaCriptografada = passwordEncoder.encode(novo.senha());
+        if (novo.acessoIrrestrito()) {
+            garantirIrrestrito(ator, "Só quem tem acesso irrestrito pode criar outro usuário irrestrito");
+            return usuarioRepository.save(Usuario.comAcessoIrrestrito(novo.nome(), novo.email(), senhaCriptografada));
+        }
+
+        Cargo cargo = cargoConcedivel(ator, novo.cargoId());
+        return usuarioRepository.save(Usuario.comCargo(novo.nome(), novo.email(), senhaCriptografada, cargo));
+    }
+
+    @Transactional
+    public Usuario trocarCargo(String emailAtor, UUID usuarioId, UUID cargoId) {
+        Usuario ator = buscarComPermissoes(emailAtor);
+        Usuario alvo = buscarAlvo(ator, usuarioId, "Você não pode alterar o próprio perfil de acesso");
+        alvo.trocarCargo(cargoConcedivel(ator, cargoId));
+        return alvo;
+    }
+
+    @Transactional
+    public Usuario desativar(String emailAtor, UUID usuarioId) {
+        Usuario ator = buscarComPermissoes(emailAtor);
+        Usuario alvo = buscarAlvo(ator, usuarioId, "Você não pode desativar a si mesmo");
+        alvo.desativar();
+        return alvo;
+    }
+
+    @Transactional
+    public Usuario ativar(String emailAtor, UUID usuarioId) {
+        Usuario ator = buscarComPermissoes(emailAtor);
+        Usuario alvo = buscarAlvo(ator, usuarioId, "Você não pode alterar a si mesmo");
+        alvo.ativar();
+        return alvo;
+    }
+
+    private Usuario buscarAlvo(Usuario ator, UUID usuarioId, String mensagemSeForOProprio) {
+        Usuario alvo = usuarioRepository.findComPermissoesById(usuarioId)
+                .orElseThrow(() -> new EntidadeNaoEncontradaException("Usuário não encontrado: " + usuarioId));
+        if (alvo.id().equals(ator.id())) {
+            throw new AcessoNegadoException(mensagemSeForOProprio);
+        }
+        if (alvo.acessoIrrestrito()) {
+            garantirIrrestrito(ator, "Só quem tem acesso irrestrito pode alterar um usuário irrestrito");
+        }
+        return alvo;
+    }
+
+    private Cargo cargoConcedivel(Usuario ator, UUID cargoId) {
+        if (cargoId == null) {
+            throw new DomainException("Escolha um perfil de acesso para o funcionário");
+        }
+        Cargo cargo = cargoService.buscarPorId(cargoId);
+        if (!ator.podeConceder(cargo.permissoes())) {
+            throw new AcessoNegadoException("Você não pode atribuir um perfil de acesso com permissões que você mesmo não tem");
+        }
+        return cargo;
+    }
+
+    private static void garantirIrrestrito(Usuario ator, String mensagem) {
+        if (!ator.acessoIrrestrito()) {
+            throw new AcessoNegadoException(mensagem);
+        }
+    }
+}

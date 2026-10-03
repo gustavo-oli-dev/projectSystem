@@ -1,0 +1,78 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_dados:/var/lib/postgresql/data
+    ports:
+      # exposto apenas para desenvolvimento local (ver CLAUDE.md — isolamento de rede)
+      - "5432:5432"
+
+  minio:
+    # Opcional (profile "storage"): nem minio/minio (Docker Hub) nem quay.io/minio/minio pullam
+    # sem login — a MinIO Inc. restringiu as duas imagens em 2025 (confirmado em 2026-10-02, ver
+    # PENDENCIAS.md). O backend sobe sem este serviço (MinioArmazenamentoObjetos é não-fatal ao
+    # iniciar); só anexo de WhatsApp fica fora do ar até achar uma imagem que funcione.
+    profiles: ["storage"]
+    image: quay.io/minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_dados:/data
+    ports:
+      # exposto apenas para desenvolvimento local
+      - "9000:9000"
+      - "9001:9001"
+
+  backend:
+    build: ./backend
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SEGREDO: ${JWT_SEGREDO}
+      JWT_EXPIRACAO_MINUTOS: ${JWT_EXPIRACAO_MINUTOS}
+      MERCADOPAGO_ACCESS_TOKEN: ${MERCADOPAGO_ACCESS_TOKEN}
+      MERCADOPAGO_WEBHOOK_SEGREDO: ${MERCADOPAGO_WEBHOOK_SEGREDO}
+      WAPI_INSTANCE_ID: ${WAPI_INSTANCE_ID:-}
+      WAPI_TOKEN: ${WAPI_TOKEN:-}
+      WAPI_WEBHOOK_TOKEN: ${WAPI_WEBHOOK_TOKEN:-}
+      WAPI_ASSISTENTE_INSTANCE_ID: ${WAPI_ASSISTENTE_INSTANCE_ID:-}
+      WAPI_ASSISTENTE_TOKEN: ${WAPI_ASSISTENTE_TOKEN:-}
+      WAPI_ASSISTENTE_WEBHOOK_TOKEN: ${WAPI_ASSISTENTE_WEBHOOK_TOKEN:-}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      DONO_WHATSAPP_TELEFONE: ${DONO_WHATSAPP_TELEFONE}
+      ACESSO_INICIAL_NOME: ${ACESSO_INICIAL_NOME:-Acesso inicial}
+      ACESSO_INICIAL_EMAIL: ${ACESSO_INICIAL_EMAIL:-}
+      ACESSO_INICIAL_SENHA: ${ACESSO_INICIAL_SENHA:-}
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY:-}
+      CLAUDE_MODELO: ${CLAUDE_MODELO:-claude-haiku-4-5-20251001}
+      CLAUDE_API_KEY_ATENDIMENTO: ${CLAUDE_API_KEY_ATENDIMENTO:-}
+      FISCAL_AMBIENTE: ${FISCAL_AMBIENTE:-HOMOLOGACAO}
+      FISCAL_CERTIFICADO_A1_CAMINHO: ${FISCAL_CERTIFICADO_A1_CAMINHO:-}
+      FISCAL_REGIME_TRIBUTARIO: ${FISCAL_REGIME_TRIBUTARIO:-}
+      FOCUS_NFE_TOKEN: ${FOCUS_NFE_TOKEN:-}
+    depends_on:
+      - postgres
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "8081:8080"
+
+volumes:
+  postgres_dados:
+  minio_dados:

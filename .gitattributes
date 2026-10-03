@@ -1,0 +1,11 @@
+# Tudo com quebra de linha LF: os arquivos rodam em containers Linux (Dockerfile, nginx.conf, scripts).
+* text=auto eol=lf
+
+# Binários: nunca converter.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.pdf binary
+*.pfx binary
+*.p12 binary

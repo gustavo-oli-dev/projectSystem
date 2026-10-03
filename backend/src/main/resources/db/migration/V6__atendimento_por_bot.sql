@@ -1,0 +1,2 @@
+ALTER TABLE conversas ADD COLUMN modo VARCHAR(10) NOT NULL DEFAULT 'BOT';
+ALTER TABLE conversas ADD COLUMN motivo_transferencia VARCHAR(300);
