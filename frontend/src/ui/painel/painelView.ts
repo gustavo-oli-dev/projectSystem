@@ -12,12 +12,13 @@ import { elementoCarregando } from "../estadoCarregamento.js";
 import { cartaoEstado } from "../estadoCard.js";
 import { formatarMoeda } from "../formatarMoeda.js";
 import { formatarInteiro } from "../formatarNumero.js";
-import { criarBarrasHorizontais } from "../graficos/barrasHorizontais.js";
+import { criarGraficoRosca, type CorFatia, type Fatia } from "../graficos/graficoRosca.js";
 import { situacaoEstoque } from "../produtos/situacaoEstoque.js";
 import { criarIndicadores } from "./indicadoresView.js";
 import { ATALHOS, periodoDoAtalho, type AtalhoPeriodo } from "./periodoPainel.js";
 import {
   criarSecaoCanais,
+  criarSecaoCustoLucro,
   criarSecaoDiasDaSemana,
   criarSecaoFaturamento,
   criarSecaoFormasPagamento,
@@ -27,12 +28,13 @@ import {
 
 const ATALHO_INICIAL: AtalhoPeriodo = "TRINTA_DIAS";
 const ESTOQUE_BAIXO_MAXIMO = 8;
-const ROTULO_STATUS_PEDIDO: Record<string, string> = {
-  ABERTO: "Abertos",
-  AGUARDANDO_EMISSAO: "Aguardando nota",
-  CONCLUIDO: "Concluídos",
-  CANCELADO: "Cancelados",
+const STATUS_PEDIDO: Record<string, { rotulo: string; cor: CorFatia }> = {
+  ABERTO: { rotulo: "Abertos", cor: 1 },
+  AGUARDANDO_EMISSAO: { rotulo: "Aguardando nota", cor: 2 },
+  CONCLUIDO: { rotulo: "Concluídos", cor: 3 },
+  CANCELADO: { rotulo: "Cancelados", cor: 4 },
 };
+const COR_STATUS_DESCONHECIDO: CorFatia = 5;
 
 /**
  * Painel = central de relatórios: indicadores com comparação, faturamento no tempo, canais, formas
@@ -86,12 +88,15 @@ function montarRelatorio(relatorio: RelatorioVendas, periodo: Periodo): HTMLElem
   faturamento.querySelector(".cartao-relatorio__cabecalho")
     ?.append(criarBotaoExportar("Exportar CSV", periodo, "periodos"));
 
+  // Grade de 3 colunas iguais em todas as linhas: o que é largo (tempo, tabela) ocupa 2.
   return [
     criarIndicadores(relatorio),
-    faturamento,
-    linha(criarSecaoCanais(relatorio), criarSecaoFormasPagamento(relatorio)),
-    linha(criarSecaoHorarios(relatorio), criarSecaoDiasDaSemana(relatorio)),
-    criarSecaoMaisVendidos(relatorio, criarBotaoExportar("Exportar CSV", periodo, "mais-vendidos")),
+    linha(largo(faturamento), criarSecaoFormasPagamento(relatorio)),
+    linha(criarSecaoCanais(relatorio), criarSecaoCustoLucro(relatorio), criarSecaoDiasDaSemana(relatorio)),
+    linha(
+      largo(criarSecaoMaisVendidos(relatorio, criarBotaoExportar("Exportar CSV", periodo, "mais-vendidos"))),
+      criarSecaoHorarios(relatorio)
+    ),
   ];
 }
 
@@ -194,6 +199,11 @@ function linha(...cartoes: HTMLElement[]): HTMLElement {
   return grade;
 }
 
+function largo(cartao: HTMLElement): HTMLElement {
+  cartao.classList.add("cartao-relatorio--largo");
+  return cartao;
+}
+
 /** Parte operacional (sem valores de faturamento): cada bloco só aparece com a permissão dele. */
 function montarOperacional(area: HTMLElement): void {
   const blocos: HTMLElement[] = [];
@@ -214,7 +224,7 @@ function montarOperacional(area: HTMLElement): void {
   titulo.className = "painel-operacional__titulo";
   titulo.textContent = "Operação agora";
   const grade = document.createElement("div");
-  grade.className = "linha-relatorio linha-relatorio--tres";
+  grade.className = "linha-relatorio";
   grade.append(...blocos);
   area.replaceChildren(titulo, grade);
 }
@@ -262,10 +272,19 @@ async function carregarEstoqueBaixo(): Promise<HTMLElement> {
 
 async function carregarPedidosPorStatus(): Promise<HTMLElement> {
   const porStatus = await consultarPedidosPorStatus();
-  const barras = Object.entries(porStatus)
-    .map(([status, quantidade]) => ({ rotulo: ROTULO_STATUS_PEDIDO[status] ?? status, valor: quantidade, detalhe: "" }))
-    .sort((a, b) => b.valor - a.valor);
-  return criarBarrasHorizontais(barras, formatarInteiro);
+  const fatias: Fatia[] = Object.entries(porStatus).map(([status, quantidade]) => ({
+    rotulo: STATUS_PEDIDO[status]?.rotulo ?? status,
+    cor: STATUS_PEDIDO[status]?.cor ?? COR_STATUS_DESCONHECIDO,
+    valor: quantidade,
+    detalhe: "",
+  }));
+  if (!fatias.some((fatia) => fatia.valor > 0)) {
+    return cartaoEstado("Nenhum pedido registrado.");
+  }
+  return criarGraficoRosca({
+    fatias, formatarValor: formatarInteiro, formatarTotal: formatarInteiro, rotuloTotal: "pedidos",
+    descricao: "Pedidos por situação",
+  });
 }
 
 async function carregarCobrancasPendentes(): Promise<HTMLElement> {

@@ -7,42 +7,33 @@ interface Indicador {
   valor: string;
   atual: number;
   anterior: number;
-  /** Para "vendas desfeitas", subir é ruim. */
-  subirEhBom: boolean;
-  nota?: string;
-  destaque?: boolean;
+  nota: string;
 }
 
 /** Bloco de números do topo: cada um com a variação contra o período anterior de mesmo tamanho. */
 export function criarIndicadores(relatorio: RelatorioVendas): HTMLElement {
   const { resumo, periodoAnterior, desfeitas } = relatorio;
+  // Quatro números, todos do mesmo tamanho; o resto vira nota pequena embaixo de cada um.
   const indicadores: Indicador[] = [
     {
       rotulo: "Faturamento", valor: formatarMoeda(resumo.faturamento),
-      atual: resumo.faturamento, anterior: periodoAnterior.faturamento, subirEhBom: true, destaque: true,
+      atual: resumo.faturamento, anterior: periodoAnterior.faturamento,
       nota: `${formatarMoeda(relatorio.recebido)} recebido · ${formatarMoeda(relatorio.aReceber)} a receber`,
     },
     {
       rotulo: "Lucro bruto", valor: formatarMoeda(resumo.lucroBruto),
-      atual: resumo.lucroBruto, anterior: periodoAnterior.lucroBruto, subirEhBom: true,
+      atual: resumo.lucroBruto, anterior: periodoAnterior.lucroBruto,
       nota: notaDoLucro(resumo.margem, resumo.coberturaCusto),
     },
     {
       rotulo: "Vendas", valor: formatarInteiro(resumo.vendas),
-      atual: resumo.vendas, anterior: periodoAnterior.vendas, subirEhBom: true,
+      atual: resumo.vendas, anterior: periodoAnterior.vendas,
+      nota: `${formatarInteiro(resumo.unidades)} unidade(s) · ${formatarInteiro(desfeitas.vendas)} desfeita(s)`,
     },
     {
       rotulo: "Ticket médio", valor: formatarMoeda(resumo.ticketMedio),
-      atual: resumo.ticketMedio, anterior: periodoAnterior.ticketMedio, subirEhBom: true,
-    },
-    {
-      rotulo: "Unidades vendidas", valor: formatarInteiro(resumo.unidades),
-      atual: resumo.unidades, anterior: periodoAnterior.unidades, subirEhBom: true,
-    },
-    {
-      rotulo: "Vendas desfeitas", valor: formatarInteiro(desfeitas.vendas),
-      atual: desfeitas.vendas, anterior: Number.NaN, subirEhBom: false,
-      nota: `${formatarMoeda(desfeitas.valor)} cancelado ou reembolsado`,
+      atual: resumo.ticketMedio, anterior: periodoAnterior.ticketMedio,
+      nota: "Valor médio por venda",
     },
   ];
 
@@ -71,28 +62,18 @@ function criarIndicador(indicador: Indicador): HTMLElement {
   valor.className = "indicador__valor";
   valor.textContent = indicador.valor;
 
-  const cartao = document.createElement("article");
-  cartao.className = indicador.destaque === true ? "indicador indicador--destaque" : "indicador";
-  cartao.append(rotulo, valor);
+  const nota = document.createElement("p");
+  nota.className = "indicador__nota";
+  nota.textContent = indicador.nota;
 
-  const variacao = criarVariacao(indicador);
-  if (variacao !== null) {
-    cartao.append(variacao);
-  }
-  if (indicador.nota !== undefined) {
-    const nota = document.createElement("p");
-    nota.className = "indicador__nota";
-    nota.textContent = indicador.nota;
-    cartao.append(nota);
-  }
+  const cartao = document.createElement("article");
+  cartao.className = "indicador";
+  cartao.append(rotulo, valor, criarVariacao(indicador), nota);
   return cartao;
 }
 
-/** "▲ 12% vs período anterior" — seta + texto + cor (nunca só a cor). */
-function criarVariacao(indicador: Indicador): HTMLElement | null {
-  if (Number.isNaN(indicador.anterior)) {
-    return null;
-  }
+/** "▲ 12% vs período anterior" — seta + texto + cor (nunca só a cor). Nos quatro, subir é bom. */
+function criarVariacao(indicador: Indicador): HTMLElement {
   const elemento = document.createElement("p");
   elemento.className = "indicador__variacao";
   if (indicador.anterior === 0) {
@@ -102,9 +83,8 @@ function criarVariacao(indicador: Indicador): HTMLElement | null {
   }
   const variacao = (indicador.atual - indicador.anterior) / Math.abs(indicador.anterior);
   const subiu = variacao > 0;
-  const bom = variacao === 0 ? null : subiu === indicador.subirEhBom;
-  elemento.classList.add(bom === null ? "indicador__variacao--neutra"
-    : bom ? "indicador__variacao--boa" : "indicador__variacao--ruim");
+  elemento.classList.add(variacao === 0 ? "indicador__variacao--neutra"
+    : subiu ? "indicador__variacao--boa" : "indicador__variacao--ruim");
   const seta = variacao === 0 ? "=" : subiu ? "▲" : "▼";
   elemento.textContent = `${seta} ${formatarPercentual(Math.abs(variacao))} vs período anterior`;
   return elemento;
