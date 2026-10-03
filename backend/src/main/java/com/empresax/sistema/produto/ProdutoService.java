@@ -43,6 +43,13 @@ public class ProdutoService {
                 .orElseThrow(() -> new EntidadeNaoEncontradaException("Produto não encontrado: " + id));
     }
 
+    /** Leitura pelo leitor de código de barras (caixa e entrada de estoque). */
+    @Transactional(readOnly = true)
+    public Produto buscarPorCodigoBarras(String codigoBarras) {
+        return produtoRepository.findByCodigoBarras(codigoBarras.trim())
+                .orElseThrow(() -> new EntidadeNaoEncontradaException("Nenhum produto com o código " + codigoBarras.trim()));
+    }
+
     @Transactional
     public Produto atualizar(UUID id, String nome, String descricao, Dinheiro precoUnitario, String codigoBarras) {
         Produto produto = buscarPorId(id);

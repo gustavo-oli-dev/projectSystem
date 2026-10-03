@@ -87,3 +87,8 @@ export function enviarFoto(id: string, arquivo: File): Promise<FotoProduto> {
 export function removerFoto(produtoId: string, fotoId: string): Promise<void> {
   return httpClient.delete<void>(`/produtos/${produtoId}/fotos/${fotoId}`);
 }
+
+/** Leitor de código de barras (caixa e entrada de estoque). */
+export function buscarProdutoPorCodigoBarras(codigo: string): Promise<Produto> {
+  return httpClient.get<Produto>(`/produtos/codigo-barras/${encodeURIComponent(codigo)}`);
+}

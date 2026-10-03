@@ -5,6 +5,7 @@ import com.empresax.sistema.pedido.Pedido;
 import com.empresax.sistema.pedido.PedidoService;
 import com.empresax.sistema.pedido.StatusPedido;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -50,5 +51,11 @@ public class DocumentoFiscalService {
                 .map(tipo -> new DocumentoFiscal(pedidoId, tipo))
                 .toList();
         return documentoFiscalRepository.saveAll(documentos);
+    }
+
+    /** Chamado ao desfazer uma venda, na mesma transação do cancelamento. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void descartarPendentes(UUID pedidoId) {
+        documentoFiscalRepository.findByPedidoId(pedidoId).forEach(DocumentoFiscal::descartarPendente);
     }
 }

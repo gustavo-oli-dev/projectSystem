@@ -11,6 +11,8 @@ export type Permissao =
   | "CATALOGO_VER"
   | "CATALOGO_GERENCIAR"
   | "ESTOQUE_GERENCIAR"
+  | "PDV_VENDER"
+  | "PDV_CANCELAR"
   | "FISCAL_VER"
   | "FISCAL_GERENCIAR"
   | "COBRANCAS_VER"

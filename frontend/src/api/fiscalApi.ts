@@ -1,6 +1,12 @@
 import { httpClient } from "./httpClient.js";
 
-export type TipoDocumentoFiscal = "NFE" | "NFSE";
+export type TipoDocumentoFiscal = "NFE" | "NFSE" | "NFCE";
+
+export const ROTULO_TIPO_DOCUMENTO: Record<TipoDocumentoFiscal, string> = {
+  NFE: "NF-e",
+  NFSE: "NFS-e",
+  NFCE: "NFC-e",
+};
 export type StatusDocumentoFiscal = "PENDENTE" | "AUTORIZADO" | "REJEITADO" | "CANCELADO";
 
 export interface DocumentoFiscal {

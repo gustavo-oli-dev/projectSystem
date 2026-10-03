@@ -112,6 +112,20 @@ public class DocumentoFiscal {
         this.atualizadoEm = Instant.now();
     }
 
+    /**
+     * Venda desfeita antes de a nota ir para a SEFAZ: nada foi transmitido, então só se descarta.
+     * Nota já autorizada não se descarta — exige cancelamento fiscal (cancelar()).
+     */
+    public void descartarPendente() {
+        if (status == StatusDocumentoFiscal.AUTORIZADO) {
+            throw new DomainException("A nota desta venda já foi autorizada: é preciso cancelá-la na SEFAZ antes");
+        }
+        if (status == StatusDocumentoFiscal.PENDENTE) {
+            this.status = StatusDocumentoFiscal.CANCELADO;
+            this.atualizadoEm = Instant.now();
+        }
+    }
+
     private void garantirPendente() {
         if (status != StatusDocumentoFiscal.PENDENTE) {
             throw new DomainException("Documento fiscal já foi processado e não pode mudar de estado");

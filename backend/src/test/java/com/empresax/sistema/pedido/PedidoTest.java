@@ -3,6 +3,7 @@ package com.empresax.sistema.pedido;
 import com.empresax.sistema.common.domain.DomainException;
 import com.empresax.sistema.documentofiscal.TipoDocumentoFiscal;
 import com.empresax.sistema.shared.dinheiro.Dinheiro;
+import com.empresax.sistema.shared.documento.Cpf;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -86,6 +87,37 @@ class PedidoTest {
         Pedido pedido = pedidoComUmItem();
 
         assertThat(pedido.documentosFiscaisNecessarios()).containsExactly(TipoDocumentoFiscal.NFE);
+    }
+
+    @Test
+    void vendaNoBalcaoComProdutoExigeNfceENaoNfe() {
+        ItemPedido caneca = new ItemPedido(
+                TipoItem.PRODUTO, UUID.randomUUID(), "Caneca", new Dinheiro(new BigDecimal("10.00")), 1);
+        ItemPedido arte = new ItemPedido(
+                TipoItem.SERVICO, UUID.randomUUID(), "Arte", new Dinheiro(new BigDecimal("25.00")), 1);
+
+        Pedido pedido = Pedido.noBalcao(List.of(caneca, arte), null);
+
+        assertThat(pedido.documentosFiscaisNecessarios())
+                .containsExactlyInAnyOrder(TipoDocumentoFiscal.NFCE, TipoDocumentoFiscal.NFSE);
+    }
+
+    @Test
+    void vendaNoBalcaoNaoPrecisaDeClienteEGuardaOCpfNaNota() {
+        Pedido pedido = Pedido.noBalcao(List.of(itemCaneca()), new Cpf("111.444.777-35"));
+
+        assertThat(pedido.clienteId()).isEmpty();
+        assertThat(pedido.vendidoNoBalcao()).isTrue();
+        assertThat(pedido.cpfNaNota()).contains("11144477735");
+    }
+
+    @Test
+    void pedidoForaDoBalcaoContinuaExigindoCliente() {
+        assertThatThrownBy(() -> new Pedido(null, List.of(itemCaneca()))).isInstanceOf(DomainException.class);
+    }
+
+    private static ItemPedido itemCaneca() {
+        return new ItemPedido(TipoItem.PRODUTO, UUID.randomUUID(), "Caneca", new Dinheiro(new BigDecimal("10.00")), 1);
     }
 
     private static Pedido pedidoComUmItem() {

@@ -50,13 +50,20 @@ public class ProdutoController {
         return ResponseEntity.created(URI.create("/api/produtos/" + produto.id())).body(resposta);
     }
 
-    @PreAuthorize(RegraAcesso.CATALOGO_VER)
+    /** O caixa também lista (busca pelo nome quando o produto não tem código de barras). */
+    @PreAuthorize(RegraAcesso.CATALOGO_VER + " or " + RegraAcesso.PDV_VENDER)
     @GetMapping
     public List<ProdutoResponse> listar() {
         Map<UUID, List<UUID>> fotos = fotoProdutoService.idsDasFotosPorProduto();
         return produtoService.listarTodos().stream()
                 .map(produto -> ProdutoResponse.de(produto, fotos.getOrDefault(produto.id(), List.of())))
                 .toList();
+    }
+
+    @PreAuthorize(RegraAcesso.CATALOGO_VER + " or " + RegraAcesso.PDV_VENDER + " or " + RegraAcesso.ESTOQUE_GERENCIAR)
+    @GetMapping("/codigo-barras/{codigo}")
+    public ProdutoResponse buscarPorCodigoBarras(@PathVariable String codigo) {
+        return comFotos(produtoService.buscarPorCodigoBarras(codigo));
     }
 
     @PreAuthorize(RegraAcesso.CATALOGO_VER)

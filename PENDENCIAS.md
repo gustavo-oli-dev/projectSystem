@@ -22,6 +22,8 @@ marcar como feito.
 - [ ] **Definir o e-mail de acesso irrestrito** (`ACESSO_INICIAL_EMAIL` / `ACESSO_INICIAL_SENHA` no
       `.env`) para o dono e para você. Hoje só existe `admin@empresax.com` (senha fraca de teste,
       convertido para irrestrito pela V7) — desativar ou trocar a senha antes de expor o sistema.
+- [ ] **Maquininha integrada (D19)**: escolher o fornecedor (Mercado Pago Point, Stone, Cielo...) e trocar o modo avulso pelo envio automático do valor. A regra estadual exige integração (tpIntegra = 1 na NFC-e); confirmar na legislação do Ceará o prazo e o layout antes de produção.
+- [ ] **Transmissão da NFC-e**: exige CSC (código de segurança do contribuinte) da SEFAZ-CE, além do certificado A1 — depende da transmissão fiscal.
 - [ ] **Próximas áreas pedidas (03/10)**: histórico de vendas com busca por produto; relatórios
       (quantidade vendida por dia/semana/mês/3 meses/ano, faturamento, mais vendidos, estoque
       baixo/parado, reembolsos); exportação CSV; aba Contatos (fornecedores, frete...);

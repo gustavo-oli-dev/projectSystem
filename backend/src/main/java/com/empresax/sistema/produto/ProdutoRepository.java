@@ -16,6 +16,8 @@ public interface ProdutoRepository extends JpaRepository<Produto, UUID> {
 
     List<Produto> findAllByOrderByNomeAsc();
 
+    Optional<Produto> findByCodigoBarras(String codigoBarras);
+
     boolean existsByCodigoBarras(String codigoBarras);
 
     boolean existsByCodigoBarrasAndIdNot(String codigoBarras, UUID id);

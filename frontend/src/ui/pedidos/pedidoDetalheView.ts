@@ -1,6 +1,11 @@
 import { buscarCliente, type Cliente } from "../../api/clientesApi.js";
 import { criarCobranca, listarCobrancasDoPedido, type Cobranca, type MeioCobranca } from "../../api/cobrancasApi.js";
-import { gerarDocumentosFiscais, listarDocumentosDoPedido, type DocumentoFiscal } from "../../api/fiscalApi.js";
+import {
+  gerarDocumentosFiscais,
+  listarDocumentosDoPedido,
+  ROTULO_TIPO_DOCUMENTO,
+  type DocumentoFiscal,
+} from "../../api/fiscalApi.js";
 import { buscarPedido, cancelarPedido, confirmarPedido, reembolsarPedido, type Pedido } from "../../api/pedidosApi.js";
 import type { Permissao } from "../../api/sessaoApi.js";
 import { navegarPara } from "../../router.js";
@@ -54,7 +59,9 @@ export async function montarDetalhePedido(container: HTMLElement, pedidoId: stri
   try {
     const pedido = await buscarPedido(pedidoId);
     const [cliente, cobrancas, documentos] = await Promise.all([
-      seTiverPermissao("CLIENTES_VER", () => buscarCliente(pedido.clienteId)),
+      pedido.clienteId === null
+        ? Promise.resolve(null)
+        : seTiverPermissao("CLIENTES_VER", () => buscarCliente(pedido.clienteId ?? "")),
       seTiverPermissao("COBRANCAS_VER", () => listarCobrancasDoPedido(pedidoId)),
       seTiverPermissao("FISCAL_VER", () => listarDocumentosDoPedido(pedidoId)),
     ]);
@@ -104,6 +111,12 @@ function renderizar(container: HTMLElement, dados: DadosPedido): void {
   if (dados.cliente !== null) {
     lateral.append(criarCartaoCliente(dados.cliente));
   }
+  if (pedido.canal === "BALCAO") {
+    lateral.append(criarCartaoLateral("Venda no balcão", [
+      ["Consumidor", pedido.clienteId === null ? "Não identificado" : "Cliente cadastrado"],
+      ["CPF na nota", pedido.cpfNaNota ?? "—"],
+    ]));
+  }
   lateral.append(criarCartaoResumo(pedido));
 
   const grade = document.createElement("div");
@@ -134,6 +147,14 @@ function criarAcoes(dados: DadosPedido, erroAcao: HTMLElement, recarregar: () =>
       executar("Cancelar pedido", "btn-ghost", () => confirmarECancelar(pedido.id)),
       executar("Confirmar pedido", "btn-primary", () => confirmarPedido(pedido.id))
     );
+  }
+
+  // Venda de balcão: cancelar pelo Caixa (estorna o pagamento); não tem cobrança online.
+  if (pedido.canal === "BALCAO") {
+    if (dados.documentos !== null && dados.documentos.length === 0 && possui("FISCAL_GERENCIAR")) {
+      acoes.append(executar("Gerar documentos fiscais", "btn-primary", () => gerarDocumentosFiscais(pedido.id)));
+    }
+    return acoes;
   }
 
   if (pedido.status === "AGUARDANDO_EMISSAO") {
@@ -231,7 +252,7 @@ function criarTabelaDocumentos(documentos: DocumentoFiscal[]): HTMLElement {
   }
   const linhas = documentos.map((documento) =>
     criarLinha(
-      celula(documento.tipo === "NFE" ? "NF-e" : "NFS-e"),
+      celula(ROTULO_TIPO_DOCUMENTO[documento.tipo]),
       celulaSelo(ROTULO_STATUS_DOCUMENTO[documento.status] ?? documento.status, documento.status.toLowerCase()),
       celula(documento.protocolo ?? "—"),
       celula(formatarDataCurta(documento.atualizadoEm))

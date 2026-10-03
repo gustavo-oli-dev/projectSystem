@@ -2,6 +2,7 @@ import {
   consultarConfiguracaoFiscal,
   gerarDocumentosFiscais,
   listarDocumentosFiscais,
+  ROTULO_TIPO_DOCUMENTO,
   type ConfiguracaoFiscal,
   type DocumentoFiscal,
   type StatusDocumentoFiscal,
@@ -20,7 +21,6 @@ import {
   formatarDataCurta,
 } from "../tabela.js";
 
-const ROTULO_TIPO: Record<string, string> = { NFE: "NF-e", NFSE: "NFS-e" };
 const ROTULO_STATUS: Record<StatusDocumentoFiscal, string> = {
   PENDENTE: "Pendente",
   AUTORIZADO: "Autorizado",
@@ -199,7 +199,7 @@ function criarTabelaDocumentos(documentos: DocumentoFiscal[]): HTMLElement {
 
   const linhas = documentos.map((documento) =>
     criarLinha(
-      celula(ROTULO_TIPO[documento.tipo] ?? documento.tipo),
+      celula(ROTULO_TIPO_DOCUMENTO[documento.tipo]),
       celula(documento.pedidoId.slice(0, 8)),
       celulaSelo(ROTULO_STATUS[documento.status], documento.status.toLowerCase()),
       celula(documento.protocolo ?? "—"),

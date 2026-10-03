@@ -24,4 +24,7 @@ public interface PedidoRepository extends JpaRepository<Pedido, UUID> {
 
     @EntityGraph(attributePaths = "itens")
     List<Pedido> findTop10ByClienteIdOrderByCriadoEmDesc(UUID clienteId);
+
+    @EntityGraph(attributePaths = "itens")
+    List<Pedido> findTop50ByCanalOrderByCriadoEmDesc(CanalVenda canal);
 }

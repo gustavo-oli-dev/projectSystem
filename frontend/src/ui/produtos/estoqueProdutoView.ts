@@ -11,6 +11,7 @@ import { criarCampoTexto, criarMensagemErro, mostrarErro } from "../camposFormul
 import { elementoCarregando } from "../estadoCarregamento.js";
 import { cartaoEstado } from "../estadoCard.js";
 import { celula, celulaComConteudo, celulaSelo, criarLinha, criarTabela } from "../tabela.js";
+import { criarEntradaPorLeitura } from "./entradaPorLeituraView.js";
 import { criarSecao } from "./secaoEdicao.js";
 import { situacaoEstoque } from "./situacaoEstoque.js";
 
@@ -42,14 +43,14 @@ export function criarSecaoEstoque(produto: Produto, recarregar: () => Promise<vo
 
   const conteudo: HTMLElement[] = [saldo];
   if (possui("ESTOQUE_GERENCIAR")) {
-    conteudo.push(criarFormularioEntrada(produto, recarregar));
+    conteudo.push(criarEntradaPorLeitura(produto, recarregar), criarFormularioEntrada(produto, recarregar));
   }
   conteudo.push(historico);
   return criarSecao("Estoque", ...conteudo);
 }
 
 function criarFormularioEntrada(produto: Produto, recarregar: () => Promise<void>): HTMLElement {
-  const quantidade = criarCampoTexto("estoque-quantidade", "Quantidade que chegou", "number", true);
+  const quantidade = criarCampoTexto("estoque-quantidade", "Ou digite a quantidade que chegou", "number", true);
   quantidade.entrada.min = "1";
   quantidade.entrada.step = "1";
 

@@ -6,6 +6,7 @@ import com.empresax.sistema.cobranca.MeioCobranca;
 import com.empresax.sistema.cobranca.StatusCobranca;
 import com.empresax.sistema.cobranca.pagamento.ProvedorPagamento;
 import com.empresax.sistema.common.domain.DomainException;
+import com.empresax.sistema.documentofiscal.DocumentoFiscalService;
 import com.empresax.sistema.pedido.ItemPedido;
 import com.empresax.sistema.pedido.Pedido;
 import com.empresax.sistema.pedido.PedidoService;
@@ -41,8 +42,9 @@ class CancelamentoVendaServiceTest {
     private final CobrancaRepository cobrancaRepository = mock(CobrancaRepository.class);
     private final ProvedorPagamento provedorPagamento = mock(ProvedorPagamento.class);
     private final EstoqueService estoqueService = mock(EstoqueService.class);
-    private final CancelamentoVendaService servico =
-            new CancelamentoVendaService(pedidoService, cobrancaRepository, provedorPagamento, estoqueService);
+    private final DocumentoFiscalService documentoFiscalService = mock(DocumentoFiscalService.class);
+    private final CancelamentoVendaService servico = new CancelamentoVendaService(
+            pedidoService, cobrancaRepository, provedorPagamento, estoqueService, documentoFiscalService);
 
     @Test
     void cancelarPedidoConfirmadoDevolveOsProdutosAoEstoque() {
@@ -111,6 +113,18 @@ class CancelamentoVendaServiceTest {
 
         assertThatThrownBy(() -> servico.reembolsar(PEDIDO_ID, RESPONSAVEL)).isInstanceOf(DomainException.class);
         verify(provedorPagamento, never()).reembolsar(anyString(), anyString());
+    }
+
+    @Test
+    void vendaDeBalcaoNaoSeCancelaPeloPedidoSemEstornarOPagamento() {
+        Pedido balcao = Pedido.noBalcao(List.of(new ItemPedido(TipoItem.PRODUTO, PRODUTO_ID, "Caneca", PRECO, 1)), null);
+        balcao.confirmar();
+        prepararPedido(balcao, List.of());
+
+        assertThatThrownBy(() -> servico.cancelar(PEDIDO_ID, RESPONSAVEL))
+                .isInstanceOf(DomainException.class)
+                .hasMessageContaining("Caixa");
+        assertThat(balcao.status()).isEqualTo(StatusPedido.AGUARDANDO_EMISSAO);
     }
 
     private static Pedido pedidoComDuasCanecas() {

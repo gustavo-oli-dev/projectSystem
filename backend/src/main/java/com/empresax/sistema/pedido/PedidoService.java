@@ -8,6 +8,7 @@ import com.empresax.sistema.produto.ProdutoService;
 import com.empresax.sistema.produto.estoque.EstoqueService;
 import com.empresax.sistema.servico.Servico;
 import com.empresax.sistema.servico.ServicoService;
+import com.empresax.sistema.shared.documento.Cpf;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +46,13 @@ public class PedidoService {
         return pedidoRepository.save(pedido);
     }
 
+    /** Venda presencial: sem cliente cadastrado, CPF na nota opcional. Mesmas regras de estoque. */
+    @Transactional
+    public Pedido criarNoBalcao(List<ItemPedidoRequerido> itensRequeridos, Cpf cpfNaNota) {
+        List<ItemPedido> itens = itensRequeridos.stream().map(this::montarItem).toList();
+        return pedidoRepository.save(Pedido.noBalcao(itens, cpfNaNota));
+    }
+
     private ItemPedido montarItem(ItemPedidoRequerido requerido) {
         return switch (requerido.tipo()) {
             case PRODUTO -> montarItemDeProduto(requerido);
@@ -78,6 +86,11 @@ public class PedidoService {
     @Transactional(readOnly = true)
     public List<Pedido> listarTodos() {
         return pedidoRepository.findAllByOrderByCriadoEmDesc();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Pedido> listarUltimasDoBalcao() {
+        return pedidoRepository.findTop50ByCanalOrderByCriadoEmDesc(CanalVenda.BALCAO);
     }
 
     @Transactional(readOnly = true)

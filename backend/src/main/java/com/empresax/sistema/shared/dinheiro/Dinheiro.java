@@ -32,4 +32,13 @@ public record Dinheiro(BigDecimal valor) {
     public Dinheiro multiplicar(int quantidade) {
         return new Dinheiro(valor.multiply(BigDecimal.valueOf(quantidade)));
     }
+
+    /** Resultado negativo é recusado pelo próprio construtor (dinheiro nunca é negativo). */
+    public Dinheiro subtrair(Dinheiro outro) {
+        return new Dinheiro(valor.subtract(outro.valor));
+    }
+
+    public boolean menorQue(Dinheiro outro) {
+        return valor.compareTo(outro.valor) < 0;
+    }
 }

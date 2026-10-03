@@ -17,9 +17,14 @@ export interface ItemPedidoResponse {
   subtotal: number;
 }
 
+export type CanalVenda = "PAINEL" | "BALCAO";
+
+/** clienteId e cpfNaNota vêm nulos na venda de balcão sem consumidor identificado. */
 export interface Pedido {
   id: string;
-  clienteId: string;
+  clienteId: string | null;
+  canal: CanalVenda;
+  cpfNaNota: string | null;
   status: string;
   itens: ItemPedidoResponse[];
   valorTotal: number;

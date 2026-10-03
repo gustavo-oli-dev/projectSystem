@@ -39,7 +39,10 @@ public class CobrancaService {
     public CobrancaCriada criar(UUID pedidoId, MeioCobranca meio) {
         Pedido pedido = pedidoService.buscarPorId(pedidoId);
         garantirPedidoCobravel(pedido);
-        Cliente cliente = clienteService.buscarPorId(pedido.clienteId());
+        // Cobrança online (Pix/boleto) exige pagador identificado; venda de balcão paga no caixa (PDV).
+        UUID clienteId = pedido.clienteId()
+                .orElseThrow(() -> new DomainException("Venda de balcão é paga no caixa, não por cobrança online"));
+        Cliente cliente = clienteService.buscarPorId(clienteId);
 
         DadosCobrancaExterna dadosExternos = provedorPagamento.criarCobranca(
                 pedido.valorTotal(), "Pedido " + pedido.id(), pedido.id(), meio, cliente);

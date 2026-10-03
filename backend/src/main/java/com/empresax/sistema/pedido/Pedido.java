@@ -3,6 +3,7 @@ package com.empresax.sistema.pedido;
 import com.empresax.sistema.common.domain.DomainException;
 import com.empresax.sistema.documentofiscal.TipoDocumentoFiscal;
 import com.empresax.sistema.shared.dinheiro.Dinheiro;
+import com.empresax.sistema.shared.documento.Cpf;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -20,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -35,8 +37,17 @@ public class Pedido {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false)
+    /** Ausente só na venda de balcão (consumidor não identificado) — o banco garante com CHECK. */
+    @Column
     private UUID clienteId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, updatable = false)
+    private CanalVenda canal;
+
+    /** "CPF na nota" opcional do consumidor no balcão (vai para a NFC-e). */
+    @Column(length = 11, updatable = false)
+    private String cpfNaNota;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -54,10 +65,21 @@ public class Pedido {
     }
 
     public Pedido(UUID clienteId, List<ItemPedido> itensIniciais) {
-        this.clienteId = validarCliente(clienteId);
+        this(validarCliente(clienteId), CanalVenda.PAINEL, null, itensIniciais);
+    }
+
+    private Pedido(UUID clienteId, CanalVenda canal, Cpf cpfNaNota, List<ItemPedido> itensIniciais) {
+        this.clienteId = clienteId;
+        this.canal = canal;
+        this.cpfNaNota = cpfNaNota == null ? null : cpfNaNota.valor();
         this.itens = new ArrayList<>(validarItens(itensIniciais));
         this.status = StatusPedido.ABERTO;
         this.criadoEm = Instant.now();
+    }
+
+    /** Venda presencial: cliente não precisa estar cadastrado; o CPF na nota é opcional. */
+    public static Pedido noBalcao(List<ItemPedido> itens, Cpf cpfNaNota) {
+        return new Pedido(null, CanalVenda.BALCAO, cpfNaNota, itens);
     }
 
     private static UUID validarCliente(UUID clienteId) {
@@ -133,7 +155,7 @@ public class Pedido {
     public Set<TipoDocumentoFiscal> documentosFiscaisNecessarios() {
         Set<TipoDocumentoFiscal> tipos = EnumSet.noneOf(TipoDocumentoFiscal.class);
         for (ItemPedido item : itens) {
-            tipos.add(item.tipo().documentoFiscal());
+            tipos.add(canal.documentoPara(item.tipo()));
         }
         return Collections.unmodifiableSet(tipos);
     }
@@ -142,8 +164,20 @@ public class Pedido {
         return id;
     }
 
-    public UUID clienteId() {
-        return clienteId;
+    public Optional<UUID> clienteId() {
+        return Optional.ofNullable(clienteId);
+    }
+
+    public CanalVenda canal() {
+        return canal;
+    }
+
+    public boolean vendidoNoBalcao() {
+        return canal == CanalVenda.BALCAO;
+    }
+
+    public Optional<String> cpfNaNota() {
+        return Optional.ofNullable(cpfNaNota);
     }
 
     public StatusPedido status() {

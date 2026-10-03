@@ -16,6 +16,8 @@ public final class RegraAcesso {
     public static final String CATALOGO_VER = "hasAuthority('CATALOGO_VER')";
     public static final String CATALOGO_GERENCIAR = "hasAuthority('CATALOGO_GERENCIAR')";
     public static final String ESTOQUE_GERENCIAR = "hasAuthority('ESTOQUE_GERENCIAR')";
+    public static final String PDV_VENDER = "hasAuthority('PDV_VENDER')";
+    public static final String PDV_CANCELAR = "hasAuthority('PDV_CANCELAR')";
     public static final String FISCAL_VER = "hasAuthority('FISCAL_VER')";
     public static final String FISCAL_GERENCIAR = "hasAuthority('FISCAL_GERENCIAR')";
     public static final String COBRANCAS_VER = "hasAuthority('COBRANCAS_VER')";

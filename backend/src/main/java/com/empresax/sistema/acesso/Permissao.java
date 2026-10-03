@@ -9,6 +9,8 @@ public enum Permissao {
     // Primeira de propósito: aparece no topo do formulário de cargo. Ordem não afeta o banco (EnumType.STRING).
     /** Uma permissão só: quem vê o assistente já pode conversar com ele (painel e WhatsApp interno). */
     ASSISTENTE_GESTOR_USAR("Assistente de IA", "Ver e conversar com o assistente (painel e WhatsApp interno)"),
+    PDV_VENDER("Caixa (balcão)", "Vender no caixa: ler produtos e receber o pagamento"),
+    PDV_CANCELAR("Caixa (balcão)", "Cancelar venda do caixa (estorno e devolução ao estoque)"),
     PAINEL_VER("Painel", "Ver o painel"),
     FATURAMENTO_VER("Faturamento", "Ver faturamento"),
     PEDIDOS_VER("Pedidos", "Ver pedidos"),
