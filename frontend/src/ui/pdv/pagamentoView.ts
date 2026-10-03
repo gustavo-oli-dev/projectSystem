@@ -1,9 +1,9 @@
-import type { BandeiraCartao, FormaPagamentoPresencial, PagamentoPresencial } from "../../api/pdvApi.js";
+import type { BandeiraCartao, FormaVendaBalcao, PagamentoPresencial } from "../../api/pdvApi.js";
 import { criarCampoTexto, criarCampoSelecao, type OpcaoSelecao } from "../camposFormulario.js";
 import { formatarMoeda } from "../formatarMoeda.js";
 
 interface OpcaoForma {
-  forma: FormaPagamentoPresencial;
+  forma: FormaVendaBalcao;
   rotulo: string;
 }
 
@@ -11,7 +11,8 @@ const FORMAS: readonly OpcaoForma[] = [
   { forma: "DINHEIRO", rotulo: "Dinheiro" },
   { forma: "CARTAO_CREDITO", rotulo: "Crédito" },
   { forma: "CARTAO_DEBITO", rotulo: "Débito" },
-  { forma: "PIX", rotulo: "Pix" },
+  { forma: "PIX_QR", rotulo: "Pix (QR na tela)" },
+  { forma: "PIX", rotulo: "Pix (maquininha)" },
 ];
 
 const BANDEIRAS: readonly OpcaoSelecao[] = [
@@ -27,6 +28,8 @@ export interface PainelPagamento {
   elemento: HTMLElement;
   /** Chamar quando o total mudar, para recalcular o troco. */
   atualizarTotal: (total: number) => void;
+  /** Pix com QR na tela segue outro fluxo (cobrança no Mercado Pago), sem dados presenciais. */
+  pixNaTela: () => boolean;
   lerPagamento: () => PagamentoPresencial;
   limpar: () => void;
 }
@@ -36,7 +39,7 @@ export interface PainelPagamento {
  * operador passa o cartão na maquininha e digita a autorização do comprovante.
  */
 export function criarPainelPagamento(): PainelPagamento {
-  let formaEscolhida: FormaPagamentoPresencial = "DINHEIRO";
+  let formaEscolhida: FormaVendaBalcao = "DINHEIRO";
   let totalAtual = 0;
 
   const botoes = FORMAS.map((opcao) => {
@@ -68,6 +71,10 @@ export function criarPainelPagamento(): PainelPagamento {
   avisoMaquininha.className = "nota-campo";
   avisoMaquininha.textContent = "Maquininha ainda não integrada: passe o valor na maquininha e digite aqui o código de autorização.";
 
+  const blocoPixNaTela = document.createElement("p");
+  blocoPixNaTela.className = "nota-campo";
+  blocoPixNaTela.textContent = "Ao finalizar, o QR code aparece na tela para o cliente pagar pelo celular. A venda se confirma sozinha quando o Pix cair.";
+
   const blocoDinheiro = document.createElement("div");
   blocoDinheiro.append(recebido.container, troco);
   const blocoMaquininha = document.createElement("div");
@@ -75,9 +82,9 @@ export function criarPainelPagamento(): PainelPagamento {
 
   const elemento = document.createElement("div");
   elemento.className = "painel-pagamento";
-  elemento.append(grupoFormas, blocoDinheiro, blocoMaquininha);
+  elemento.append(grupoFormas, blocoDinheiro, blocoMaquininha, blocoPixNaTela);
 
-  function escolher(forma: FormaPagamentoPresencial): void {
+  function escolher(forma: FormaVendaBalcao): void {
     formaEscolhida = forma;
     botoes.forEach(({ opcao, botao }) => {
       const ativa = opcao.forma === forma;
@@ -85,7 +92,8 @@ export function criarPainelPagamento(): PainelPagamento {
       botao.setAttribute("aria-checked", String(ativa));
     });
     blocoDinheiro.hidden = forma !== "DINHEIRO";
-    blocoMaquininha.hidden = forma === "DINHEIRO";
+    blocoMaquininha.hidden = forma === "DINHEIRO" || forma === "PIX_QR";
+    blocoPixNaTela.hidden = forma !== "PIX_QR";
     bandeira.container.hidden = forma === "PIX";
     autorizacao.container.querySelector("label")?.replaceChildren(
       forma === "PIX" ? "Identificador do Pix (no comprovante)" : "Código de autorização (no comprovante)");
@@ -106,8 +114,9 @@ export function criarPainelPagamento(): PainelPagamento {
       totalAtual = total;
       atualizarTroco();
     },
+    pixNaTela: () => formaEscolhida === "PIX_QR",
     lerPagamento: () => ({
-      forma: formaEscolhida,
+      forma: formaEscolhida === "PIX_QR" ? "PIX" : formaEscolhida,
       valorRecebido: formaEscolhida === "DINHEIRO" && recebido.entrada.value !== "" ? Number(recebido.entrada.value) : null,
       bandeira: formaEscolhida === "CARTAO_CREDITO" || formaEscolhida === "CARTAO_DEBITO"
         ? bandeira.selecao.value as BandeiraCartao

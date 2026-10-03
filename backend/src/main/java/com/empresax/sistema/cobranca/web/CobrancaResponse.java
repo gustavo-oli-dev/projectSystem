@@ -10,7 +10,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * qrCodeCopiaECola/linhaDigitavelBoleto/urlBoleto só vêm preenchidos na resposta de criação —
+ * Dados do Pix (copia e cola, imagem do QR) e do boleto só vêm preenchidos na resposta de criação —
  * não são persistidos (ver CobrancaCriada). Uma consulta posterior (GET) não os repete.
  */
 public record CobrancaResponse(
@@ -20,6 +20,7 @@ public record CobrancaResponse(
         BigDecimal valor,
         StatusCobranca status,
         String qrCodeCopiaECola,
+        String qrCodeImagemBase64,
         String linhaDigitavelBoleto,
         String urlBoleto,
         Instant criadoEm
@@ -28,7 +29,7 @@ public record CobrancaResponse(
     public static CobrancaResponse de(Cobranca cobranca) {
         return new CobrancaResponse(
                 cobranca.id(), cobranca.pedidoId(), cobranca.meio(), cobranca.valor().valor(), cobranca.status(),
-                null, null, null, cobranca.criadoEm());
+                null, null, null, null, cobranca.criadoEm());
     }
 
     public static CobrancaResponse de(CobrancaCriada cobrancaCriada) {
@@ -36,6 +37,7 @@ public record CobrancaResponse(
         var dados = cobrancaCriada.dadosExternos();
         return new CobrancaResponse(
                 cobranca.id(), cobranca.pedidoId(), cobranca.meio(), cobranca.valor().valor(), cobranca.status(),
-                dados.qrCodeCopiaECola(), dados.linhaDigitavelBoleto(), dados.urlBoleto(), cobranca.criadoEm());
+                dados.qrCodeCopiaECola(), dados.qrCodeImagemBase64(), dados.linhaDigitavelBoleto(), dados.urlBoleto(),
+                cobranca.criadoEm());
     }
 }

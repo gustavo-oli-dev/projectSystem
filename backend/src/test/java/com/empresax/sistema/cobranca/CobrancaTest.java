@@ -1,5 +1,6 @@
 package com.empresax.sistema.cobranca;
 
+import com.empresax.sistema.cobranca.pagamento.StatusPagamentoExterno;
 import com.empresax.sistema.common.domain.DomainException;
 import com.empresax.sistema.shared.dinheiro.Dinheiro;
 import org.junit.jupiter.api.Test;
@@ -50,6 +51,26 @@ class CobrancaTest {
     void rejeitaReferenciaExternaEmBranco() {
         assertThatThrownBy(() -> new Cobranca(UUID.randomUUID(), MeioCobranca.PIX, VALOR, " "))
                 .isInstanceOf(DomainException.class);
+    }
+
+    @Test
+    void avisoDeAprovadoDoProvedorDaBaixaNaCobrancaPendente() {
+        Cobranca cobranca = new Cobranca(UUID.randomUUID(), MeioCobranca.PIX, VALOR, "ref-externa-8");
+
+        cobranca.aplicarStatusDoProvedor(StatusPagamentoExterno.APROVADO);
+
+        assertThat(cobranca.status()).isEqualTo(StatusCobranca.PAGA);
+    }
+
+    @Test
+    void avisoAtrasadoDoProvedorNaoDesfazReembolso() {
+        Cobranca cobranca = new Cobranca(UUID.randomUUID(), MeioCobranca.PIX, VALOR, "ref-externa-9");
+        cobranca.marcarComoPaga();
+        cobranca.marcarComoReembolsada();
+
+        cobranca.aplicarStatusDoProvedor(StatusPagamentoExterno.REJEITADO);
+
+        assertThat(cobranca.status()).isEqualTo(StatusCobranca.REEMBOLSADA);
     }
 
     @Test

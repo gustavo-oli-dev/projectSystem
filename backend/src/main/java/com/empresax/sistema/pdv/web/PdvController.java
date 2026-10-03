@@ -47,6 +47,26 @@ public class PdvController {
         return VendaBalcaoResponse.de(pdvService.vender(itens, requisicao.cpfNaNota(), dados, operador.getUsername()));
     }
 
+    /** Pix com QR code na tela: separa os produtos do estoque e devolve o QR para o cliente pagar. */
+    @PreAuthorize(RegraAcesso.PDV_VENDER)
+    @PostMapping("/pix")
+    @ResponseStatus(HttpStatus.CREATED)
+    public VendaPixResponse iniciarComPix(
+            @Valid @RequestBody VendaPixRequest requisicao, @AuthenticationPrincipal UserDetails operador
+    ) {
+        List<ItemPedidoRequerido> itens = requisicao.itens().stream()
+                .map(item -> new ItemPedidoRequerido(TipoItem.PRODUTO, item.produtoId(), item.quantidade()))
+                .toList();
+        return VendaPixResponse.de(pdvService.iniciarVendaComPix(itens, requisicao.cpfNaNota(), operador.getUsername()));
+    }
+
+    /** O caixa consulta a cada poucos segundos até o Pix cair (ou o operador cancelar). */
+    @PreAuthorize(RegraAcesso.PDV_VENDER)
+    @GetMapping("/{pedidoId}/pix")
+    public VendaBalcaoResponse acompanharPix(@PathVariable UUID pedidoId) {
+        return VendaBalcaoResponse.de(pdvService.acompanharPix(pedidoId));
+    }
+
     @PreAuthorize(RegraAcesso.PDV_VENDER + " or " + RegraAcesso.PDV_CANCELAR)
     @GetMapping
     public List<VendaBalcaoResponse> ultimas() {

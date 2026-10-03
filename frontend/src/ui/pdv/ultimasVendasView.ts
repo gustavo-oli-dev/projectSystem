@@ -11,7 +11,14 @@ export const ROTULO_FORMA: Record<VendaBalcao["formaPagamento"], string> = {
   DINHEIRO: "Dinheiro",
   CARTAO_CREDITO: "Crédito",
   CARTAO_DEBITO: "Débito",
-  PIX: "Pix",
+  PIX: "Pix (maquininha)",
+  PIX_QR: "Pix (QR na tela)",
+};
+
+const SITUACAO_VENDA: Record<VendaBalcao["statusPagamento"], { rotulo: string; modificador: string }> = {
+  AGUARDANDO: { rotulo: "Aguardando Pix", modificador: "pendente" },
+  APROVADO: { rotulo: "Concluída", modificador: "concluido" },
+  ESTORNADO: { rotulo: "Cancelada", modificador: "cancelado" },
 };
 
 export async function carregarUltimasVendas(area: HTMLElement): Promise<void> {
@@ -34,7 +41,7 @@ function renderizar(area: HTMLElement, vendas: VendaBalcao[]): void {
     celula(venda.itens.map((item) => `${item.quantidade}× ${item.descricao}`).join(", ")),
     celula(formatarMoeda(venda.total)),
     celula(ROTULO_FORMA[venda.formaPagamento]),
-    venda.statusPagamento === "ESTORNADO" ? celulaSelo("Cancelada", "cancelado") : celulaSelo("Concluída", "concluido"),
+    celulaSelo(SITUACAO_VENDA[venda.statusPagamento].rotulo, SITUACAO_VENDA[venda.statusPagamento].modificador),
     celulaComConteudo(criarAcoes(venda, area, erro))
   ));
   area.replaceChildren(erro, criarTabela(["Quando", "Itens", "Total", "Pagamento", "Situação", ""], linhas, "venda(s) recentes"));
@@ -51,7 +58,7 @@ function criarAcoes(venda: VendaBalcao, area: HTMLElement, erro: HTMLElement): H
   detalhe.addEventListener("click", () => navegarPara("pedido-detalhe", venda.pedidoId));
   acoes.append(detalhe);
 
-  if (venda.statusPagamento === "APROVADO" && possui("PDV_CANCELAR")) {
+  if (venda.statusPagamento !== "ESTORNADO" && possui("PDV_CANCELAR")) {
     const cancelar = document.createElement("button");
     cancelar.type = "button";
     cancelar.className = "btn btn-ghost btn-pequeno";
@@ -74,8 +81,19 @@ function criarAcoes(venda: VendaBalcao, area: HTMLElement, erro: HTMLElement): H
 }
 
 function mensagemCancelamento(venda: VendaBalcao): string {
-  const devolucao = venda.formaPagamento === "DINHEIRO"
-    ? `Devolva ${formatarMoeda(venda.total)} em dinheiro ao cliente.`
-    : `Faça também o estorno de ${formatarMoeda(venda.total)} na maquininha (ela ainda não é integrada).`;
+  const devolucao = mensagemDevolucao(venda);
   return `Cancelar esta venda? Os produtos voltam ao estoque. ${devolucao}`;
+}
+
+function mensagemDevolucao(venda: VendaBalcao): string {
+  const valor = formatarMoeda(venda.total);
+  if (venda.formaPagamento === "PIX_QR") {
+    return venda.statusPagamento === "APROVADO"
+      ? `O Pix de ${valor} é devolvido automaticamente pelo Mercado Pago.`
+      : "O Pix ainda não pago é cancelado no Mercado Pago.";
+  }
+  if (venda.formaPagamento === "DINHEIRO") {
+    return `Devolva ${valor} em dinheiro ao cliente.`;
+  }
+  return `Faça também o estorno de ${valor} na maquininha (ela ainda não é integrada).`;
 }

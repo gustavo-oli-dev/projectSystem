@@ -23,6 +23,8 @@ marcar como feito.
       `.env`) para o dono e para você. Hoje só existe `admin@empresax.com` (senha fraca de teste,
       convertido para irrestrito pela V7) — desativar ou trocar a senha antes de expor o sistema.
 - [ ] **Maquininha integrada (D19)**: escolher o fornecedor (Mercado Pago Point, Stone, Cielo...) e trocar o modo avulso pelo envio automático do valor. A regra estadual exige integração (tpIntegra = 1 na NFC-e); confirmar na legislação do Ceará o prazo e o layout antes de produção.
+- [ ] **Pix com QR na tela do caixa**: pronto, mas depende do token do Mercado Pago. Conferir com o token de teste se a API de Pix exige e-mail do pagador (o consumidor do balcão não informa) — se exigir, usar o fluxo de QR presencial do Mercado Pago (loja/caixa cadastrados).
+- [ ] **Fotos na loja do WhatsApp**: o bot do cliente enviar a foto do produto quando perguntarem (envio de imagem da W-API + endereço público para a imagem).
 - [ ] **Transmissão da NFC-e**: exige CSC (código de segurança do contribuinte) da SEFAZ-CE, além do certificado A1 — depende da transmissão fiscal.
 - [ ] **Próximas áreas pedidas (03/10)**: histórico de vendas com busca por produto; relatórios
       (quantidade vendida por dia/semana/mês/3 meses/ano, faturamento, mais vendidos, estoque

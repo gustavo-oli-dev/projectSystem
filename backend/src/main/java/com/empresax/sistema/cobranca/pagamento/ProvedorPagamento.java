@@ -1,20 +1,21 @@
 package com.empresax.sistema.cobranca.pagamento;
 
-import com.empresax.sistema.cliente.Cliente;
 import com.empresax.sistema.cobranca.MeioCobranca;
 import com.empresax.sistema.shared.dinheiro.Dinheiro;
+import com.empresax.sistema.shared.documento.Documento;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
  * Porta para o provedor de pagamento (Mercado Pago, decisão D4 em DECISOES.md). Isolar a
- * interface permite trocar de provedor sem tocar em CobrancaService. O Cliente é passado porque o
- * Mercado Pago exige identificação do pagador (CPF/CNPJ) para Pix e boleto.
+ * interface permite trocar de provedor sem tocar em CobrancaService. O documento do pagador
+ * (CPF/CNPJ) vai quando existe: cliente cadastrado, ou CPF na nota no balcão. Boleto exige o documento.
  */
 public interface ProvedorPagamento {
 
     DadosCobrancaExterna criarCobranca(
-            Dinheiro valor, String descricao, UUID referenciaPedido, MeioCobranca meio, Cliente cliente);
+            Dinheiro valor, String descricao, UUID referenciaPedido, MeioCobranca meio, Optional<Documento> documentoPagador);
 
     StatusPagamentoExterno consultarStatus(String referenciaExterna);
 

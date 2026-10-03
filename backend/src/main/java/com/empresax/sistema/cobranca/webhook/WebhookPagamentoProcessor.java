@@ -72,10 +72,6 @@ public class WebhookPagamentoProcessor {
             }
             return;
         }
-        switch (status) {
-            case APROVADO -> cobranca.marcarComoPaga();
-            case REJEITADO -> cobranca.cancelar();
-            case PENDENTE -> { /* nada muda; aguarda a próxima execução */ }
-        }
+        cobranca.aplicarStatusDoProvedor(status);
     }
 }

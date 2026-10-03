@@ -1,4 +1,4 @@
-import { cadastrarProduto, listarProdutos, type NovoProduto, type Produto } from "../../api/produtosApi.js";
+import { cadastrarProduto, enviarFoto, listarProdutos, type NovoProduto, type Produto } from "../../api/produtosApi.js";
 import { navegarPara } from "../../router.js";
 import { possui } from "../../state/sessaoState.js";
 import { criarCampoTexto, criarMensagemErro, mostrarErro, textoOuNulo } from "../camposFormulario.js";
@@ -8,6 +8,7 @@ import { formatarMoeda } from "../formatarMoeda.js";
 import { celula, celulaComConteudo, celulaSelo, criarLinha, criarTabela } from "../tabela.js";
 import { montarEdicaoProduto } from "./edicaoProdutoView.js";
 import { criarImagemPrincipal } from "./imagemProduto.js";
+import { criarSeletorFotos } from "./seletorFotosView.js";
 import { situacaoEstoque } from "./situacaoEstoque.js";
 
 /** "#/gerenciar-produtos" → lista; "#/gerenciar-produtos/<id>" → edição do produto. */
@@ -45,13 +46,28 @@ function alternarFormulario(areaFormulario: HTMLElement): void {
     areaFormulario.replaceChildren();
     return;
   }
-  areaFormulario.append(
-    criarFormularioNovoProduto(async (novo) => {
-      const criado = await cadastrarProduto(novo);
-      // Logo depois de criar, abre a edição para adicionar fotos e estoque.
-      navegarPara("gerenciar-produtos", criado.id);
-    })
-  );
+  areaFormulario.append(criarFormularioNovoProduto(salvarComFotos));
+}
+
+/**
+ * Cria o produto e envia as fotos escolhidas, uma por vez. Se alguma foto falhar, o produto já
+ * existe: avisa e segue para a edição (lá dá para tentar a foto de novo) em vez de criar duplicado.
+ */
+async function salvarComFotos(novo: NovoProduto, fotos: File[]): Promise<void> {
+  const criado = await cadastrarProduto(novo);
+  const falhas: string[] = [];
+  for (const foto of fotos) {
+    try {
+      await enviarFoto(criado.id, foto);
+    } catch (falha) {
+      falhas.push(`${foto.name}: ${falha instanceof Error ? falha.message : "falhou"}`);
+    }
+  }
+  if (falhas.length > 0) {
+    const lista = falhas.join("\n");
+    window.alert(`Produto criado, mas algumas fotos não foram enviadas:\n${lista}\n\nTente de novo na tela do produto.`);
+  }
+  navegarPara("gerenciar-produtos", criado.id);
 }
 
 async function carregar(areaLista: HTMLElement): Promise<void> {
@@ -94,9 +110,10 @@ function renderizarLista(areaLista: HTMLElement, produtos: Produto[]): void {
   );
 }
 
-function criarFormularioNovoProduto(aoSalvar: (produto: NovoProduto) => Promise<void>): HTMLFormElement {
+function criarFormularioNovoProduto(aoSalvar: (produto: NovoProduto, fotos: File[]) => Promise<void>): HTMLFormElement {
   const formulario = document.createElement("form");
-  formulario.className = "formulario-cartao";
+  formulario.className = "formulario-cartao formulario-produto";
+  const seletorFotos = criarSeletorFotos();
 
   const nome = criarCampoTexto("produto-nome", "Nome", "text", true);
   const descricao = criarCampoTexto("produto-descricao", "Descrição", "text", false);
@@ -116,16 +133,26 @@ function criarFormularioNovoProduto(aoSalvar: (produto: NovoProduto) => Promise<
   const botaoSalvar = document.createElement("button");
   botaoSalvar.type = "submit";
   botaoSalvar.className = "btn btn-primary btn-pequeno";
-  botaoSalvar.textContent = "Criar e adicionar fotos";
+  botaoSalvar.textContent = "Criar produto";
 
   const acoes = document.createElement("div");
   acoes.className = "formulario-cartao__acoes";
   acoes.append(botaoSalvar);
 
-  formulario.append(
-    nome.container, descricao.container, preco.container, ncm.container,
-    unidade.container, codigoBarras.container, erro, acoes
+  const colunaDados = document.createElement("div");
+  colunaDados.className = "formulario-produto__dados";
+  colunaDados.append(
+    nome.container, descricao.container, preco.container, ncm.container, unidade.container, codigoBarras.container
   );
+
+  const tituloFotos = document.createElement("p");
+  tituloFotos.className = "subtitulo-bloco";
+  tituloFotos.textContent = "Fotos (aparecem no site e na loja do WhatsApp)";
+  const colunaFotos = document.createElement("div");
+  colunaFotos.className = "formulario-produto__fotos";
+  colunaFotos.append(tituloFotos, seletorFotos.elemento);
+
+  formulario.append(colunaDados, colunaFotos, erro, acoes);
 
   formulario.addEventListener("submit", (evento) => {
     evento.preventDefault();
@@ -138,7 +165,7 @@ function criarFormularioNovoProduto(aoSalvar: (produto: NovoProduto) => Promise<
       unidadeMedida: unidade.entrada.value,
       precoUnitario: Number(preco.entrada.value),
       codigoBarras: textoOuNulo(codigoBarras.entrada.value),
-    })
+    }, seletorFotos.arquivos())
       .catch((falha: unknown) => mostrarErro(erro, falha, "Não foi possível criar o produto. Confira os dados."))
       .finally(() => {
         botaoSalvar.disabled = false;

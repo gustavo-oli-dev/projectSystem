@@ -1,5 +1,6 @@
 package com.empresax.sistema.cobranca;
 
+import com.empresax.sistema.cobranca.pagamento.StatusPagamentoExterno;
 import com.empresax.sistema.common.domain.DomainException;
 import com.empresax.sistema.shared.dinheiro.Dinheiro;
 import jakarta.persistence.Column;
@@ -97,6 +98,21 @@ public class Cobranca {
         garantirPendente();
         this.status = StatusCobranca.PAGA;
         this.atualizadoEm = Instant.now();
+    }
+
+    /**
+     * Aplica o que o provedor informou. Só cobrança pendente muda: avisos repetidos ou atrasados
+     * (inclusive depois de um reembolso) são ignorados, para nunca desfazer um estado final.
+     */
+    public void aplicarStatusDoProvedor(StatusPagamentoExterno statusExterno) {
+        if (!aguardandoPagamento()) {
+            return;
+        }
+        switch (statusExterno) {
+            case APROVADO -> marcarComoPaga();
+            case REJEITADO -> cancelar();
+            case PENDENTE -> { /* continua aguardando */ }
+        }
     }
 
     public void marcarComoVencida() {

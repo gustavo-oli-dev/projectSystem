@@ -1,8 +1,9 @@
 package com.empresax.sistema.cobranca.pagamento;
 
-import com.empresax.sistema.cliente.Cliente;
 import com.empresax.sistema.cobranca.MeioCobranca;
 import com.empresax.sistema.shared.dinheiro.Dinheiro;
+import com.empresax.sistema.shared.documento.Documento;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,6 +15,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -46,9 +48,9 @@ public class MercadoPagoProvedorPagamento implements ProvedorPagamento {
 
     @Override
     public DadosCobrancaExterna criarCobranca(
-            Dinheiro valor, String descricao, UUID referenciaPedido, MeioCobranca meio, Cliente cliente
+            Dinheiro valor, String descricao, UUID referenciaPedido, MeioCobranca meio, Optional<Documento> documentoPagador
     ) {
-        String corpo = montarCorpoCriacao(valor, descricao, meio, cliente);
+        String corpo = montarCorpoCriacao(valor, descricao, meio, documentoPagador);
         HttpRequest requisicao = HttpRequest.newBuilder()
                 .uri(URI.create(URL_BASE + "/v1/payments"))
                 .header("Authorization", "Bearer " + tokenAcesso)
@@ -96,14 +98,20 @@ public class MercadoPagoProvedorPagamento implements ProvedorPagamento {
         enviarELer(requisicao);
     }
 
-    private String montarCorpoCriacao(Dinheiro valor, String descricao, MeioCobranca meio, Cliente cliente) {
+    /** Pagador sem documento (consumidor do balcão sem CPF na nota) vai sem identificação. */
+    private String montarCorpoCriacao(
+            Dinheiro valor, String descricao, MeioCobranca meio, Optional<Documento> documentoPagador
+    ) {
         String metodoPagamento = meio == MeioCobranca.PIX ? METODO_PIX : METODO_BOLETO;
-        TipoDocumentoMercadoPago tipoDocumento = TipoDocumentoMercadoPago.de(cliente.documento());
+        Pagador pagador = documentoPagador
+                .map(documento -> new Pagador(new IdentificacaoPagador(
+                        TipoDocumentoMercadoPago.de(documento).codigo(), documento.valor())))
+                .orElse(null);
         RequisicaoPagamento requisicao = new RequisicaoPagamento(
                 valor.valor(),
                 descricao,
                 metodoPagamento,
-                new Pagador(new IdentificacaoPagador(tipoDocumento.codigo(), cliente.documento().valor()))
+                pagador
         );
         return escreverJson(requisicao);
     }
@@ -113,11 +121,12 @@ public class MercadoPagoProvedorPagamento implements ProvedorPagamento {
         if (meio == MeioCobranca.PIX) {
             JsonNode dadosTransacao = resposta.path("point_of_interaction").path("transaction_data");
             String copiaECola = dadosTransacao.path("qr_code").asText(null);
-            return new DadosCobrancaExterna(id, copiaECola, null, null);
+            String imagemQr = dadosTransacao.path("qr_code_base64").asText(null);
+            return new DadosCobrancaExterna(id, copiaECola, imagemQr, null, null);
         }
         String linhaDigitavel = resposta.path("barcode").path("content").asText(null);
         String urlBoleto = resposta.path("transaction_details").path("external_resource_url").asText(null);
-        return new DadosCobrancaExterna(id, null, linhaDigitavel, urlBoleto);
+        return new DadosCobrancaExterna(id, null, null, linhaDigitavel, urlBoleto);
     }
 
     private StatusPagamentoExterno interpretarStatus(JsonNode resposta) {
@@ -152,6 +161,7 @@ public class MercadoPagoProvedorPagamento implements ProvedorPagamento {
         }
     }
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private record RequisicaoPagamento(
             @JsonProperty("transaction_amount") java.math.BigDecimal valorTransacao,
             String description,

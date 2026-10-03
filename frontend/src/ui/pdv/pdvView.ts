@@ -1,4 +1,4 @@
-import { venderNoBalcao, type VendaBalcao } from "../../api/pdvApi.js";
+import { iniciarVendaComPix, venderNoBalcao, type VendaBalcao } from "../../api/pdvApi.js";
 import { listarProdutos, type Produto } from "../../api/produtosApi.js";
 import {
   adicionarAoCarrinho,
@@ -15,6 +15,7 @@ import { formatarMoeda } from "../formatarMoeda.js";
 import { renderizarCarrinho } from "./carrinhoView.js";
 import { criarCampoLeitura } from "./leituraView.js";
 import { criarPainelPagamento } from "./pagamentoView.js";
+import { criarPainelPix } from "./pixNaTelaView.js";
 import { carregarUltimasVendas, ROTULO_FORMA } from "./ultimasVendasView.js";
 
 /** Caixa (PDV): ler produtos → conferir → receber → finalizar. O estoque é o mesmo do site e do WhatsApp. */
@@ -93,22 +94,32 @@ function montarVenda(area: HTMLElement, produtos: Produto[], aoVender: () => voi
   atualizar();
   leitura.focar();
 
+  const novaVenda = (): void => montarVenda(area, produtos, aoVender);
+  const mostrarRecibo = (venda: VendaBalcao): void => {
+    area.replaceChildren(criarRecibo(venda, novaVenda));
+    aoVender();
+  };
+
   finalizar.addEventListener("click", () => {
     erro.hidden = true;
     finalizar.disabled = true;
-    venderNoBalcao({
-      itens: itensDoCarrinho().map((item) => ({ produtoId: item.produto.id, quantidade: item.quantidade })),
-      cpfNaNota: textoOuNulo(cpf.entrada.value),
-      pagamento: pagamento.lerPagamento(),
-    })
-      .then((venda) => {
-        area.replaceChildren(criarRecibo(venda, () => montarVenda(area, produtos, aoVender)));
+    const itens = itensDoCarrinho().map((item) => ({ produtoId: item.produto.id, quantidade: item.quantidade }));
+    const cpfNaNota = textoOuNulo(cpf.entrada.value);
+
+    const venda: Promise<unknown> = pagamento.pixNaTela()
+      ? iniciarVendaComPix(itens, cpfNaNota).then((pix) => {
+        area.replaceChildren(criarPainelPix(pix, mostrarRecibo, () => {
+          novaVenda();
+          aoVender();
+        }));
         aoVender();
       })
-      .catch((falha: unknown) => {
-        mostrarErro(erro, falha, "Não foi possível finalizar a venda.");
-        finalizar.disabled = false;
-      });
+      : venderNoBalcao({ itens, cpfNaNota, pagamento: pagamento.lerPagamento() }).then(mostrarRecibo);
+
+    venda.catch((falha: unknown) => {
+      mostrarErro(erro, falha, "Não foi possível finalizar a venda.");
+      finalizar.disabled = false;
+    });
   });
 }
 
