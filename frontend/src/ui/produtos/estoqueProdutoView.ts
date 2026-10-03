@@ -108,12 +108,14 @@ async function carregarHistorico(produto: Produto, area: HTMLElement): Promise<v
 function criarLinhaMovimentacao(movimentacao: MovimentacaoEstoque): HTMLTableRowElement {
   const sinal = movimentacao.tipo === "VENDA" ? "−" : "+";
   return criarLinha(
-    celula(new Date(movimentacao.criadaEm).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })),
+    celula(new Date(movimentacao.criadaEm).toLocaleString("pt-BR", {
+      day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+    })),
     celulaSelo(ROTULO_MOVIMENTACAO[movimentacao.tipo], MODIFICADOR_MOVIMENTACAO[movimentacao.tipo]),
     celula(`${sinal}${movimentacao.quantidade}`),
     celula(String(movimentacao.saldoApos)),
     movimentacao.pedidoId === null ? celula("—") : celulaComConteudo(criarLinkPedido(movimentacao.pedidoId)),
-    celula(movimentacao.responsavel)
+    celulaResponsavel(movimentacao.responsavel)
   );
 }
 
@@ -124,4 +126,11 @@ function criarLinkPedido(pedidoId: string): HTMLButtonElement {
   botao.textContent = `#${pedidoId.slice(0, 8)}`;
   botao.addEventListener("click", () => navegarPara("pedido-detalhe", pedidoId));
   return botao;
+}
+
+/** Mostra só a parte antes do @ (cabe na coluna); o e-mail completo fica no "title". */
+function celulaResponsavel(responsavel: string): HTMLTableCellElement {
+  const elemento = celula(responsavel.split("@")[0] ?? responsavel);
+  elemento.title = responsavel;
+  return elemento;
 }

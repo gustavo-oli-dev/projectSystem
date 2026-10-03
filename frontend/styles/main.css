@@ -2186,7 +2186,7 @@ form p[role="alert"] {
 
 /* Cadastro de produto: dados à esquerda, fotos à direita (ocupa a largura útil da tela). */
 .formulario-produto {
-  max-width: 64rem;
+  max-width: none;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 1rem 2rem;
@@ -2648,4 +2648,55 @@ form.formulario-produto > .formulario-produto__fotos {
   .formas-pagamento {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+.entrada-leitura {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.entrada-leitura .contador-leitura {
+  margin-top: 0.25rem;
+}
+
+.entrada-leitura .leitura__aviso:empty {
+  display: none;
+}
+
+.recibo .lista-dados {
+  margin-bottom: 1.5rem;
+}
+
+.formas-pagamento {
+  margin-bottom: 0.75rem;
+}
+
+.painel-pagamento .nota-campo {
+  margin-top: 0;
+}
+
+.cliente-caixa .link-discreto,
+.painel-pagamento .link-discreto {
+  align-self: flex-start;
+  text-align: left;
+}
+
+.caixa-troco__valor {
+  white-space: nowrap;
+}
+
+/* Campo e caixa de troco dividem a largura sem um empurrar o outro para fora do painel. */
+.bloco-dinheiro {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.bloco-dinheiro input {
+  width: 100%;
+  min-width: 0;
+}
+
+.caixa-troco {
+  min-width: 0;
+  overflow: hidden;
 }
