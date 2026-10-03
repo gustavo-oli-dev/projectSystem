@@ -12,6 +12,7 @@ public record AtualizarProdutoRequest(
         String descricao,
         @NotNull(message = "Preço unitário é obrigatório")
         @DecimalMin(value = "0.0", message = "Preço unitário não pode ser negativo") BigDecimal precoUnitario,
-        @Size(max = 14, message = "Código de barras tem no máximo 14 dígitos") String codigoBarras
+        @Size(max = 14, message = "Código de barras tem no máximo 14 dígitos") String codigoBarras,
+        @DecimalMin(value = "0.0", message = "Custo não pode ser negativo") BigDecimal custoUnitario
 ) {
 }

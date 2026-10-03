@@ -3058,3 +3058,400 @@ form.formulario-produto > .formulario-produto__fotos {
 .leitura__sugestoes:empty {
   display: none;
 }
+
+/* =========================================================================
+   Painel de relatórios (D21)
+   Cor da série validada (scripts/validate_palette.js, superfície #fbfcfd): #2a78d6.
+   ========================================================================= */
+:root {
+  --serie-1: #2a78d6;
+  --serie-1-ativa: #5598e7;
+  --grade-grafico: #e3e6ec;
+  --eixo-grafico: #b6bdc9;
+  --texto-variacao-boa: #006300;
+  --texto-variacao-ruim: #b42318;
+}
+
+.filtro-periodo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 1.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-cartao);
+  background: var(--cor-superficie);
+}
+
+.filtro-periodo__atalhos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.filtro-periodo__atalho {
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--cor-texto);
+}
+
+.filtro-periodo__atalho:hover {
+  background: var(--cor-superficie-suave);
+}
+
+.filtro-periodo__atalho[aria-pressed="true"] {
+  border-color: var(--cor-primaria);
+  background: var(--cor-primaria-suave);
+  color: var(--cor-primaria);
+}
+
+.filtro-periodo__datas {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filtro-periodo__datas input {
+  padding: 0.4375rem 0.625rem;
+  font-size: 0.8125rem;
+}
+
+.filtro-periodo__ate {
+  font-size: 0.8125rem;
+  color: var(--cor-texto-suave);
+}
+
+.painel-relatorio {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  transition: opacity 0.15s ease;
+}
+
+.painel-relatorio--atualizando {
+  opacity: 0.5;
+}
+
+.indicadores {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.indicador {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 1.125rem 1.25rem;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-cartao);
+  background: var(--cor-superficie);
+}
+
+.indicador--destaque {
+  grid-column: span 2;
+  border-color: #bcd3f5;
+}
+
+.indicador__rotulo {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--cor-texto-suave);
+}
+
+.indicador__valor {
+  margin: 0;
+  font-size: 1.625rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--cor-texto);
+}
+
+.indicador--destaque .indicador__valor {
+  font-size: 2.5rem;
+}
+
+.indicador__variacao {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--cor-texto-suave);
+}
+
+.indicador__variacao--boa {
+  color: var(--texto-variacao-boa);
+}
+
+.indicador__variacao--ruim {
+  color: var(--texto-variacao-ruim);
+}
+
+.indicador__nota {
+  margin: auto 0 0;
+  padding-top: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--cor-texto-suave);
+}
+
+.cartao-relatorio {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-cartao);
+  background: var(--cor-superficie);
+}
+
+.cartao-relatorio__cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.cartao-relatorio__cabecalho h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.cartao-relatorio__tabela > summary {
+  width: fit-content;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--cor-primaria);
+  cursor: pointer;
+}
+
+.cartao-relatorio__tabela[open] > summary {
+  margin-bottom: 0.75rem;
+}
+
+.cartao-relatorio .estado-cartao {
+  padding: 1.5rem;
+}
+
+.linha-relatorio {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.linha-relatorio--tres {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Gráfico de colunas */
+.grafico {
+  position: relative;
+  width: 100%;
+}
+
+.grafico svg {
+  display: block;
+  overflow: visible;
+}
+
+.grafico__grade {
+  stroke: var(--grade-grafico);
+  stroke-width: 1;
+}
+
+.grafico__base {
+  stroke: var(--eixo-grafico);
+  stroke-width: 1;
+}
+
+.grafico__eixo {
+  font-size: 11px;
+  fill: var(--cor-texto-suave);
+  font-variant-numeric: tabular-nums;
+}
+
+.grafico__eixo--y {
+  text-anchor: end;
+}
+
+.grafico__eixo--x {
+  text-anchor: middle;
+}
+
+.grafico__coluna {
+  fill: var(--serie-1);
+  transition: fill 0.1s ease;
+}
+
+.grafico__coluna--ativa {
+  fill: var(--serie-1-ativa);
+}
+
+.grafico__alvo {
+  fill: transparent;
+  cursor: default;
+}
+
+.grafico__alvo:focus-visible {
+  outline: none;
+  fill: rgba(42, 120, 214, 0.08);
+}
+
+.grafico__dica {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 9rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+  box-shadow: 0 4px 16px rgba(18, 26, 44, 0.12);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.grafico__dica strong {
+  font-size: 0.9375rem;
+  color: var(--cor-texto);
+}
+
+.grafico__dica-titulo,
+.grafico__dica-linha {
+  font-size: 0.75rem;
+  color: var(--cor-texto-suave);
+}
+
+/* Barras horizontais (canal, forma de pagamento, situação) */
+.barras {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.barras__item {
+  display: grid;
+  grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 1rem;
+}
+
+.barras__rotulo {
+  font-size: 0.875rem;
+  color: var(--cor-texto);
+}
+
+.barras__trilho {
+  height: 0.625rem;
+  border-radius: 0 4px 4px 0;
+  background: var(--cor-superficie-suave);
+}
+
+.barras__preenchimento {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: 0 4px 4px 0;
+  background: var(--serie-1);
+}
+
+.barras__valor {
+  font-size: 0.875rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.barras__detalhe {
+  grid-column: 3;
+  font-size: 0.75rem;
+  color: var(--cor-texto-suave);
+  text-align: right;
+}
+
+.barras__detalhe:empty {
+  display: none;
+}
+
+/* Parte operacional */
+.painel-operacional {
+  margin-top: 2rem;
+}
+
+.painel-operacional__titulo {
+  margin: 0 0 1rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+.painel-operacional__resumo {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.lista-simples {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lista-simples li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.625rem 0;
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.lista-simples li:last-child {
+  border-bottom: none;
+}
+
+@media (max-width: 1400px) {
+  .indicadores {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .linha-relatorio,
+  .linha-relatorio--tres {
+    grid-template-columns: 1fr;
+  }
+
+  .indicadores {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Indicadores numa linha só: faturamento ocupa 2 colunas + 5 indicadores = 7. */
+.indicadores {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+@media (max-width: 1600px) {
+  .indicadores {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .indicadores {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

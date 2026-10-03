@@ -60,6 +60,10 @@ public class Pedido {
     @Column(nullable = false, updatable = false)
     private Instant criadoEm;
 
+    /** Momento da venda de fato (confirmação = baixa no estoque). É a data que os relatórios usam. */
+    @Column
+    private Instant confirmadoEm;
+
     protected Pedido() {
         // exigido pelo JPA
     }
@@ -110,6 +114,7 @@ public class Pedido {
             throw new DomainException("Pedido sem itens não pode ser confirmado");
         }
         this.status = StatusPedido.AGUARDANDO_EMISSAO;
+        this.confirmadoEm = Instant.now();
     }
 
     public void concluir() {
@@ -190,5 +195,9 @@ public class Pedido {
 
     public Instant criadoEm() {
         return criadoEm;
+    }
+
+    public Optional<Instant> confirmadoEm() {
+        return Optional.ofNullable(confirmadoEm);
     }
 }

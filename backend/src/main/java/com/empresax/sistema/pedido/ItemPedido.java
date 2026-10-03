@@ -32,6 +32,10 @@ public class ItemPedido {
     @Column(nullable = false)
     private int quantidade;
 
+    /** Custo unitário no momento da venda (snapshot), para o lucro não mudar se o custo mudar depois. */
+    @Column
+    private Dinheiro custoUnitario;
+
     protected ItemPedido() {
         // exigido pelo JPA
     }
@@ -42,6 +46,14 @@ public class ItemPedido {
         this.descricao = validarDescricao(descricao);
         this.precoUnitario = validarPreco(precoUnitario);
         this.quantidade = validarQuantidade(quantidade);
+    }
+
+    /** custoUnitario nulo = custo não informado (o lucro desse item fica de fora). */
+    public ItemPedido(
+            TipoItem tipo, UUID referenciaId, String descricao, Dinheiro precoUnitario, int quantidade, Dinheiro custoUnitario
+    ) {
+        this(tipo, referenciaId, descricao, precoUnitario, quantidade);
+        this.custoUnitario = custoUnitario;
     }
 
     private static TipoItem validarTipo(TipoItem tipo) {

@@ -54,6 +54,10 @@ public class Produto {
     @Column(unique = true, length = 14)
     private String codigoBarras;
 
+    /** Quanto o produto custa para a empresa (compra/produção). Opcional; sem ele o lucro fica incompleto. */
+    @Column
+    private Dinheiro custoUnitario;
+
     /** Nunca negativo (o banco também garante com CHECK). Só muda pelas operações de estoque abaixo. */
     @Column(nullable = false)
     private int quantidadeEmEstoque;
@@ -139,6 +143,11 @@ public class Produto {
         return verificadorEsperado == codigo.charAt(ultimo) - '0';
     }
 
+    /** Nulo = custo não informado. Mudar o custo não altera o lucro de vendas já feitas (cada item guarda o seu). */
+    public void definirCusto(Dinheiro custo) {
+        this.custoUnitario = custo;
+    }
+
     public void darEntradaNoEstoque(int quantidade) {
         this.quantidadeEmEstoque += validarQuantidade(quantidade);
     }
@@ -207,6 +216,10 @@ public class Produto {
 
     public int quantidadeEmEstoque() {
         return quantidadeEmEstoque;
+    }
+
+    public Optional<Dinheiro> custoUnitario() {
+        return Optional.ofNullable(custoUnitario);
     }
 
     public Optional<String> codigoBarras() {

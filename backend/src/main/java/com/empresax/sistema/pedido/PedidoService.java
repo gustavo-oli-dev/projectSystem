@@ -76,8 +76,8 @@ public class PedidoService {
             throw new DomainException("Estoque insuficiente para \"" + produto.nome() + "\": disponível "
                     + produto.quantidadeEmEstoque());
         }
-        return new ItemPedido(
-                TipoItem.PRODUTO, produto.id(), produto.nome(), produto.precoUnitario(), requerido.quantidade());
+        return new ItemPedido(TipoItem.PRODUTO, produto.id(), produto.nome(), produto.precoUnitario(),
+                requerido.quantidade(), produto.custoUnitario().orElse(null));
     }
 
     private ItemPedido montarItemDeServico(ItemPedidoRequerido requerido) {

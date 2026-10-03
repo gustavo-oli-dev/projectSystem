@@ -85,6 +85,7 @@ export function criarEntradaPorLeitura(produto: Produto, recarregar: () => Promi
         descricao: produto.descricao,
         precoUnitario: produto.precoUnitario,
         codigoBarras: codigo,
+        custoUnitario: produto.custoUnitario,
       });
       codigoDoProduto = codigo;
       contar();

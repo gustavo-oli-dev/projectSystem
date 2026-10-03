@@ -20,9 +20,11 @@ public class ProdutoService {
 
     @Transactional
     public Produto cadastrar(
-            String nome, String descricao, String ncm, String unidadeMedida, Dinheiro precoUnitario, String codigoBarras
+            String nome, String descricao, String ncm, String unidadeMedida, Dinheiro precoUnitario, String codigoBarras,
+            Dinheiro custoUnitario
     ) {
         Produto produto = new Produto(nome, descricao, ncm, unidadeMedida, precoUnitario, codigoBarras);
+        produto.definirCusto(custoUnitario);
         garantirCodigoBarrasLivre(produto, null);
         return produtoRepository.save(produto);
     }
@@ -51,9 +53,12 @@ public class ProdutoService {
     }
 
     @Transactional
-    public Produto atualizar(UUID id, String nome, String descricao, Dinheiro precoUnitario, String codigoBarras) {
+    public Produto atualizar(
+            UUID id, String nome, String descricao, Dinheiro precoUnitario, String codigoBarras, Dinheiro custoUnitario
+    ) {
         Produto produto = buscarPorId(id);
         produto.atualizar(nome, descricao, precoUnitario, codigoBarras);
+        produto.definirCusto(custoUnitario);
         garantirCodigoBarrasLivre(produto, id);
         return produto;
     }

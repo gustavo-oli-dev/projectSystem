@@ -1,149 +1,281 @@
+import { consultarCobrancasPendentes, consultarPedidosPorStatus } from "../../api/painelApi.js";
+import { listarProdutos } from "../../api/produtosApi.js";
 import {
-  consultarCobrancasPendentes,
-  consultarFaturamento,
-  consultarPedidosPorStatus,
-  type ResumoCobranca,
-} from "../../api/painelApi.js";
+  baixarCsvVendas,
+  gerarRelatorioVendas,
+  type ExportacaoVendas,
+  type Periodo,
+  type RelatorioVendas,
+} from "../../api/relatoriosApi.js";
 import { possui } from "../../state/sessaoState.js";
+import { elementoCarregando } from "../estadoCarregamento.js";
 import { cartaoEstado } from "../estadoCard.js";
 import { formatarMoeda } from "../formatarMoeda.js";
+import { formatarInteiro } from "../formatarNumero.js";
+import { criarBarrasHorizontais } from "../graficos/barrasHorizontais.js";
+import { situacaoEstoque } from "../produtos/situacaoEstoque.js";
+import { criarIndicadores } from "./indicadoresView.js";
+import { ATALHOS, periodoDoAtalho, type AtalhoPeriodo } from "./periodoPainel.js";
+import {
+  criarSecaoCanais,
+  criarSecaoDiasDaSemana,
+  criarSecaoFaturamento,
+  criarSecaoFormasPagamento,
+  criarSecaoHorarios,
+  criarSecaoMaisVendidos,
+} from "./secoesRelatorio.js";
+
+const ATALHO_INICIAL: AtalhoPeriodo = "TRINTA_DIAS";
+const ESTOQUE_BAIXO_MAXIMO = 8;
+const ROTULO_STATUS_PEDIDO: Record<string, string> = {
+  ABERTO: "Abertos",
+  AGUARDANDO_EMISSAO: "Aguardando nota",
+  CONCLUIDO: "Concluídos",
+  CANCELADO: "Cancelados",
+};
 
 /**
- * Cada widget só é carregado se o cargo enxerga aquela informação — um gerente pode ver o painel
- * sem ver o faturamento. Falha em um widget não derruba os outros.
+ * Painel = central de relatórios: indicadores com comparação, faturamento no tempo, canais, formas
+ * de pagamento, horários, mais vendidos e exportação. Valores em dinheiro exigem "ver faturamento";
+ * quem não tem vê só a parte operacional (pedidos, estoque, cobranças) que o perfil permite.
  */
 export async function montarPainel(container: HTMLElement): Promise<void> {
   const titulo = document.createElement("h1");
   titulo.textContent = "Painel";
+  const cabecalho = document.createElement("div");
+  cabecalho.className = "cabecalho-pagina";
+  cabecalho.append(titulo);
 
+  const areaRelatorio = document.createElement("div");
+  areaRelatorio.className = "painel-relatorio";
+  const areaOperacional = document.createElement("div");
+  areaOperacional.className = "painel-operacional";
+
+  if (!possui("FATURAMENTO_VER")) {
+    container.replaceChildren(cabecalho, areaOperacional);
+    montarOperacional(areaOperacional);
+    return;
+  }
+
+  let periodo = periodoDoAtalho(ATALHO_INICIAL);
+  const carregar = (novo: Periodo): void => {
+    periodo = novo;
+    void carregarRelatorio(areaRelatorio, periodo);
+  };
+  container.replaceChildren(cabecalho, criarFiltroPeriodo(carregar), areaRelatorio, areaOperacional);
+  areaRelatorio.append(elementoCarregando("Calculando o relatório..."));
+  carregar(periodo);
+  montarOperacional(areaOperacional);
+}
+
+async function carregarRelatorio(area: HTMLElement, periodo: Periodo): Promise<void> {
+  // Recarregar mantém o relatório anterior esmaecido (sem piscar a tela) até chegar o novo.
+  area.classList.add("painel-relatorio--atualizando");
+  try {
+    const relatorio = await gerarRelatorioVendas(periodo);
+    area.replaceChildren(...montarRelatorio(relatorio, periodo));
+  } catch {
+    area.replaceChildren(cartaoEstado("Não foi possível calcular o relatório deste período.", "erro"));
+  } finally {
+    area.classList.remove("painel-relatorio--atualizando");
+  }
+}
+
+function montarRelatorio(relatorio: RelatorioVendas, periodo: Periodo): HTMLElement[] {
+  const faturamento = criarSecaoFaturamento(relatorio);
+  faturamento.querySelector(".cartao-relatorio__cabecalho")
+    ?.append(criarBotaoExportar("Exportar CSV", periodo, "periodos"));
+
+  return [
+    criarIndicadores(relatorio),
+    faturamento,
+    linha(criarSecaoCanais(relatorio), criarSecaoFormasPagamento(relatorio)),
+    linha(criarSecaoHorarios(relatorio), criarSecaoDiasDaSemana(relatorio)),
+    criarSecaoMaisVendidos(relatorio, criarBotaoExportar("Exportar CSV", periodo, "mais-vendidos")),
+  ];
+}
+
+/** Filtro único acima de tudo: atalhos de período + datas livres. Todos os números seguem ele. */
+function criarFiltroPeriodo(aoMudar: (periodo: Periodo) => void): HTMLElement {
+  const botoes = ATALHOS.map(({ atalho, rotulo }) => {
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.className = "filtro-periodo__atalho";
+    botao.textContent = rotulo;
+    botao.setAttribute("aria-pressed", String(atalho === ATALHO_INICIAL));
+    botao.addEventListener("click", () => {
+      marcar(botao);
+      const periodo = periodoDoAtalho(atalho);
+      inicio.value = periodo.inicio;
+      fim.value = periodo.fim;
+      aoMudar(periodo);
+    });
+    return botao;
+  });
+
+  const inicial = periodoDoAtalho(ATALHO_INICIAL);
+  const inicio = criarData("Início do período", inicial.inicio);
+  const fim = criarData("Fim do período", inicial.fim);
+  const aplicar = document.createElement("button");
+  aplicar.type = "button";
+  aplicar.className = "btn btn-ghost btn-pequeno";
+  aplicar.textContent = "Aplicar datas";
+  aplicar.addEventListener("click", () => {
+    if (inicio.value === "" || fim.value === "" || fim.value < inicio.value) {
+      return;
+    }
+    marcar(null);
+    aoMudar({ inicio: inicio.value, fim: fim.value });
+  });
+
+  const marcar = (ativo: HTMLButtonElement | null): void => {
+    botoes.forEach((botao) => botao.setAttribute("aria-pressed", String(botao === ativo)));
+  };
+
+  const grupoAtalhos = document.createElement("div");
+  grupoAtalhos.className = "filtro-periodo__atalhos";
+  grupoAtalhos.setAttribute("role", "group");
+  grupoAtalhos.setAttribute("aria-label", "Período");
+  grupoAtalhos.append(...botoes);
+
+  const separador = document.createElement("span");
+  separador.className = "filtro-periodo__ate";
+  separador.textContent = "até";
+  const datas = document.createElement("div");
+  datas.className = "filtro-periodo__datas";
+  datas.append(inicio, separador, fim, aplicar);
+
+  const filtro = document.createElement("div");
+  filtro.className = "filtro-periodo";
+  filtro.append(grupoAtalhos, datas);
+  return filtro;
+}
+
+function criarData(rotulo: string, valor: string): HTMLInputElement {
+  const campo = document.createElement("input");
+  campo.type = "date";
+  campo.value = valor;
+  campo.setAttribute("aria-label", rotulo);
+  return campo;
+}
+
+function criarBotaoExportar(rotulo: string, periodo: Periodo, tipo: ExportacaoVendas): HTMLButtonElement {
+  const botao = document.createElement("button");
+  botao.type = "button";
+  botao.className = "btn btn-ghost btn-pequeno";
+  botao.textContent = rotulo;
+  botao.addEventListener("click", () => {
+    botao.disabled = true;
+    baixarCsvVendas(periodo, tipo)
+      .then((arquivo) => salvarArquivo(arquivo, `${tipo}_${periodo.inicio}_a_${periodo.fim}.csv`))
+      .catch(() => {
+        botao.textContent = "Falhou — tentar de novo";
+      })
+      .finally(() => {
+        botao.disabled = false;
+      });
+  });
+  return botao;
+}
+
+function salvarArquivo(arquivo: Blob, nome: string): void {
+  const endereco = URL.createObjectURL(arquivo);
+  const link = document.createElement("a");
+  link.href = endereco;
+  link.download = nome;
+  link.click();
+  URL.revokeObjectURL(endereco);
+}
+
+function linha(...cartoes: HTMLElement[]): HTMLElement {
   const grade = document.createElement("div");
-  grade.className = "grade-widgets";
+  grade.className = "linha-relatorio";
+  grade.append(...cartoes);
+  return grade;
+}
 
-  const secaoCobrancas = document.createElement("section");
-  secaoCobrancas.className = "secao-painel";
-
-  const carregamentos: Promise<void>[] = [];
-  if (possui("FATURAMENTO_VER")) {
-    carregamentos.push(preencherWidget(grade, carregarWidgetFaturamento));
+/** Parte operacional (sem valores de faturamento): cada bloco só aparece com a permissão dele. */
+function montarOperacional(area: HTMLElement): void {
+  const blocos: HTMLElement[] = [];
+  if (possui("CATALOGO_VER")) {
+    blocos.push(blocoAssincrono("Estoque baixo", carregarEstoqueBaixo));
   }
   if (possui("PEDIDOS_VER")) {
-    carregamentos.push(preencherWidget(grade, carregarWidgetPedidos));
+    blocos.push(blocoAssincrono("Pedidos por situação", carregarPedidosPorStatus));
   }
   if (possui("COBRANCAS_VER")) {
-    carregamentos.push(preencherWidget(grade, () => carregarWidgetCobrancas(secaoCobrancas)));
+    blocos.push(blocoAssincrono("Cobranças pendentes", carregarCobrancasPendentes));
   }
-
-  if (carregamentos.length === 0) {
-    container.replaceChildren(titulo, cartaoEstado("Seu perfil de acesso não inclui nenhum indicador do painel."));
+  if (blocos.length === 0) {
+    area.replaceChildren(cartaoEstado("Seu perfil de acesso não inclui nenhum indicador do painel."));
     return;
   }
-
-  container.replaceChildren(titulo, grade, secaoCobrancas);
-  await Promise.all(carregamentos);
+  const titulo = document.createElement("h2");
+  titulo.className = "painel-operacional__titulo";
+  titulo.textContent = "Operação agora";
+  const grade = document.createElement("div");
+  grade.className = "linha-relatorio linha-relatorio--tres";
+  grade.append(...blocos);
+  area.replaceChildren(titulo, grade);
 }
 
-async function preencherWidget(grade: HTMLElement, carregar: () => Promise<HTMLElement>): Promise<void> {
-  const espaco = widgetCarregando();
-  grade.append(espaco);
-  try {
-    espaco.replaceWith(await carregar());
-  } catch {
-    espaco.replaceWith(widget("Indisponível", "—", "Não foi possível carregar este número."));
+function blocoAssincrono(titulo: string, carregar: () => Promise<HTMLElement>): HTMLElement {
+  const elementoTitulo = document.createElement("h2");
+  elementoTitulo.textContent = titulo;
+  const cabecalho = document.createElement("div");
+  cabecalho.className = "cartao-relatorio__cabecalho";
+  cabecalho.append(elementoTitulo);
+  const corpo = document.createElement("div");
+  corpo.append(elementoCarregando("Carregando..."));
+  const cartao = document.createElement("section");
+  cartao.className = "cartao-relatorio";
+  cartao.append(cabecalho, corpo);
+  carregar()
+    .then((conteudo) => corpo.replaceChildren(conteudo))
+    .catch(() => corpo.replaceChildren(cartaoEstado("Não foi possível carregar.", "erro")));
+  return cartao;
+}
+
+async function carregarEstoqueBaixo(): Promise<HTMLElement> {
+  const baixos = (await listarProdutos())
+    .filter((produto) => produto.ativo && situacaoEstoque(produto.quantidadeEmEstoque).modificador !== "em_estoque")
+    .sort((a, b) => a.quantidadeEmEstoque - b.quantidadeEmEstoque)
+    .slice(0, ESTOQUE_BAIXO_MAXIMO);
+  if (baixos.length === 0) {
+    return cartaoEstado("Nenhum produto com estoque baixo.");
   }
+  const lista = document.createElement("ul");
+  lista.className = "lista-simples";
+  lista.append(...baixos.map((produto) => {
+    const situacao = situacaoEstoque(produto.quantidadeEmEstoque);
+    const nome = document.createElement("span");
+    nome.textContent = produto.nome;
+    const selo = document.createElement("span");
+    selo.className = `selo selo--${situacao.modificador}`;
+    selo.textContent = `${produto.quantidadeEmEstoque} ${produto.unidadeMedida}`;
+    const item = document.createElement("li");
+    item.append(nome, selo);
+    return item;
+  }));
+  return lista;
 }
 
-async function carregarWidgetFaturamento(): Promise<HTMLElement> {
-  const hoje = new Date();
-  const primeiroDiaDoMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-  const faturamento = await consultarFaturamento(formatarData(primeiroDiaDoMes), formatarData(hoje));
-  return widget(
-    "Faturamento do mês",
-    formatarMoeda(faturamento.total),
-    `${faturamento.quantidadeCobrancas} cobrança(s) paga(s)`,
-    true
-  );
+async function carregarPedidosPorStatus(): Promise<HTMLElement> {
+  const porStatus = await consultarPedidosPorStatus();
+  const barras = Object.entries(porStatus)
+    .map(([status, quantidade]) => ({ rotulo: ROTULO_STATUS_PEDIDO[status] ?? status, valor: quantidade, detalhe: "" }))
+    .sort((a, b) => b.valor - a.valor);
+  return criarBarrasHorizontais(barras, formatarInteiro);
 }
 
-async function carregarWidgetPedidos(): Promise<HTMLElement> {
-  const pedidosPorStatus = await consultarPedidosPorStatus();
-  const pedidosEmAberto = pedidosPorStatus.ABERTO + pedidosPorStatus.AGUARDANDO_EMISSAO;
-  return widget("Pedidos em aberto", String(pedidosEmAberto), `${pedidosPorStatus.CONCLUIDO} concluído(s)`);
-}
-
-async function carregarWidgetCobrancas(secaoCobrancas: HTMLElement): Promise<HTMLElement> {
-  const cobrancasPendentes = await consultarCobrancasPendentes();
-  renderizarCobrancasPendentes(secaoCobrancas, cobrancasPendentes);
-  return widget("Cobranças pendentes", String(cobrancasPendentes.length), somaPendentes(cobrancasPendentes));
-}
-
-function renderizarCobrancasPendentes(secao: HTMLElement, cobrancas: ResumoCobranca[]): void {
-  const tituloSecao = document.createElement("h2");
-  tituloSecao.className = "secao-painel__titulo";
-  tituloSecao.textContent = "Cobranças pendentes";
-  secao.replaceChildren(tituloSecao);
-
-  if (cobrancas.length === 0) {
-    secao.append(cartaoEstado("Nenhuma cobrança pendente — tudo em dia."));
-    return;
+async function carregarCobrancasPendentes(): Promise<HTMLElement> {
+  const pendentes = await consultarCobrancasPendentes();
+  if (pendentes.length === 0) {
+    return cartaoEstado("Nenhuma cobrança pendente — tudo em dia.");
   }
-
-  const lista = document.createElement("div");
-  lista.className = "lista-resumo";
-  for (const cobranca of cobrancas.slice(0, 6)) {
-    lista.append(criarItemCobranca(cobranca));
-  }
-  secao.append(lista);
-}
-
-function criarItemCobranca(cobranca: ResumoCobranca): HTMLElement {
-  const linha = document.createElement("div");
-  linha.className = "lista-resumo__item";
-
-  const meio = document.createElement("span");
-  meio.textContent = cobranca.meio === "PIX" ? "Pix" : "Boleto";
-
-  const valor = document.createElement("span");
-  valor.className = "lista-resumo__valor";
-  valor.textContent = formatarMoeda(cobranca.valor);
-
-  linha.append(meio, valor);
-  return linha;
-}
-
-function somaPendentes(cobrancas: ResumoCobranca[]): string {
-  const total = cobrancas.reduce((soma, cobranca) => soma + cobranca.valor, 0);
-  return `${formatarMoeda(total)} no total`;
-}
-
-function widget(rotulo: string, valor: string, detalhe: string, destaque = false): HTMLElement {
-  const card = document.createElement("div");
-  card.className = destaque ? "widget widget--destaque" : "widget";
-
-  const rotuloEl = document.createElement("p");
-  rotuloEl.className = "widget__rotulo";
-  rotuloEl.textContent = rotulo;
-
-  const valorEl = document.createElement("p");
-  valorEl.className = "widget__valor";
-  valorEl.textContent = valor;
-
-  const detalheEl = document.createElement("p");
-  detalheEl.className = "widget__detalhe";
-  detalheEl.textContent = detalhe;
-
-  card.append(rotuloEl, valorEl, detalheEl);
-  return card;
-}
-
-function widgetCarregando(): HTMLElement {
-  const card = document.createElement("div");
-  card.className = "widget widget--carregando";
-  return card;
-}
-
-function formatarData(data: Date): string {
-  const ano = data.getFullYear();
-  const mes = String(data.getMonth() + 1).padStart(2, "0");
-  const dia = String(data.getDate()).padStart(2, "0");
-  return `${ano}-${mes}-${dia}`;
+  const total = pendentes.reduce((soma, cobranca) => soma + cobranca.valor, 0);
+  const resumo = document.createElement("p");
+  resumo.className = "painel-operacional__resumo";
+  resumo.textContent = `${formatarInteiro(pendentes.length)} cobrança(s) · ${formatarMoeda(total)}`;
+  return resumo;
 }

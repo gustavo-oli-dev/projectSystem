@@ -124,6 +124,9 @@ function criarFormularioNovoProduto(aoSalvar: (produto: NovoProduto, fotos: File
   ncm.entrada.inputMode = "numeric";
   ncm.entrada.maxLength = 8;
   const unidade = criarCampoTexto("produto-unidade", "Unidade (ex.: UN, KG, CX)", "text", true);
+  const custo = criarCampoTexto("produto-custo", "Custo (R$) — para calcular o lucro", "number", false);
+  custo.entrada.step = "0.01";
+  custo.entrada.min = "0";
   const codigoBarras = criarCampoTexto("produto-codigo-barras", "Código de barras (opcional)", "text", false);
   codigoBarras.entrada.inputMode = "numeric";
   codigoBarras.entrada.maxLength = 14;
@@ -142,7 +145,8 @@ function criarFormularioNovoProduto(aoSalvar: (produto: NovoProduto, fotos: File
   const colunaDados = document.createElement("div");
   colunaDados.className = "formulario-produto__dados";
   colunaDados.append(
-    nome.container, descricao.container, preco.container, ncm.container, unidade.container, codigoBarras.container
+    nome.container, descricao.container, preco.container, custo.container, ncm.container, unidade.container,
+    codigoBarras.container
   );
 
   const tituloFotos = document.createElement("p");
@@ -165,6 +169,7 @@ function criarFormularioNovoProduto(aoSalvar: (produto: NovoProduto, fotos: File
       unidadeMedida: unidade.entrada.value,
       precoUnitario: Number(preco.entrada.value),
       codigoBarras: textoOuNulo(codigoBarras.entrada.value),
+      custoUnitario: custo.entrada.value === "" ? null : Number(custo.entrada.value),
     }, seletorFotos.arquivos())
       .catch((falha: unknown) => mostrarErro(erro, falha, "Não foi possível criar o produto. Confira os dados."))
       .finally(() => {

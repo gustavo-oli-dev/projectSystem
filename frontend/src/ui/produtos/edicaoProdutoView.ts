@@ -61,6 +61,10 @@ function criarSecaoDados(produto: Produto, recarregar: () => Promise<void>): HTM
   preco.entrada.step = "0.01";
   preco.entrada.min = "0";
   preco.entrada.value = produto.precoUnitario.toFixed(2);
+  const custo = criarCampoTexto("edicao-custo", "Custo (R$) — para calcular o lucro", "number", false);
+  custo.entrada.step = "0.01";
+  custo.entrada.min = "0";
+  custo.entrada.value = produto.custoUnitario === null ? "" : produto.custoUnitario.toFixed(2);
   const codigoBarras = criarCampoTexto("edicao-codigo-barras", "Código de barras (opcional)", "text", false);
   codigoBarras.entrada.inputMode = "numeric";
   codigoBarras.entrada.maxLength = 14;
@@ -82,7 +86,9 @@ function criarSecaoDados(produto: Produto, recarregar: () => Promise<void>): HTM
 
   const formulario = document.createElement("form");
   formulario.className = "formulario-grade";
-  formulario.append(nome.container, descricao.container, preco.container, codigoBarras.container, fiscal, erro, acoes);
+  formulario.append(
+    nome.container, descricao.container, preco.container, custo.container, codigoBarras.container, fiscal, erro, acoes
+  );
   formulario.addEventListener("submit", (evento) => {
     evento.preventDefault();
     erro.hidden = true;
@@ -92,6 +98,7 @@ function criarSecaoDados(produto: Produto, recarregar: () => Promise<void>): HTM
       descricao: textoOuNulo(descricao.entrada.value),
       precoUnitario: Number(preco.entrada.value),
       codigoBarras: textoOuNulo(codigoBarras.entrada.value),
+      custoUnitario: custo.entrada.value === "" ? null : Number(custo.entrada.value),
     };
     atualizarProduto(produto.id, alteracao)
       .then(recarregar)

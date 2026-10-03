@@ -1,5 +1,6 @@
 package com.empresax.sistema.produto.web;
 
+import com.empresax.sistema.acesso.Permissao;
 import com.empresax.sistema.acesso.RegraAcesso;
 import com.empresax.sistema.produto.Produto;
 import com.empresax.sistema.produto.ProdutoService;
@@ -9,6 +10,9 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,14 +23,19 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/produtos")
 public class ProdutoController {
+
+    private static final Set<String> PERMISSOES_QUE_VEEM_CUSTO =
+            Set.of(Permissao.CATALOGO_GERENCIAR.name(), Permissao.FATURAMENTO_VER.name());
 
     private final ProdutoService produtoService;
     private final FotoProdutoService fotoProdutoService;
@@ -45,8 +54,9 @@ public class ProdutoController {
                 requisicao.ncm(),
                 requisicao.unidadeMedida(),
                 new Dinheiro(requisicao.precoUnitario()),
-                requisicao.codigoBarras());
-        ProdutoResponse resposta = ProdutoResponse.de(produto, List.of());
+                requisicao.codigoBarras(),
+                dinheiroOuNulo(requisicao.custoUnitario()));
+        ProdutoResponse resposta = ProdutoResponse.de(produto, List.of(), podeVerCusto());
         return ResponseEntity.created(URI.create("/api/produtos/" + produto.id())).body(resposta);
     }
 
@@ -56,7 +66,7 @@ public class ProdutoController {
     public List<ProdutoResponse> listar() {
         Map<UUID, List<UUID>> fotos = fotoProdutoService.idsDasFotosPorProduto();
         return produtoService.listarTodos().stream()
-                .map(produto -> ProdutoResponse.de(produto, fotos.getOrDefault(produto.id(), List.of())))
+                .map(produto -> ProdutoResponse.de(produto, fotos.getOrDefault(produto.id(), List.of()), podeVerCusto()))
                 .toList();
     }
 
@@ -77,7 +87,7 @@ public class ProdutoController {
     public ProdutoResponse atualizar(@PathVariable UUID id, @Valid @RequestBody AtualizarProdutoRequest requisicao) {
         Produto produto = produtoService.atualizar(
                 id, requisicao.nome(), requisicao.descricao(), new Dinheiro(requisicao.precoUnitario()),
-                requisicao.codigoBarras());
+                requisicao.codigoBarras(), dinheiroOuNulo(requisicao.custoUnitario()));
         return comFotos(produto);
     }
 
@@ -95,6 +105,19 @@ public class ProdutoController {
     }
 
     private ProdutoResponse comFotos(Produto produto) {
-        return ProdutoResponse.de(produto, fotoProdutoService.idsDasFotosPorProduto().getOrDefault(produto.id(), List.of()));
+        List<UUID> fotos = fotoProdutoService.idsDasFotosPorProduto().getOrDefault(produto.id(), List.of());
+        return ProdutoResponse.de(produto, fotos, podeVerCusto());
+    }
+
+    /** Custo é dado sensível: só quem gerencia o catálogo ou vê o faturamento (o caixa, não). */
+    private static boolean podeVerCusto() {
+        Authentication autenticacao = SecurityContextHolder.getContext().getAuthentication();
+        return autenticacao != null && autenticacao.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(PERMISSOES_QUE_VEEM_CUSTO::contains);
+    }
+
+    private static Dinheiro dinheiroOuNulo(BigDecimal valor) {
+        return valor == null ? null : new Dinheiro(valor);
     }
 }

@@ -16,6 +16,8 @@ export interface Produto {
   codigoBarras: string | null;
   quantidadeEmEstoque: number;
   fotos: FotoProduto[];
+  /** Só vem para quem gerencia o catálogo ou vê o faturamento; null = não informado ou sem permissão. */
+  custoUnitario: number | null;
 }
 
 export interface NovoProduto {
@@ -25,6 +27,7 @@ export interface NovoProduto {
   unidadeMedida: string;
   precoUnitario: number;
   codigoBarras: string | null;
+  custoUnitario: number | null;
 }
 
 export interface AlteracaoProduto {
@@ -32,6 +35,7 @@ export interface AlteracaoProduto {
   descricao: string | null;
   precoUnitario: number;
   codigoBarras: string | null;
+  custoUnitario: number | null;
 }
 
 export type TipoMovimentacao = "ENTRADA" | "VENDA" | "DEVOLUCAO";
