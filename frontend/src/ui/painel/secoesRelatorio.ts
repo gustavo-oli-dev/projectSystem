@@ -202,7 +202,7 @@ function semDados(): HTMLElement {
 }
 
 /** Cartão com título; se houver tabela, ela fica num "Ver em tabela" (o gráfico nunca é o único acesso ao número). */
-function criarCartao(titulo: string, conteudo: HTMLElement, tabela?: HTMLElement): HTMLElement {
+export function criarCartao(titulo: string, conteudo: HTMLElement, tabela?: HTMLElement): HTMLElement {
   const cabecalho = document.createElement("div");
   cabecalho.className = "cartao-relatorio__cabecalho";
   const elementoTitulo = document.createElement("h2");

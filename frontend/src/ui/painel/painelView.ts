@@ -1,13 +1,14 @@
 import { consultarCobrancasPendentes, consultarPedidosPorStatus } from "../../api/painelApi.js";
 import { listarProdutos } from "../../api/produtosApi.js";
 import {
+  baixarCsvCaixa,
   baixarCsvVendas,
+  gerarRelatorioCaixa,
   gerarRelatorioVendas,
-  type ExportacaoVendas,
   type Periodo,
   type RelatorioVendas,
 } from "../../api/relatoriosApi.js";
-import { possui } from "../../state/sessaoState.js";
+import { possui, possuiAlguma } from "../../state/sessaoState.js";
 import { elementoCarregando } from "../estadoCarregamento.js";
 import { cartaoEstado } from "../estadoCard.js";
 import { formatarMoeda } from "../formatarMoeda.js";
@@ -16,6 +17,7 @@ import { criarGraficoRosca, type CorFatia, type Fatia } from "../graficos/grafic
 import { situacaoEstoque } from "../produtos/situacaoEstoque.js";
 import { criarIndicadores } from "./indicadoresView.js";
 import { ATALHOS, periodoDoAtalho, type AtalhoPeriodo } from "./periodoPainel.js";
+import { montarAbaCaixa } from "./secoesCaixa.js";
 import {
   criarSecaoCanais,
   criarSecaoCustoLucro,
@@ -26,81 +28,163 @@ import {
   criarSecaoMaisVendidos,
 } from "./secoesRelatorio.js";
 
+type AbaPainel = "vendas" | "produtos" | "horarios" | "caixa" | "operacao";
+
+interface DefinicaoAba {
+  aba: AbaPainel;
+  rotulo: string;
+  visivel: () => boolean;
+  /** Operação é "agora": não depende do período escolhido. */
+  usaPeriodo: boolean;
+}
+
+const ABAS: readonly DefinicaoAba[] = [
+  { aba: "vendas", rotulo: "Vendas", visivel: () => possui("FATURAMENTO_VER"), usaPeriodo: true },
+  { aba: "produtos", rotulo: "Produtos", visivel: () => possui("FATURAMENTO_VER"), usaPeriodo: true },
+  { aba: "horarios", rotulo: "Horários", visivel: () => possui("FATURAMENTO_VER"), usaPeriodo: true },
+  { aba: "caixa", rotulo: "Caixa", visivel: () => possuiAlguma(["FATURAMENTO_VER", "CAIXA_CONFERIR"]), usaPeriodo: true },
+  {
+    aba: "operacao", rotulo: "Operação agora",
+    visivel: () => possuiAlguma(["CATALOGO_VER", "PEDIDOS_VER", "COBRANCAS_VER"]), usaPeriodo: false,
+  },
+];
 const ATALHO_INICIAL: AtalhoPeriodo = "TRINTA_DIAS";
 const ESTOQUE_BAIXO_MAXIMO = 8;
 const STATUS_PEDIDO: Record<string, { rotulo: string; cor: CorFatia }> = {
   ABERTO: { rotulo: "Abertos", cor: 1 },
   AGUARDANDO_EMISSAO: { rotulo: "Aguardando nota", cor: 2 },
   CONCLUIDO: { rotulo: "Concluídos", cor: 3 },
-  CANCELADO: { rotulo: "Cancelados", cor: 4 },
+  CANCELADO: { rotulo: "Cancelados", cor: "restante" },
 };
 const COR_STATUS_DESCONHECIDO: CorFatia = 5;
 
 /**
- * Painel = central de relatórios: indicadores com comparação, faturamento no tempo, canais, formas
- * de pagamento, horários, mais vendidos e exportação. Valores em dinheiro exigem "ver faturamento";
- * quem não tem vê só a parte operacional (pedidos, estoque, cobranças) que o perfil permite.
+ * Painel = central de relatórios, em abas (D28): Vendas, Produtos, Horários, Caixa e Operação.
+ * Um filtro de período só, no topo, vale para todas as abas que dependem de período. A aba aberta
+ * fica no endereço (#/painel/caixa) para dar para voltar direto nela.
  */
-export async function montarPainel(container: HTMLElement): Promise<void> {
+export function montarPainel(container: HTMLElement, abaPedida: string | null): void {
   const titulo = document.createElement("h1");
   titulo.textContent = "Painel";
   const cabecalho = document.createElement("div");
   cabecalho.className = "cabecalho-pagina";
   cabecalho.append(titulo);
 
-  const areaRelatorio = document.createElement("div");
-  areaRelatorio.className = "painel-relatorio";
-  const areaOperacional = document.createElement("div");
-  areaOperacional.className = "painel-operacional";
-
-  if (!possui("FATURAMENTO_VER")) {
-    container.replaceChildren(cabecalho, areaOperacional);
-    montarOperacional(areaOperacional);
+  const abas = ABAS.filter((definicao) => definicao.visivel());
+  const primeira = abas[0];
+  if (primeira === undefined) {
+    container.replaceChildren(cabecalho, cartaoEstado("Seu perfil de acesso não inclui nenhum relatório do painel."));
     return;
   }
 
+  let abaAtiva = abas.find((definicao) => definicao.aba === abaPedida) ?? primeira;
   let periodo = periodoDoAtalho(ATALHO_INICIAL);
-  const carregar = (novo: Periodo): void => {
-    periodo = novo;
-    void carregarRelatorio(areaRelatorio, periodo);
+  const relatoriosDeVendas = new Map<string, Promise<RelatorioVendas>>();
+  const vendasDoPeriodo = (): Promise<RelatorioVendas> => {
+    const chave = `${periodo.inicio}|${periodo.fim}`;
+    const existente = relatoriosDeVendas.get(chave);
+    if (existente !== undefined) {
+      return existente;
+    }
+    const novo = gerarRelatorioVendas(periodo);
+    relatoriosDeVendas.set(chave, novo);
+    novo.catch(() => relatoriosDeVendas.delete(chave));
+    return novo;
   };
-  container.replaceChildren(cabecalho, criarFiltroPeriodo(carregar), areaRelatorio, areaOperacional);
-  areaRelatorio.append(elementoCarregando("Calculando o relatório..."));
-  carregar(periodo);
-  montarOperacional(areaOperacional);
+
+  const conteudo = document.createElement("div");
+  conteudo.className = "painel-relatorio";
+  const filtro = criarFiltroPeriodo((novo) => {
+    periodo = novo;
+    void mostrarAba();
+  });
+  const botoes = new Map<AbaPainel, HTMLButtonElement>();
+  const barraAbas = document.createElement("div");
+  barraAbas.className = "abas";
+  barraAbas.setAttribute("role", "tablist");
+  for (const definicao of abas) {
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.className = "abas__item";
+    botao.setAttribute("role", "tab");
+    botao.textContent = definicao.rotulo;
+    botao.addEventListener("click", () => {
+      abaAtiva = definicao;
+      // Troca de aba sem recarregar a tela (o período escolhido continua valendo).
+      history.replaceState(null, "", `#/painel/${definicao.aba}`);
+      void mostrarAba();
+    });
+    botoes.set(definicao.aba, botao);
+    barraAbas.append(botao);
+  }
+
+  const mostrarAba = async (): Promise<void> => {
+    botoes.forEach((botao, aba) => {
+      const ativa = aba === abaAtiva.aba;
+      botao.classList.toggle("abas__item--ativa", ativa);
+      botao.setAttribute("aria-selected", String(ativa));
+    });
+    filtro.hidden = !abaAtiva.usaPeriodo;
+    const abaPedidaAgora = abaAtiva.aba;
+    // Recarregar mantém o conteúdo anterior esmaecido (sem piscar a tela) até chegar o novo.
+    if (conteudo.childElementCount === 0) {
+      conteudo.append(elementoCarregando("Calculando o relatório..."));
+    }
+    conteudo.classList.add("painel-relatorio--atualizando");
+    try {
+      const elementos = await montarConteudoDaAba(abaPedidaAgora, periodo, vendasDoPeriodo);
+      if (abaAtiva.aba === abaPedidaAgora) {
+        conteudo.replaceChildren(...elementos);
+      }
+    } catch {
+      conteudo.replaceChildren(cartaoEstado("Não foi possível calcular o relatório deste período.", "erro"));
+    } finally {
+      conteudo.classList.remove("painel-relatorio--atualizando");
+    }
+  };
+
+  container.replaceChildren(cabecalho, barraAbas, filtro, conteudo);
+  void mostrarAba();
 }
 
-async function carregarRelatorio(area: HTMLElement, periodo: Periodo): Promise<void> {
-  // Recarregar mantém o relatório anterior esmaecido (sem piscar a tela) até chegar o novo.
-  area.classList.add("painel-relatorio--atualizando");
-  try {
-    const relatorio = await gerarRelatorioVendas(periodo);
-    area.replaceChildren(...montarRelatorio(relatorio, periodo));
-  } catch {
-    area.replaceChildren(cartaoEstado("Não foi possível calcular o relatório deste período.", "erro"));
-  } finally {
-    area.classList.remove("painel-relatorio--atualizando");
+async function montarConteudoDaAba(
+  aba: AbaPainel, periodo: Periodo, vendasDoPeriodo: () => Promise<RelatorioVendas>
+): Promise<HTMLElement[]> {
+  switch (aba) {
+    case "vendas":
+      return montarAbaVendas(await vendasDoPeriodo(), periodo);
+    case "produtos":
+      return [criarSecaoMaisVendidos(await vendasDoPeriodo(), criarBotaoExportar(
+        () => baixarCsvVendas(periodo, "mais-vendidos"), `mais-vendidos_${periodo.inicio}_a_${periodo.fim}.csv`))];
+    case "horarios":
+      return montarAbaHorarios(await vendasDoPeriodo());
+    case "caixa":
+      return montarAbaCaixa(await gerarRelatorioCaixa(periodo), criarBotaoExportar(
+        () => baixarCsvCaixa(periodo), `fechamentos-de-caixa_${periodo.inicio}_a_${periodo.fim}.csv`));
+    case "operacao":
+      return montarAbaOperacao();
   }
 }
 
-function montarRelatorio(relatorio: RelatorioVendas, periodo: Periodo): HTMLElement[] {
+/** Grade de 3 colunas: faturamento no tempo inteiro em cima, as três pizzas embaixo. */
+function montarAbaVendas(relatorio: RelatorioVendas, periodo: Periodo): HTMLElement[] {
   const faturamento = criarSecaoFaturamento(relatorio);
-  faturamento.querySelector(".cartao-relatorio__cabecalho")
-    ?.append(criarBotaoExportar("Exportar CSV", periodo, "periodos"));
-
-  // Grade de 3 colunas iguais em todas as linhas: o que é largo (tempo, tabela) ocupa 2.
+  faturamento.querySelector(".cartao-relatorio__cabecalho")?.append(criarBotaoExportar(
+    () => baixarCsvVendas(periodo, "periodos"), `periodos_${periodo.inicio}_a_${periodo.fim}.csv`));
   return [
     criarIndicadores(relatorio),
-    linha(largo(faturamento), criarSecaoFormasPagamento(relatorio)),
-    linha(criarSecaoCanais(relatorio), criarSecaoCustoLucro(relatorio), criarSecaoDiasDaSemana(relatorio)),
-    linha(
-      largo(criarSecaoMaisVendidos(relatorio, criarBotaoExportar("Exportar CSV", periodo, "mais-vendidos"))),
-      criarSecaoHorarios(relatorio)
-    ),
+    faturamento,
+    linha(criarSecaoFormasPagamento(relatorio), criarSecaoCanais(relatorio), criarSecaoCustoLucro(relatorio)),
   ];
 }
 
-/** Filtro único acima de tudo: atalhos de período + datas livres. Todos os números seguem ele. */
+function montarAbaHorarios(relatorio: RelatorioVendas): HTMLElement[] {
+  const horarios = criarSecaoHorarios(relatorio);
+  horarios.classList.add("cartao-relatorio--largo");
+  return [linha(horarios, criarSecaoDiasDaSemana(relatorio))];
+}
+
+/** Filtro único acima do conteúdo: atalhos de período + datas livres. */
 function criarFiltroPeriodo(aoMudar: (periodo: Periodo) => void): HTMLElement {
   const botoes = ATALHOS.map(({ atalho, rotulo }) => {
     const botao = document.createElement("button");
@@ -164,15 +248,15 @@ function criarData(rotulo: string, valor: string): HTMLInputElement {
   return campo;
 }
 
-function criarBotaoExportar(rotulo: string, periodo: Periodo, tipo: ExportacaoVendas): HTMLButtonElement {
+function criarBotaoExportar(baixar: () => Promise<Blob>, nomeArquivo: string): HTMLButtonElement {
   const botao = document.createElement("button");
   botao.type = "button";
   botao.className = "btn btn-ghost btn-pequeno";
-  botao.textContent = rotulo;
+  botao.textContent = "Exportar CSV";
   botao.addEventListener("click", () => {
     botao.disabled = true;
-    baixarCsvVendas(periodo, tipo)
-      .then((arquivo) => salvarArquivo(arquivo, `${tipo}_${periodo.inicio}_a_${periodo.fim}.csv`))
+    baixar()
+      .then((arquivo) => salvarArquivo(arquivo, nomeArquivo))
       .catch(() => {
         botao.textContent = "Falhou — tentar de novo";
       })
@@ -199,13 +283,8 @@ function linha(...cartoes: HTMLElement[]): HTMLElement {
   return grade;
 }
 
-function largo(cartao: HTMLElement): HTMLElement {
-  cartao.classList.add("cartao-relatorio--largo");
-  return cartao;
-}
-
 /** Parte operacional (sem valores de faturamento): cada bloco só aparece com a permissão dele. */
-function montarOperacional(area: HTMLElement): void {
+function montarAbaOperacao(): HTMLElement[] {
   const blocos: HTMLElement[] = [];
   if (possui("CATALOGO_VER")) {
     blocos.push(blocoAssincrono("Estoque baixo", carregarEstoqueBaixo));
@@ -216,17 +295,7 @@ function montarOperacional(area: HTMLElement): void {
   if (possui("COBRANCAS_VER")) {
     blocos.push(blocoAssincrono("Cobranças pendentes", carregarCobrancasPendentes));
   }
-  if (blocos.length === 0) {
-    area.replaceChildren(cartaoEstado("Seu perfil de acesso não inclui nenhum indicador do painel."));
-    return;
-  }
-  const titulo = document.createElement("h2");
-  titulo.className = "painel-operacional__titulo";
-  titulo.textContent = "Operação agora";
-  const grade = document.createElement("div");
-  grade.className = "linha-relatorio";
-  grade.append(...blocos);
-  area.replaceChildren(titulo, grade);
+  return [linha(...blocos)];
 }
 
 function blocoAssincrono(titulo: string, carregar: () => Promise<HTMLElement>): HTMLElement {

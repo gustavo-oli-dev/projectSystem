@@ -42,7 +42,7 @@ public final class ExportacaoCsv {
         return montar(List.of("Item", "Tipo", "Unidades", "Faturamento (R$)", "Lucro bruto (R$)", "Lucro"), linhas);
     }
 
-    private static byte[] montar(List<String> cabecalho, Stream<List<String>> linhas) {
+    public static byte[] montar(List<String> cabecalho, Stream<List<String>> linhas) {
         String corpo = Stream.concat(Stream.of(cabecalho), linhas)
                 .map(colunas -> colunas.stream().map(ExportacaoCsv::campo).collect(Collectors.joining(SEPARADOR)))
                 .collect(Collectors.joining(QUEBRA, "", QUEBRA));
@@ -59,14 +59,14 @@ public final class ExportacaoCsv {
         return precisaAspas ? "\"" + valor.replace("\"", "\"\"") + "\"" : valor;
     }
 
-    static String texto(String valor) {
+    public static String texto(String valor) {
         if (valor == null || valor.isEmpty()) {
             return "";
         }
         return INICIOS_DE_FORMULA.indexOf(valor.charAt(0)) >= 0 ? "'" + valor : valor;
     }
 
-    private static String decimal(BigDecimal valor) {
+    public static String decimal(BigDecimal valor) {
         return valor.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString().replace('.', ',');
     }
 }

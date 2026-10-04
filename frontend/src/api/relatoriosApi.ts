@@ -74,3 +74,57 @@ export type ExportacaoVendas = "periodos" | "mais-vendidos";
 export function baixarCsvVendas(periodo: Periodo, tipo: ExportacaoVendas): Promise<Blob> {
   return httpClient.arquivo(`/relatorios/vendas/${tipo}.csv?${consulta(periodo)}`);
 }
+
+export type ResultadoFechamento = "ABERTO" | "BATEU" | "SOBROU" | "FALTOU";
+
+export interface RelatorioCaixa {
+  totais: {
+    caixas: number;
+    fechados: number;
+    /** Total que faltou, positivo. */
+    faltas: number;
+    sobras: number;
+    /** Sobras − faltas. */
+    saldo: number;
+    sangrias: number;
+    reposicoes: number;
+    vendasEmDinheiro: number;
+  };
+  porResultado: Array<{ resultado: ResultadoFechamento; caixas: number }>;
+  porOperador: Array<{
+    operador: string;
+    operadorNome: string;
+    caixas: number;
+    fechados: number;
+    comFalta: number;
+    faltas: number;
+    sobras: number;
+    saldo: number;
+    sangrias: number;
+    reposicoes: number;
+  }>;
+  caixas: Array<{
+    id: string;
+    operadorNome: string;
+    abertaPorNome: string;
+    fechadaPorNome: string | null;
+    abertaEm: string;
+    fechadaEm: string | null;
+    fundoInicial: number;
+    reposicoes: number;
+    sangrias: number;
+    vendasEmDinheiro: number | null;
+    valorEsperado: number | null;
+    valorContado: number | null;
+    diferenca: number | null;
+    resultado: ResultadoFechamento;
+  }>;
+}
+
+export function gerarRelatorioCaixa(periodo: Periodo): Promise<RelatorioCaixa> {
+  return httpClient.get<RelatorioCaixa>(`/relatorios/caixa?${consulta(periodo)}`);
+}
+
+export function baixarCsvCaixa(periodo: Periodo): Promise<Blob> {
+  return httpClient.arquivo(`/relatorios/caixa/fechamentos.csv?${consulta(periodo)}`);
+}
