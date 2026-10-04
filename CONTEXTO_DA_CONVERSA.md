@@ -78,8 +78,8 @@ testar/ligar).
 
 ## Próximos passos combinados (supermercado), em ordem sugerida
 
-1. **Abrir e fechar caixa:** fundo de troco, sangria, suprimento, conferência no fechamento com
-   diferença. *(recomendado começar por aqui)*
+1. ~~**Abrir e fechar caixa**~~ — **feito em 04/10 (D26)**: fundo de troco por cédula, reposição,
+   sangria, fechamento cego e tela "Conferência de caixa".
 2. **Venda por peso:** ler etiqueta da balança (código de barras com peso/preço embutido).
 3. **Entrada de mercadoria pelo XML da nota do fornecedor** — cobre também "Contas a pagar" e a
    aba "Contatos" (fornecedores, frete).

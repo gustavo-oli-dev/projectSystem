@@ -60,6 +60,10 @@ public class Pedido {
     @Column(nullable = false, updatable = false)
     private Instant criadoEm;
 
+    /** Caixa aberto em que a venda de balcão foi feita (o fechamento soma as vendas por ele). */
+    @Column(updatable = false)
+    private UUID sessaoCaixaId;
+
     /** Momento da venda de fato (confirmação = baixa no estoque). É a data que os relatórios usam. */
     @Column
     private Instant confirmadoEm;
@@ -81,9 +85,17 @@ public class Pedido {
         this.criadoEm = Instant.now();
     }
 
-    /** Venda presencial: o cliente cadastrado é opcional (clienteId pode ser nulo), assim como o CPF na nota. */
-    public static Pedido noBalcao(List<ItemPedido> itens, Cpf cpfNaNota, UUID clienteId) {
-        return new Pedido(clienteId, CanalVenda.BALCAO, cpfNaNota, itens);
+    /**
+     * Venda presencial: o cliente cadastrado é opcional (clienteId pode ser nulo), assim como o CPF na
+     * nota. O caixa aberto é obrigatório — não existe venda de balcão fora de um caixa.
+     */
+    public static Pedido noBalcao(List<ItemPedido> itens, Cpf cpfNaNota, UUID clienteId, UUID sessaoCaixaId) {
+        if (sessaoCaixaId == null) {
+            throw new DomainException("Abra o caixa antes de vender");
+        }
+        Pedido pedido = new Pedido(clienteId, CanalVenda.BALCAO, cpfNaNota, itens);
+        pedido.sessaoCaixaId = sessaoCaixaId;
+        return pedido;
     }
 
     private static UUID validarCliente(UUID clienteId) {
@@ -171,6 +183,10 @@ public class Pedido {
 
     public Optional<UUID> clienteId() {
         return Optional.ofNullable(clienteId);
+    }
+
+    public Optional<UUID> sessaoCaixaId() {
+        return Optional.ofNullable(sessaoCaixaId);
     }
 
     public CanalVenda canal() {

@@ -48,12 +48,14 @@ public class PedidoService {
 
     /** Venda presencial: cliente cadastrado e CPF na nota são opcionais. Mesmas regras de estoque. */
     @Transactional
-    public Pedido criarNoBalcao(List<ItemPedidoRequerido> itensRequeridos, Cpf cpfNaNota, UUID clienteId) {
+    public Pedido criarNoBalcao(
+            List<ItemPedidoRequerido> itensRequeridos, Cpf cpfNaNota, UUID clienteId, UUID sessaoCaixaId
+    ) {
         if (clienteId != null) {
             clienteService.buscarPorId(clienteId);
         }
         List<ItemPedido> itens = itensRequeridos.stream().map(this::montarItem).toList();
-        return pedidoRepository.save(Pedido.noBalcao(itens, cpfNaNota, clienteId));
+        return pedidoRepository.save(Pedido.noBalcao(itens, cpfNaNota, clienteId, sessaoCaixaId));
     }
 
     private ItemPedido montarItem(ItemPedidoRequerido requerido) {

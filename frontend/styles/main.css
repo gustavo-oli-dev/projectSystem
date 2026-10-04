@@ -3664,3 +3664,273 @@ form.formulario-produto > .formulario-produto__fotos {
 .linha-destaque:hover {
   background: var(--cor-primaria-suave);
 }
+
+/* =========================================================================
+   Abertura e fechamento de caixa (D26)
+   ========================================================================= */
+.barra-caixa {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 1.25rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-cartao);
+  background: var(--cor-superficie);
+}
+
+.barra-caixa__situacao {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.barra-caixa__marcador {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  background: var(--cor-sucesso);
+}
+
+.barra-caixa__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.caixa-painel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+  padding: 1.5rem 1.75rem;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-cartao);
+  background: var(--cor-superficie);
+}
+
+.caixa-painel h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.caixa-painel--embutido {
+  margin-top: 1rem;
+  margin-bottom: 0;
+  border: none;
+  padding: 0;
+  background: transparent;
+}
+
+.caixa-painel__instrucao {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--cor-texto-suave);
+}
+
+.caixa-painel__acoes {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--cor-borda);
+}
+
+.caixa-painel__confirmacao {
+  margin: 0 auto 0 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--texto-variacao-boa);
+}
+
+/* Contagem de notas e moedas */
+.contagem-cedulas {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.contagem-cedulas__grupos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.contagem-cedulas__grupo {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio);
+  overflow: hidden;
+}
+
+.contagem-cedulas__titulo {
+  margin: 0;
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid var(--cor-borda-forte);
+  background: var(--cor-superficie-suave);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cor-texto-suave);
+}
+
+.contagem-cedulas__linha {
+  display: grid;
+  grid-template-columns: minmax(7rem, 10rem) 8rem minmax(6rem, 1fr);
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.contagem-cedulas__linha:last-child {
+  border-bottom: none;
+}
+
+.contagem-cedulas__rotulo {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.contagem-cedulas__quantidade {
+  width: 100%;
+  padding: 0.4375rem 0.625rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.contagem-cedulas__subtotal {
+  font-size: 0.875rem;
+  text-align: right;
+  color: var(--cor-texto-suave);
+  font-variant-numeric: tabular-nums;
+}
+
+.contagem-cedulas__total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio);
+  background: var(--cor-superficie-suave);
+  font-weight: 600;
+}
+
+.contagem-cedulas__valor-total {
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Resultado / conferência */
+.resultado-caixa {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.resultado-caixa__situacao {
+  margin: 0;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio);
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.resultado-caixa__situacao--bateu {
+  border-color: #9fd3a9;
+  background: #eef8f0;
+  color: var(--texto-variacao-boa);
+}
+
+.resultado-caixa__situacao--sobra {
+  border-color: #f0c98a;
+  background: #fff7e8;
+  color: #8a4b00;
+}
+
+.resultado-caixa__situacao--falta {
+  border-color: #f2b1ab;
+  background: var(--cor-erro-suave);
+  color: var(--texto-variacao-ruim);
+}
+
+.resultado-caixa__secao h3 {
+  margin: 0 0 0.75rem;
+  font-size: 0.9375rem;
+}
+
+.resultado-caixa__conta {
+  margin: 0;
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio);
+  overflow: hidden;
+}
+
+.resultado-caixa__linha {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.resultado-caixa__linha:last-child {
+  border-bottom: none;
+}
+
+.resultado-caixa__linha dt {
+  color: var(--cor-texto-suave);
+}
+
+.resultado-caixa__linha dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.resultado-caixa__linha--forte {
+  background: var(--cor-superficie-suave);
+  font-weight: 700;
+}
+
+.resultado-caixa__linha--forte dt {
+  color: var(--cor-texto);
+}
+
+.resultado-caixa__observacao,
+.resultado-caixa__vazio {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--cor-texto-suave);
+}
+
+@media (max-width: 900px) {
+  .contagem-cedulas__grupos {
+    grid-template-columns: 1fr;
+  }
+}
+
+.caixa-painel__linha-campos {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 1.25rem;
+}
+
+.conferencia-caixas__fundo {
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 900px) {
+  .caixa-painel__linha-campos {
+    grid-template-columns: 1fr;
+  }
+}

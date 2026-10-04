@@ -5,7 +5,16 @@ import {
   type DadosVendaBalcao,
   type VendaBalcao,
 } from "../../api/pdvApi.js";
+import { buscarCaixaAberto, type CaixaAberto } from "../../api/caixaApi.js";
 import { listarProdutos, type Produto } from "../../api/produtosApi.js";
+import { criarAberturaCaixa } from "../caixa/aberturaCaixaView.js";
+import {
+  criarBarraCaixa,
+  criarPainelFechamento,
+  criarPainelReposicao,
+  criarPainelSangria,
+  criarTelaCaixaFechado,
+} from "../caixa/operacaoCaixaView.js";
 import {
   adicionarAoCarrinho,
   aoMudarCarrinho,
@@ -51,13 +60,58 @@ export async function montarPdv(container: HTMLElement): Promise<void> {
     return;
   }
 
-  areaVenda.replaceChildren(elementoCarregando("Carregando produtos..."));
+  areaVenda.replaceChildren(elementoCarregando("Carregando o caixa..."));
   try {
-    const produtos = await listarProdutos();
-    montarVenda(areaVenda, produtos, () => void carregarUltimasVendas(areaUltimas));
+    const [produtos, caixa] = await Promise.all([listarProdutos(), buscarCaixaAberto()]);
+    iniciarCaixa(areaVenda, produtos, caixa, () => void carregarUltimasVendas(areaUltimas));
   } catch {
-    areaVenda.replaceChildren(cartaoEstado("Não foi possível carregar os produtos.", "erro"));
+    areaVenda.replaceChildren(cartaoEstado("Não foi possível carregar o caixa.", "erro"));
   }
+}
+
+/**
+ * Sem caixa aberto: tela de abertura (contagem do fundo de troco). Com caixa aberto: faixa do caixa
+ * no topo e a venda embaixo. Reposição, sangria e fechamento abrem no lugar da venda sem perder o
+ * carrinho — "Voltar para a venda" devolve tudo como estava.
+ */
+function iniciarCaixa(area: HTMLElement, produtos: Produto[], caixa: CaixaAberto | null, aoVender: () => void): void {
+  if (caixa === null) {
+    area.replaceChildren(criarAberturaCaixa((aberto) => iniciarCaixa(area, produtos, aberto, aoVender)));
+    return;
+  }
+  const faixa = document.createElement("div");
+  const areaPainel = document.createElement("div");
+  areaPainel.hidden = true;
+  const areaDaVenda = document.createElement("div");
+
+  const voltarParaVenda = (): void => {
+    areaPainel.hidden = true;
+    areaPainel.replaceChildren();
+    areaDaVenda.hidden = false;
+  };
+  const abrirPainel = (painel: HTMLElement): void => {
+    areaDaVenda.hidden = true;
+    areaPainel.replaceChildren(painel);
+    areaPainel.hidden = false;
+  };
+  const aoAtualizarCaixa = (atualizado: CaixaAberto): void => {
+    desenharFaixa(atualizado);
+    voltarParaVenda();
+  };
+  const desenharFaixa = (atual: CaixaAberto): void => {
+    faixa.replaceChildren(criarBarraCaixa(atual, {
+      aoRepor: () => abrirPainel(criarPainelReposicao(aoAtualizarCaixa, voltarParaVenda)),
+      aoSangria: () => abrirPainel(criarPainelSangria(aoAtualizarCaixa, voltarParaVenda)),
+      aoFechar: () => abrirPainel(criarPainelFechamento((conferencia) => {
+        limparCarrinho();
+        area.replaceChildren(criarTelaCaixaFechado(conferencia, () => iniciarCaixa(area, produtos, null, aoVender)));
+      }, voltarParaVenda)),
+    }));
+  };
+
+  desenharFaixa(caixa);
+  area.replaceChildren(faixa, areaPainel, areaDaVenda);
+  montarVenda(areaDaVenda, produtos, aoVender);
 }
 
 function montarVenda(area: HTMLElement, produtos: Produto[], aoVender: () => void): void {

@@ -11,7 +11,8 @@ export type Rota =
   | "novo-pedido"
   | "equipe"
   | "gerenciar-produtos"
-  | "pdv";
+  | "pdv"
+  | "caixas";
 
 export interface Destino {
   rota: Rota;
@@ -32,6 +33,7 @@ const ROTAS_SIMPLES: readonly Rota[] = [
   "equipe",
   "gerenciar-produtos",
   "pdv",
+  "caixas",
 ];
 /** Rotas que aceitam um segundo trecho: aba (equipe) ou produto aberto para edição. */
 const ROTAS_COM_PARAMETRO: readonly Rota[] = ["equipe", "gerenciar-produtos"];

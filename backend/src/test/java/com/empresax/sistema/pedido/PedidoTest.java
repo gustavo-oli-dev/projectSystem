@@ -15,6 +15,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class PedidoTest {
 
+    private static final UUID CAIXA = UUID.randomUUID();
+
     @Test
     void calculaValorTotalSomandoOsSubtotaisDosItens() {
         ItemPedido item1 = new ItemPedido(
@@ -96,7 +98,7 @@ class PedidoTest {
         ItemPedido arte = new ItemPedido(
                 TipoItem.SERVICO, UUID.randomUUID(), "Arte", new Dinheiro(new BigDecimal("25.00")), 1);
 
-        Pedido pedido = Pedido.noBalcao(List.of(caneca, arte), null, null);
+        Pedido pedido = Pedido.noBalcao(List.of(caneca, arte), null, null, CAIXA);
 
         assertThat(pedido.documentosFiscaisNecessarios())
                 .containsExactlyInAnyOrder(TipoDocumentoFiscal.NFCE, TipoDocumentoFiscal.NFSE);
@@ -104,11 +106,18 @@ class PedidoTest {
 
     @Test
     void vendaNoBalcaoNaoPrecisaDeClienteEGuardaOCpfNaNota() {
-        Pedido pedido = Pedido.noBalcao(List.of(itemCaneca()), new Cpf("111.444.777-35"), null);
+        Pedido pedido = Pedido.noBalcao(List.of(itemCaneca()), new Cpf("111.444.777-35"), null, CAIXA);
 
         assertThat(pedido.clienteId()).isEmpty();
         assertThat(pedido.vendidoNoBalcao()).isTrue();
         assertThat(pedido.cpfNaNota()).contains("11144477735");
+    }
+
+    @Test
+    void vendaNoBalcaoSemCaixaAbertoEhRecusada() {
+        assertThatThrownBy(() -> Pedido.noBalcao(List.of(itemCaneca()), null, null, null))
+                .isInstanceOf(DomainException.class)
+                .hasMessageContaining("Abra o caixa");
     }
 
     @Test

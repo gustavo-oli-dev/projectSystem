@@ -15,6 +15,7 @@ import { montarWizardPedido } from "../pedidoWizard/pedidoWizardView.js";
 import { montarEquipe } from "../equipe/equipeView.js";
 import { montarGerenciarProdutos } from "../produtos/gerenciarProdutosView.js";
 import { montarPdv } from "../pdv/pdvView.js";
+import { montarConferenciaCaixas } from "../caixa/conferenciaCaixasView.js";
 import { criarBotaoAssistente } from "../assistente/assistenteChatView.js";
 import { limparToken } from "../../state/authState.js";
 import { barraLateralRecolhida, lembrarBarraLateralRecolhida } from "./barraLateral.js";
@@ -39,6 +40,7 @@ const GRUPOS_NAV: GrupoNav[] = [
     itens: [
       { rota: "painel", rotulo: "Painel", icone: "painel" },
       { rota: "pdv", rotulo: "Caixa", icone: "caixa" },
+      { rota: "caixas", rotulo: "Conferência de caixa", icone: "conferencia" },
       { rota: "pedidos", rotulo: "Pedidos", icone: "pedidos" },
       { rota: "clientes", rotulo: "Clientes", icone: "clientes" },
     ],
@@ -80,6 +82,7 @@ const PERMISSOES_POR_ROTA: Record<Rota, readonly Permissao[]> = {
   equipe: ["USUARIOS_GERENCIAR", "CARGOS_GERENCIAR"],
   "gerenciar-produtos": ["CATALOGO_GERENCIAR", "ESTOQUE_GERENCIAR"],
   pdv: ["PDV_VENDER", "PDV_CANCELAR"],
+  caixas: ["CAIXA_CONFERIR"],
 };
 
 const MONTADORES: Record<Rota, Montador> = {
@@ -96,6 +99,7 @@ const MONTADORES: Record<Rota, Montador> = {
   equipe: montarEquipe,
   "gerenciar-produtos": montarGerenciarProdutos,
   pdv: montarPdv,
+  caixas: montarConferenciaCaixas,
 };
 
 export function montarShell(raiz: HTMLElement): void {

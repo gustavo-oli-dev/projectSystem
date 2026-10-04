@@ -8,6 +8,7 @@ import com.empresax.sistema.common.domain.DomainException;
 import com.empresax.sistema.common.domain.EntidadeNaoEncontradaException;
 import com.empresax.sistema.documentofiscal.DocumentoFiscalService;
 import com.empresax.sistema.pedido.Pedido;
+import com.empresax.sistema.pdv.caixa.CaixaService;
 import com.empresax.sistema.pdv.maquininha.Maquininha;
 import com.empresax.sistema.pdv.maquininha.SituacaoCobrancaMaquininha;
 import com.empresax.sistema.pedido.PedidoService;
@@ -42,6 +43,7 @@ public class PdvService {
     private final DocumentoFiscalService documentoFiscalService;
     private final CancelamentoVendaService cancelamentoVendaService;
     private final Maquininha maquininha;
+    private final CaixaService caixaService;
 
     public PdvService(
             PedidoService pedidoService,
@@ -49,7 +51,8 @@ public class PdvService {
             CobrancaService cobrancaService,
             DocumentoFiscalService documentoFiscalService,
             CancelamentoVendaService cancelamentoVendaService,
-            Maquininha maquininha
+            Maquininha maquininha,
+            CaixaService caixaService
     ) {
         this.pedidoService = pedidoService;
         this.pagamentoRepository = pagamentoRepository;
@@ -57,6 +60,7 @@ public class PdvService {
         this.documentoFiscalService = documentoFiscalService;
         this.cancelamentoVendaService = cancelamentoVendaService;
         this.maquininha = maquininha;
+        this.caixaService = caixaService;
     }
 
     @Transactional
@@ -134,9 +138,10 @@ public class PdvService {
      */
     @Transactional
     public VendaBalcao cancelar(UUID pedidoId, String operador) {
-        buscarDoBalcao(pedidoId);
+        Pedido pedido = buscarDoBalcao(pedidoId);
         Optional<PagamentoPresencial> presencial = pagamentoRepository.findByPedidoId(pedidoId);
         if (presencial.isPresent()) {
+            devolverDinheiroAoCliente(pedido, presencial.get(), operador);
             desfazerPagamentoPresencial(presencial.get());
             return VendaBalcao.presencial(cancelamentoVendaService.cancelarVendaDoBalcao(pedidoId, operador), presencial.get());
         }
@@ -146,6 +151,15 @@ public class PdvService {
                 ? cancelamentoVendaService.reembolsar(pedidoId, operador)
                 : cancelamentoVendaService.cancelarVendaDoBalcao(pedidoId, operador);
         return VendaBalcao.porPixNaTela(cancelado, pix);
+    }
+
+    /** Dinheiro já recebido volta da gaveta para o cliente — o caixa precisa registrar isso. */
+    private void devolverDinheiroAoCliente(Pedido pedido, PagamentoPresencial pagamento, String operador) {
+        if (pagamento.forma() != FormaPagamentoPresencial.DINHEIRO || !pagamento.aprovado()) {
+            return;
+        }
+        pedido.sessaoCaixaId().ifPresent(caixaDaVenda ->
+                caixaService.registrarDevolucaoEmDinheiro(caixaDaVenda, pagamento.valor(), pedido.id(), operador));
     }
 
     /**
@@ -209,7 +223,8 @@ public class PdvService {
     private Pedido criarEConfirmar(DadosVendaBalcao venda, String operador) {
         String cpfNaNota = venda.cpfNaNota();
         Cpf cpf = cpfNaNota == null || cpfNaNota.isBlank() ? null : new Cpf(cpfNaNota);
-        Pedido pedido = pedidoService.criarNoBalcao(venda.itens(), cpf, venda.clienteId());
+        UUID caixa = caixaService.exigirCaixaAberto(operador).id();
+        Pedido pedido = pedidoService.criarNoBalcao(venda.itens(), cpf, venda.clienteId(), caixa);
         pedidoService.confirmar(pedido.id(), operador);
         return pedido;
     }
