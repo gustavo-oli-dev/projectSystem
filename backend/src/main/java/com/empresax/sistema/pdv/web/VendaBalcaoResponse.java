@@ -12,6 +12,7 @@ import com.empresax.sistema.shared.dinheiro.Dinheiro;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -33,6 +34,8 @@ public record VendaBalcaoResponse(
         BigDecimal troco,
         String statusPagamento,
         String operador,
+        /** Nome de quem vendeu; null se a venda não registra operador ou o usuário não existe mais. */
+        String operadorNome,
         Instant criadaEm
 ) {
 
@@ -42,13 +45,13 @@ public record VendaBalcaoResponse(
     private static final String RECUSADO = "RECUSADO";
     private static final String ESTORNADO = "ESTORNADO";
 
-    public static VendaBalcaoResponse de(VendaBalcao venda) {
+    public static VendaBalcaoResponse de(VendaBalcao venda, Map<String, String> nomesPorEmail) {
         return venda.pagamentoPresencial()
-                .map(pagamento -> dePresencial(venda.pedido(), pagamento))
+                .map(pagamento -> dePresencial(venda.pedido(), pagamento, nomesPorEmail.get(pagamento.operador())))
                 .orElseGet(() -> dePix(venda.pedido(), venda.cobrancaPix().orElseThrow()));
     }
 
-    private static VendaBalcaoResponse dePresencial(Pedido pedido, PagamentoPresencial pagamento) {
+    private static VendaBalcaoResponse dePresencial(Pedido pedido, PagamentoPresencial pagamento, String operadorNome) {
         return new VendaBalcaoResponse(
                 pedido.id(), pedido.status().name(), itens(pedido), pedido.valorTotal().valor(),
                 pedido.cpfNaNota().orElse(null),
@@ -60,6 +63,7 @@ public record VendaBalcaoResponse(
                 pagamento.troco().map(Dinheiro::valor).orElse(null),
                 statusPresencial(pagamento.status()),
                 pagamento.operador(),
+                operadorNome,
                 pagamento.criadoEm());
     }
 
@@ -69,6 +73,7 @@ public record VendaBalcaoResponse(
                 pedido.cpfNaNota().orElse(null),
                 FORMA_PIX_NA_TELA, null, null, false, null, null,
                 statusDoPix(cobranca.status()),
+                null,
                 null,
                 cobranca.criadoEm());
     }

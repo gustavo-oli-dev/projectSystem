@@ -10,6 +10,7 @@ import { buscarPedido, cancelarPedido, confirmarPedido, reembolsarPedido, type P
 import { buscarVendaDoBalcao, type VendaBalcao } from "../../api/pdvApi.js";
 import type { Permissao } from "../../api/sessaoApi.js";
 import { navegarPara } from "../../router.js";
+import { lembrarPedidoEmDestaque } from "../../state/destaquePedidoState.js";
 import { possui } from "../../state/sessaoState.js";
 import { elementoCarregando } from "../estadoCarregamento.js";
 import { cartaoEstado } from "../estadoCard.js";
@@ -64,6 +65,7 @@ export async function montarDetalhePedido(container: HTMLElement, pedidoId: stri
     return;
   }
 
+  lembrarPedidoEmDestaque(pedidoId);
   const voltar = criarLinkVoltar();
   container.replaceChildren(voltar, elementoCarregando("Carregando pedido..."));
 
@@ -104,9 +106,13 @@ function renderizar(container: HTMLElement, dados: DadosPedido): void {
 
   const recarregar = (): Promise<void> => montarDetalhePedido(container, pedido.id);
 
+  const identificacao = document.createElement("div");
+  identificacao.className = "pedido-identificacao";
+  identificacao.append(tituloComStatus, criarLinhaPartes(dados));
+
   const cabecalho = document.createElement("div");
   cabecalho.className = "cabecalho-pagina";
-  cabecalho.append(tituloComStatus, criarAcoes(dados, erroAcao, recarregar));
+  cabecalho.append(identificacao, criarAcoes(dados, erroAcao, recarregar));
 
   const principal = document.createElement("div");
   principal.className = "detalhe-principal";
@@ -127,10 +133,7 @@ function renderizar(container: HTMLElement, dados: DadosPedido): void {
     lateral.append(criarCartaoCliente(dados.cliente));
   }
   if (pedido.canal === "BALCAO") {
-    lateral.append(criarCartaoLateral("Venda no balcão", [
-      ["Consumidor", pedido.clienteId === null ? "Não identificado" : "Cliente cadastrado"],
-      ["CPF na nota", pedido.cpfNaNota ?? "—"],
-    ]));
+    lateral.append(criarCartaoLateral("Venda no balcão", [["CPF na nota", pedido.cpfNaNota ?? "—"]]));
   }
   if (dados.vendaBalcao !== null) {
     lateral.append(criarCartaoPagamentoCaixa(dados.vendaBalcao));
@@ -299,10 +302,47 @@ function criarCartaoPagamentoCaixa(venda: VendaBalcao): HTMLElement {
   if (venda.troco !== null) {
     linhas.push(["Troco", formatarMoeda(venda.troco)]);
   }
-  if (venda.operador !== null) {
-    linhas.push(["Operador", venda.operador]);
+  const vendedor = nomeDeQuemVendeu(venda);
+  if (vendedor !== null) {
+    linhas.push(["Vendido por", vendedor]);
   }
   return criarCartaoLateral("Pagamento no caixa", linhas);
+}
+
+/** "Cliente: Ana Lima · Vendido por: Dono" — logo abaixo do número, para bater o olho. */
+function criarLinhaPartes(dados: DadosPedido): HTMLElement {
+  const linha = document.createElement("p");
+  linha.className = "pedido-partes";
+  linha.append(criarParte("Cliente", descreverCliente(dados)));
+  const vendedor = dados.vendaBalcao === null ? null : nomeDeQuemVendeu(dados.vendaBalcao);
+  if (vendedor !== null) {
+    linha.append(criarParte("Vendido por", vendedor));
+  }
+  return linha;
+}
+
+function criarParte(rotulo: string, valor: string): HTMLElement {
+  const termo = document.createElement("span");
+  termo.className = "pedido-partes__rotulo";
+  termo.textContent = `${rotulo}:`;
+  const conteudo = document.createElement("strong");
+  conteudo.textContent = valor;
+  const parte = document.createElement("span");
+  parte.className = "pedido-partes__item";
+  parte.append(termo, conteudo);
+  return parte;
+}
+
+function descreverCliente(dados: DadosPedido): string {
+  if (dados.cliente !== null) {
+    return dados.cliente.nome;
+  }
+  // Tem cliente, mas o perfil de acesso não pode ver clientes: não dá para mostrar o nome.
+  return dados.pedido.clienteId === null ? "Consumidor não identificado" : "Cliente cadastrado";
+}
+
+function nomeDeQuemVendeu(venda: VendaBalcao): string | null {
+  return venda.operadorNome ?? venda.operador;
 }
 
 function criarCartaoCliente(cliente: Cliente): HTMLElement {
@@ -356,8 +396,8 @@ function criarSecao(tituloTexto: string, corpo: HTMLElement): HTMLElement {
 function criarLinkVoltar(): HTMLButtonElement {
   const botao = document.createElement("button");
   botao.type = "button";
-  botao.className = "link-voltar";
-  botao.textContent = "← Pedidos";
+  botao.className = "btn btn-ghost btn-pequeno botao-voltar";
+  botao.textContent = "← Voltar para Pedidos";
   botao.addEventListener("click", () => navegarPara("pedidos"));
   return botao;
 }

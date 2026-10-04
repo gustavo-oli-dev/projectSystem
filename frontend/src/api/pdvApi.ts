@@ -38,7 +38,10 @@ export interface VendaBalcao {
   valorRecebido: number | null;
   troco: number | null;
   statusPagamento: "AGUARDANDO" | "RECUSADO" | "APROVADO" | "ESTORNADO";
+  /** E-mail de quem vendeu (identidade). */
   operador: string | null;
+  /** Nome para exibir; null em Pix na tela ou usuário removido. */
+  operadorNome: string | null;
   criadaEm: string;
 }
 

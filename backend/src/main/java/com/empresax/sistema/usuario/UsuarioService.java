@@ -9,8 +9,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Gestão de usuários com regras contra escalada de privilégio:
@@ -35,6 +38,16 @@ public class UsuarioService {
     public Usuario buscarComPermissoes(String email) {
         return usuarioRepository.findComPermissoesByEmail(email)
                 .orElseThrow(() -> new EntidadeNaoEncontradaException("Usuário não encontrado: " + email));
+    }
+
+    /** Nome para exibir de quem registrou algo (vendas guardam o e-mail, que é a identidade). */
+    @Transactional(readOnly = true)
+    public Map<String, String> nomesPorEmail(Collection<String> emails) {
+        if (emails.isEmpty()) {
+            return Map.of();
+        }
+        return usuarioRepository.findByEmailIn(emails).stream()
+                .collect(Collectors.toUnmodifiableMap(Usuario::email, Usuario::nome));
     }
 
     @Transactional(readOnly = true)

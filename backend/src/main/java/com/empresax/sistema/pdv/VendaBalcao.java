@@ -37,6 +37,11 @@ public final class VendaBalcao {
         return Optional.ofNullable(pagamentoPresencial);
     }
 
+    /** E-mail de quem registrou a venda no caixa. Pix com QR na tela não guarda o operador. */
+    public Optional<String> operador() {
+        return pagamentoPresencial().map(PagamentoPresencial::operador);
+    }
+
     public Optional<Cobranca> cobrancaPix() {
         return Optional.ofNullable(cobrancaPix);
     }

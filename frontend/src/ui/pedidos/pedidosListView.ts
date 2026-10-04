@@ -1,5 +1,6 @@
 import { listarPedidos, type Pedido } from "../../api/pedidosApi.js";
 import { navegarPara } from "../../router.js";
+import { consumirPedidoEmDestaque } from "../../state/destaquePedidoState.js";
 import { elementoCarregando } from "../estadoCarregamento.js";
 import { cartaoEstado } from "../estadoCard.js";
 import { formatarMoeda } from "../formatarMoeda.js";
@@ -22,13 +23,14 @@ export async function montarListaPedidos(container: HTMLElement): Promise<void> 
 
   try {
     const pedidos = await listarPedidos();
-    areaLista.replaceChildren(renderizar(pedidos));
+    areaLista.replaceChildren(renderizar(pedidos, consumirPedidoEmDestaque()));
+    rolarAteDestaque(areaLista);
   } catch {
     areaLista.replaceChildren(cartaoEstado("Não foi possível carregar os pedidos.", "erro"));
   }
 }
 
-function renderizar(pedidos: Pedido[]): HTMLElement {
+function renderizar(pedidos: Pedido[], pedidoEmDestaque: string | null): HTMLElement {
   if (pedidos.length === 0) {
     return cartaoEstado("Nenhum pedido criado ainda.");
   }
@@ -43,6 +45,10 @@ function renderizar(pedidos: Pedido[]): HTMLElement {
     );
     linha.className = "linha-clicavel";
     linha.tabIndex = 0;
+    if (pedido.id === pedidoEmDestaque) {
+      linha.classList.add("linha-destaque");
+      linha.setAttribute("aria-current", "true");
+    }
     linha.addEventListener("click", () => navegarPara("pedido-detalhe", pedido.id));
     linha.addEventListener("keydown", (evento) => {
       if (evento.key === "Enter") {
@@ -53,4 +59,14 @@ function renderizar(pedidos: Pedido[]): HTMLElement {
   });
 
   return criarTabela(["Pedido", "Status", "Itens", "Total", "Criado em"], linhas, "pedido(s)");
+}
+
+/** Leva a linha destacada para o meio da tela e põe o foco nela (Enter abre de novo). */
+function rolarAteDestaque(area: HTMLElement): void {
+  const destacada = area.querySelector<HTMLElement>(".linha-destaque");
+  if (destacada === null) {
+    return;
+  }
+  destacada.scrollIntoView({ block: "center" });
+  destacada.focus({ preventScroll: true });
 }
