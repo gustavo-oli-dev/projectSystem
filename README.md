@@ -15,12 +15,8 @@ serviços, pedidos, modelo de `DocumentoFiscal` sem emissão real ainda), **Fina
 via Mercado Pago) e **Atendimento** (conversas de WhatsApp, inbox, anexos no MinIO). Falta só a
 fatia de **IA** — ver o roadmap em DECISOES.md.
 
-**Ainda não foi possível rodar nada**: Docker Desktop e WSL2 já instalados, mas a **virtualização
-está desligada na BIOS/UEFI** desta máquina — é preciso entrar na BIOS e habilitar Intel VT-x/AMD
-SVM antes de o Docker funcionar (ver DECISOES.md).
-
-Este código ainda não foi compilado nem executado: a máquina onde foi escrito não tem Java, Maven,
-Node ou Docker instalados. Revisar com atenção antes do primeiro `docker compose up`.
+**Roda de ponta a ponta** desde 2026-10-03 (Mac, Docker via Colima — ver D22 em DECISOES.md):
+159 testes unitários passando, 14 migrations aplicadas, frontend em http://localhost:8081.
 
 ## Stack
 
@@ -33,9 +29,10 @@ Node ou Docker instalados. Revisar com atenção antes do primeiro `docker compo
 ## Como rodar
 
 1. Copie `.env.example` para `.env` e preencha os valores (nunca commitar `.env`).
-2. `docker compose up --build`
-3. Backend: http://localhost:8080 — documentação OpenAPI em `/swagger-ui.html`
-4. Frontend: http://localhost:8081
+2. No Mac, ligue o Docker: `colima start`
+3. `docker compose up --build`
+4. Backend: http://localhost:8080 — documentação OpenAPI em `/swagger-ui.html`
+5. Frontend: http://localhost:8081
 
 ## O que já existe
 

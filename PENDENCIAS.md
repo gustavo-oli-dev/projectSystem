@@ -51,10 +51,9 @@ marcar como feito.
 - [ ] **Testes de integração das regras de acesso** (Testcontainers): hoje a anti-escalada e os 403
       foram validados por script contra o sistema rodando (13 cenários, todos ok em 02/10), não por
       teste automatizado.
-- [ ] **Compilar e rodar pela primeira vez.** Todo o código (fatias 1 e 2 — fundação e núcleo
-      fiscal parcial) foi escrito sem acesso a Java/Maven/Node/Docker/git nesta máquina — nunca foi
-      compilado. Rodar `mvn test` no backend, `npm run build` no frontend, e
-      `docker compose up --build` de ponta a ponta.
+- [x] ~~Compilar e rodar pela primeira vez~~ — **feito em 2026-10-03** (Mac novo, Docker via
+      Colima — D22): `mvn test` com 159 testes, 0 falhas; `docker compose up --build` sobe tudo;
+      Flyway aplica as 14 migrations no PostgreSQL 16; login, sessão e rotas principais respondem.
 - [ ] **CNPJ alfanumérico** (`backend/.../shared/documento/Cnpj.java`): o dígito verificador segue
       a especificação pública da Receita Federal (IN RFB 2.229/2024), mas não foi conferido contra
       o validador oficial nem contra uma biblioteca homologada.
@@ -107,3 +106,18 @@ marcar como feito.
 - [ ] **Regime tributário da empresa** (Simples/Presumido/Real) — ainda placeholder (pendência A1
       em DECISOES.md). Necessário antes de implementar o motor de cálculo de tributos sobre
       Produto/Servico.
+- [ ] **Erro do cliente vira 500** (`GlobalExceptionHandler`): caminho inexistente
+      (`NoResourceFoundException`) e parâmetro obrigatório faltando
+      (`MissingServletRequestParameterException`) caem no tratamento genérico e respondem
+      **500 "Erro interno"** em vez de 404/400, com stack trace em nível ERROR no log. Não afeta o
+      painel (o frontend sempre chama certo), mas polui o log e confunde monitoramento. Achado na
+      primeira execução, em 2026-10-03.
+- [ ] **Teste de carga com vendas simultâneas**: o de leitura foi feito (ver CONTEXTO_DA_CONVERSA.md —
+      ~1.400 req/s de teto, zero falhas). Falta exercitar a venda (trava `SELECT ... FOR UPDATE` do
+      estoque) sob concorrência — gasta estoque, rodar com dados descartáveis.
+- [ ] **Fotos de demonstração**: as 20 fotos dos produtos de teste são do Wikimedia Commons (créditos
+      em `docs/CREDITOS-FOTOS-DEMO.md`). CC BY/BY-SA exigem atribuição se aparecerem em público
+      (vitrine do site) — trocar pelas fotos reais dos produtos antes de produção.
+- [ ] **Tipos do frontend escritos à mão**: o CLAUDE.md pede tipos gerados do OpenAPI, mas todo
+      `frontend/src/api/*.ts` é manual (desvio que já existia; seguido no `operadorNome`, D25).
+      Resolver como tarefa à parte (ex.: `openapi-typescript` no build).
