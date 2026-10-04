@@ -31,7 +31,8 @@ import java.util.UUID;
 
 /**
  * Um turno de caixa de um operador: abre com o fundo de troco contado por cédula, recebe reposições
- * de troco (suprimento) e retiradas (sangria) e fecha com a contagem da gaveta.
+ * de troco (suprimento) e retiradas (sangria) e fecha com a contagem da gaveta. Abrir, repor,
+ * sangrar e fechar são feitos por quem tem CAIXA_GERENCIAR (D27); o operador só vende.
  *
  * Dinheiro que deveria estar na gaveta = fundo inicial + vendas em dinheiro + suprimentos − sangrias.
  * O que entrou no dia = contado − fundo inicial − suprimentos + sangrias. A diferença (sobra ou
@@ -56,6 +57,10 @@ public class SessaoCaixa {
     @Column(nullable = false)
     private StatusSessaoCaixa status;
 
+    /** Quem abriu (tem CAIXA_GERENCIAR); o caixa é do operador, que só vende. */
+    @Column(nullable = false, updatable = false)
+    private String abertaPor;
+
     @Column(nullable = false, updatable = false)
     private Instant abertaEm;
 
@@ -76,6 +81,9 @@ public class SessaoCaixa {
 
     @Column
     private Instant fechadaEm;
+
+    @Column
+    private String fechadaPor;
 
     @ElementCollection
     @CollectionTable(name = "sessoes_caixa_cedulas_fechamento", joinColumns = @JoinColumn(name = "sessao_caixa_id"))
@@ -102,22 +110,26 @@ public class SessaoCaixa {
         // exigido pelo JPA
     }
 
-    private SessaoCaixa(String operador, ContagemCedulas fundo) {
+    private SessaoCaixa(String operador, ContagemCedulas fundo, String abertaPor) {
         if (operador == null || operador.isBlank()) {
             throw new DomainException("Caixa precisa de um operador");
+        }
+        if (abertaPor == null || abertaPor.isBlank()) {
+            throw new DomainException("Informe quem está abrindo o caixa");
         }
         if (fundo == null) {
             throw new DomainException("Informe as cédulas do fundo de troco");
         }
         this.operador = operador;
+        this.abertaPor = abertaPor;
         this.status = StatusSessaoCaixa.ABERTA;
         this.abertaEm = Instant.now();
         this.fundoInicial = fundo.total();
         this.cedulasAbertura = new HashMap<>(fundo.quantidades());
     }
 
-    public static SessaoCaixa abrir(String operador, ContagemCedulas fundoDeTroco) {
-        return new SessaoCaixa(operador, fundoDeTroco);
+    public static SessaoCaixa abrir(String operador, ContagemCedulas fundoDeTroco, String abertaPor) {
+        return new SessaoCaixa(operador, fundoDeTroco, abertaPor);
     }
 
     /** Reposição de troco: o gerente traz notas trocadas para a gaveta. */
@@ -143,11 +155,14 @@ public class SessaoCaixa {
     }
 
     /**
-     * Fechamento cego: o operador conta a gaveta sem ver o valor esperado; o sistema compara
+     * Fechamento cego: quem fecha conta a gaveta sem ver o valor esperado; o sistema compara
      * depois. Diferença não impede o fechamento — fica registrada para a conferência.
      */
-    public void fechar(ContagemCedulas contagem, Dinheiro vendasEmDinheiroDoTurno, String observacao) {
+    public void fechar(ContagemCedulas contagem, Dinheiro vendasEmDinheiroDoTurno, String observacao, String fechadaPor) {
         garantirAberta();
+        if (fechadaPor == null || fechadaPor.isBlank()) {
+            throw new DomainException("Informe quem está fechando o caixa");
+        }
         if (contagem == null) {
             throw new DomainException("Informe a contagem da gaveta");
         }
@@ -162,6 +177,7 @@ public class SessaoCaixa {
         this.vendasEmDinheiro = vendasEmDinheiroDoTurno;
         this.valorEsperado = dinheiroEsperado(vendasEmDinheiroDoTurno);
         this.observacaoFechamento = observacao == null || observacao.isBlank() ? null : observacao.trim();
+        this.fechadaPor = fechadaPor;
         this.fechadaEm = Instant.now();
         this.status = StatusSessaoCaixa.FECHADA;
     }
@@ -232,6 +248,10 @@ public class SessaoCaixa {
         return abertaEm;
     }
 
+    public String abertaPor() {
+        return abertaPor;
+    }
+
     public Dinheiro fundoInicial() {
         return fundoInicial;
     }
@@ -246,6 +266,10 @@ public class SessaoCaixa {
 
     public Optional<Instant> fechadaEm() {
         return Optional.ofNullable(fechadaEm);
+    }
+
+    public Optional<String> fechadaPor() {
+        return Optional.ofNullable(fechadaPor);
     }
 
     public ContagemCedulas cedulasFechamento() {

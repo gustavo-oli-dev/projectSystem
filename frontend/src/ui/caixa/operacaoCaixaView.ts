@@ -6,63 +6,32 @@ import {
   type ConferenciaCaixa,
 } from "../../api/caixaApi.js";
 import { criarCampoTexto, criarMensagemErro, mostrarErro, textoOuNulo } from "../camposFormulario.js";
-import { formatarMoeda } from "../formatarMoeda.js";
 import { criarContagemCedulas } from "./contagemCedulas.js";
 import { criarResultadoFechamento } from "./resultadoFechamentoView.js";
 
 const MOTIVO_PADRAO_REPOSICAO = "Reposição de troco";
 const MOTIVO_PADRAO_SANGRIA = "Retirada para o cofre";
-const HORA = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
+const ROTULO_VOLTAR = "Voltar para os caixas";
 
-export interface AcoesCaixa {
-  aoRepor: () => void;
-  aoSangria: () => void;
-  aoFechar: () => void;
-}
-
-/** Faixa no topo do caixa: desde quando está aberto, fundo inicial e as ações do turno. */
-export function criarBarraCaixa(caixa: CaixaAberto, acoes: AcoesCaixa): HTMLElement {
-  const situacao = document.createElement("p");
-  situacao.className = "barra-caixa__situacao";
-  const marcador = document.createElement("span");
-  marcador.className = "barra-caixa__marcador";
-  marcador.setAttribute("aria-hidden", "true");
-  const texto = document.createElement("span");
-  texto.textContent = `Caixa aberto às ${HORA.format(new Date(caixa.abertaEm))} · fundo de troco ${formatarMoeda(caixa.fundoInicial)}`;
-  situacao.append(marcador, texto);
-
-  const botoes = document.createElement("div");
-  botoes.className = "barra-caixa__acoes";
-  botoes.append(
-    botao("Reposição de troco", "btn btn-ghost btn-pequeno", acoes.aoRepor),
-    botao("Sangria", "btn btn-ghost btn-pequeno", acoes.aoSangria),
-    botao("Fechar caixa", "btn btn-ghost btn-pequeno", acoes.aoFechar)
-  );
-
-  const barra = document.createElement("div");
-  barra.className = "barra-caixa";
-  barra.append(situacao, botoes);
-  return barra;
-}
-
-export function criarPainelReposicao(aoConcluir: (caixa: CaixaAberto) => void, aoVoltar: () => void): HTMLElement {
+/** Reposição de troco no caixa escolhido: as cédulas trocadas que entram na gaveta. */
+export function criarPainelReposicao(caixa: CaixaAberto, aoConcluir: () => void, aoVoltar: () => void): HTMLElement {
   const contagem = criarContagemCedulas({});
   const motivo = criarCampoTexto("caixa-motivo-reposicao", "Motivo", "text", true);
   motivo.entrada.value = MOTIVO_PADRAO_REPOSICAO;
   motivo.entrada.maxLength = 200;
   return montarPainel({
-    titulo: "Reposição de troco",
+    titulo: `Reposição de troco · caixa de ${caixa.operadorNome}`,
     instrucao: "Conte as notas e moedas trocadas que estão entrando na gaveta.",
     campos: [contagem.elemento, motivo.container],
     rotuloConfirmar: "Registrar reposição",
     focar: contagem.focar,
     aoVoltar,
-    enviar: () => registrarSuprimento(contagem.contagem(), motivo.entrada.value.trim()).then(aoConcluir),
+    enviar: () => registrarSuprimento(caixa.id, contagem.contagem(), motivo.entrada.value.trim()).then(aoConcluir),
     mensagemFalha: "Não foi possível registrar a reposição.",
   });
 }
 
-export function criarPainelSangria(aoConcluir: (caixa: CaixaAberto) => void, aoVoltar: () => void): HTMLElement {
+export function criarPainelSangria(caixa: CaixaAberto, aoConcluir: () => void, aoVoltar: () => void): HTMLElement {
   const valor = criarCampoTexto("caixa-valor-sangria", "Valor retirado (R$)", "number", true);
   valor.entrada.min = "0.01";
   valor.entrada.step = "0.01";
@@ -71,45 +40,46 @@ export function criarPainelSangria(aoConcluir: (caixa: CaixaAberto) => void, aoV
   motivo.entrada.value = MOTIVO_PADRAO_SANGRIA;
   motivo.entrada.maxLength = 200;
   return montarPainel({
-    titulo: "Sangria",
+    titulo: `Sangria · caixa de ${caixa.operadorNome}`,
     instrucao: "Dinheiro retirado da gaveta durante o turno (levado ao cofre, por exemplo).",
     campos: [linhaDeCampos(valor.container, motivo.container)],
     rotuloConfirmar: "Registrar sangria",
     focar: () => valor.entrada.focus(),
     aoVoltar,
-    enviar: () => registrarSangria(Number(valor.entrada.value), motivo.entrada.value.trim()).then(aoConcluir),
+    enviar: () => registrarSangria(caixa.id, Number(valor.entrada.value), motivo.entrada.value.trim()).then(aoConcluir),
     mensagemFalha: "Não foi possível registrar a sangria.",
   });
 }
 
 /**
- * Fechamento cego: o operador conta a gaveta sem ver quanto deveria dar. O resultado (bateu,
+ * Fechamento cego: quem fecha conta a gaveta sem ver quanto deveria dar. O resultado (bateu,
  * sobrou ou faltou) só aparece depois de a contagem ser enviada.
  */
-export function criarPainelFechamento(aoFechar: (conferencia: ConferenciaCaixa) => void, aoVoltar: () => void): HTMLElement {
+export function criarPainelFechamento(
+  caixa: CaixaAberto, aoFechar: (conferencia: ConferenciaCaixa) => void, aoVoltar: () => void
+): HTMLElement {
   const contagem = criarContagemCedulas({});
   const observacao = criarCampoTexto("caixa-observacao-fechamento", "Observação (opcional)", "text", false);
   observacao.entrada.maxLength = 500;
   return montarPainel({
-    titulo: "Fechar o caixa",
-    instrucao: "Conte todas as notas e moedas da gaveta, inclusive o fundo de troco. Depois de fechar, o caixa não aceita mais vendas.",
+    titulo: `Fechar o caixa de ${caixa.operadorNome}`,
+    instrucao: "Conte todas as notas e moedas da gaveta, inclusive o fundo de troco. Depois de fechado, o operador não consegue mais vender neste caixa.",
     campos: [contagem.elemento, observacao.container],
     rotuloConfirmar: "Fechar caixa",
     focar: contagem.focar,
     aoVoltar,
-    enviar: () => fecharCaixa(contagem.contagem(), textoOuNulo(observacao.entrada.value)).then(aoFechar),
+    enviar: () => fecharCaixa(caixa.id, contagem.contagem(), textoOuNulo(observacao.entrada.value)).then(aoFechar),
     mensagemFalha: "Não foi possível fechar o caixa.",
   });
 }
 
-/** Tela final do turno: a conferência completa e o botão para abrir um novo caixa. */
-export function criarTelaCaixaFechado(conferencia: ConferenciaCaixa, aoAbrirNovo: () => void): HTMLElement {
+/** Depois do fechamento: a conferência completa e a volta para a lista de caixas. */
+export function criarTelaCaixaFechado(conferencia: ConferenciaCaixa, aoVoltar: () => void): HTMLElement {
   const titulo = document.createElement("h2");
-  titulo.textContent = "Caixa fechado";
-  const novo = botao("Abrir um novo caixa", "btn btn-primary", aoAbrirNovo);
+  titulo.textContent = `Caixa de ${conferencia.operadorNome} fechado`;
   const acoes = document.createElement("div");
   acoes.className = "caixa-painel__acoes";
-  acoes.append(novo);
+  acoes.append(botao(ROTULO_VOLTAR, "btn btn-primary", aoVoltar));
   const painel = document.createElement("div");
   painel.className = "caixa-painel";
   painel.append(titulo, criarResultadoFechamento(conferencia), acoes);
@@ -139,11 +109,10 @@ function montarPainel(opcoes: OpcoesPainel): HTMLElement {
   confirmar.type = "submit";
   confirmar.className = "btn btn-primary";
   confirmar.textContent = opcoes.rotuloConfirmar;
-  const voltar = botao("Voltar para a venda", "btn btn-ghost", opcoes.aoVoltar);
 
   const acoes = document.createElement("div");
   acoes.className = "caixa-painel__acoes";
-  acoes.append(voltar, confirmar);
+  acoes.append(botao(ROTULO_VOLTAR, "btn btn-ghost", opcoes.aoVoltar), confirmar);
 
   const formulario = document.createElement("form");
   formulario.className = "caixa-painel";
@@ -161,18 +130,18 @@ function montarPainel(opcoes: OpcoesPainel): HTMLElement {
   return formulario;
 }
 
-function botao(rotulo: string, classe: string, aoClicar: () => void): HTMLButtonElement {
+function linhaDeCampos(...campos: HTMLElement[]): HTMLElement {
+  const linha = document.createElement("div");
+  linha.className = "caixa-painel__linha-campos";
+  linha.append(...campos);
+  return linha;
+}
+
+export function botao(rotulo: string, classe: string, aoClicar: () => void): HTMLButtonElement {
   const elemento = document.createElement("button");
   elemento.type = "button";
   elemento.className = classe;
   elemento.textContent = rotulo;
   elemento.addEventListener("click", aoClicar);
   return elemento;
-}
-
-function linhaDeCampos(...campos: HTMLElement[]): HTMLElement {
-  const linha = document.createElement("div");
-  linha.className = "caixa-painel__linha-campos";
-  linha.append(...campos);
-  return linha;
 }

@@ -79,7 +79,9 @@ testar/ligar).
 ## Próximos passos combinados (supermercado), em ordem sugerida
 
 1. ~~**Abrir e fechar caixa**~~ — **feito em 04/10 (D26)**: fundo de troco por cédula, reposição,
-   sangria, fechamento cego e tela "Conferência de caixa".
+   sangria, fechamento cego e tela "Conferência de caixa". Separado da venda em 04/10 (D27): a tela
+   "Gestão de caixa" (permissão CAIXA_GERENCIAR) abre o caixa de um operador, repõe, faz sangria e fecha;
+   o operador só vende.
 2. **Venda por peso:** ler etiqueta da balança (código de barras com peso/preço embutido).
 3. **Entrada de mercadoria pelo XML da nota do fornecedor** — cobre também "Contas a pagar" e a
    aba "Contatos" (fornecedores, frete).

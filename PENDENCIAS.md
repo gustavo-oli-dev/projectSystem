@@ -121,6 +121,6 @@ marcar como feito.
 - [ ] **Tipos do frontend escritos à mão**: o CLAUDE.md pede tipos gerados do OpenAPI, mas todo
       `frontend/src/api/*.ts` é manual (desvio que já existia; seguido no `operadorNome`, D25).
       Resolver como tarefa à parte (ex.: `openapi-typescript` no build).
-- [ ] **Caixa (D26) — pontos em aberto**: (1) um gerente não consegue fechar o caixa de outro
-      operador que foi embora com o caixa aberto (hoje só o próprio operador fecha); (2) teste de integração (Testcontainers) do fluxo completo — hoje validado
+- [ ] **Caixa (D26) — pontos em aberto**: (1) ~~gerente fechar o caixa de outro operador~~ — resolvido pela
+      Gestão de caixa (D27); (2) teste de integração (Testcontainers) do fluxo completo — hoje validado
       por script contra o sistema rodando em 04/10 (15 passos, todos ok).

@@ -2,6 +2,7 @@ package com.empresax.sistema.usuario;
 
 import com.empresax.sistema.acesso.Cargo;
 import com.empresax.sistema.acesso.CargoService;
+import com.empresax.sistema.acesso.Permissao;
 import com.empresax.sistema.common.domain.AcessoNegadoException;
 import com.empresax.sistema.common.domain.DomainException;
 import com.empresax.sistema.common.domain.EntidadeNaoEncontradaException;
@@ -53,6 +54,24 @@ public class UsuarioService {
     @Transactional(readOnly = true)
     public List<Usuario> listarTodos() {
         return usuarioRepository.findAllByOrderByNomeAsc();
+    }
+
+    /** Funcionários ativos que podem vender no caixa (o caixa é aberto em nome deles). */
+    @Transactional(readOnly = true)
+    public List<Usuario> listarQuemPodeVender() {
+        return usuarioRepository.findAllByOrderByNomeAsc().stream()
+                .filter(usuario -> usuario.ativo() && usuario.possui(Permissao.PDV_VENDER))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Usuario buscarOperadorDeCaixa(UUID usuarioId) {
+        Usuario usuario = usuarioRepository.findComPermissoesById(usuarioId)
+                .orElseThrow(() -> new EntidadeNaoEncontradaException("Funcionário não encontrado: " + usuarioId));
+        if (!usuario.ativo() || !usuario.possui(Permissao.PDV_VENDER)) {
+            throw new DomainException("Este funcionário não pode vender no caixa");
+        }
+        return usuario;
     }
 
     @Transactional

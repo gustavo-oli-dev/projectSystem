@@ -70,6 +70,8 @@ function formasPara(nome: string): SVGElement[] {
       return [retangulo(3, 7, 14, 14, 2), linha(3, 7, 10, 3), linha(10, 3, 17, 7), linha(19, 11, 19, 19), linha(15, 15, 23, 15)];
     case "caixa":
       return [retangulo(3, 10, 18, 11, 2), retangulo(6, 3, 12, 7, 1.5), linha(7, 14, 9, 14), linha(11, 14, 13, 14), linha(15, 14, 17, 14), linha(7, 17, 17, 17)];
+    case "gestao-caixa":
+      return [retangulo(3, 8, 18, 13, 2), linha(3, 12, 21, 12), linha(9, 4, 15, 4), linha(12, 4, 12, 8)];
     case "conferencia":
       return [retangulo(2, 6, 20, 12, 2), circulo(12, 12, 3), linha(5, 9, 7, 9), linha(17, 15, 19, 15)];
     case "menu":

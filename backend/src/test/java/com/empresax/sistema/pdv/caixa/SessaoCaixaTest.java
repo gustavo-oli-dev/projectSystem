@@ -20,7 +20,7 @@ class SessaoCaixaTest {
 
     @Test
     void abreComOFundoDeTrocoSomadoPelasCedulas() {
-        SessaoCaixa caixa = SessaoCaixa.abrir(OPERADOR, FUNDO);
+        SessaoCaixa caixa = SessaoCaixa.abrir(OPERADOR, FUNDO, GERENTE);
 
         assertThat(caixa.aberta()).isTrue();
         assertThat(caixa.fundoInicial()).isEqualTo(dinheiro("90.00"));
@@ -29,10 +29,10 @@ class SessaoCaixaTest {
 
     @Test
     void fechamentoQueBateNaoTemDiferencaEMostraOQueEntrou() {
-        SessaoCaixa caixa = SessaoCaixa.abrir(OPERADOR, FUNDO);
+        SessaoCaixa caixa = SessaoCaixa.abrir(OPERADOR, FUNDO, GERENTE);
 
         // R$ 90 de fundo + R$ 150 vendidos em dinheiro = R$ 240 na gaveta.
-        caixa.fechar(new ContagemCedulas(Map.of(Cedula.NOTA_100, 2, Cedula.NOTA_20, 2)), dinheiro("150.00"), null);
+        caixa.fechar(new ContagemCedulas(Map.of(Cedula.NOTA_100, 2, Cedula.NOTA_20, 2)), dinheiro("150.00"), null, GERENTE);
 
         assertThat(caixa.aberta()).isFalse();
         assertThat(caixa.valorEsperado()).contains(new BigDecimal("240.00"));
@@ -42,9 +42,9 @@ class SessaoCaixaTest {
 
     @Test
     void faltaDeDinheiroNaGavetaAparecePorDiferencaNegativa() {
-        SessaoCaixa caixa = SessaoCaixa.abrir(OPERADOR, FUNDO);
+        SessaoCaixa caixa = SessaoCaixa.abrir(OPERADOR, FUNDO, GERENTE);
 
-        caixa.fechar(new ContagemCedulas(Map.of(Cedula.NOTA_100, 2, Cedula.NOTA_10, 3)), dinheiro("150.00"), "Conferir com o gerente");
+        caixa.fechar(new ContagemCedulas(Map.of(Cedula.NOTA_100, 2, Cedula.NOTA_10, 3)), dinheiro("150.00"), "Conferir com o gerente", GERENTE);
 
         assertThat(caixa.diferenca()).contains(new BigDecimal("-10.00"));
         assertThat(caixa.observacaoFechamento()).contains("Conferir com o gerente");
@@ -52,7 +52,7 @@ class SessaoCaixaTest {
 
     @Test
     void reposicaoDeTrocoESangriaEntramNoValorEsperado() {
-        SessaoCaixa caixa = SessaoCaixa.abrir(OPERADOR, FUNDO);
+        SessaoCaixa caixa = SessaoCaixa.abrir(OPERADOR, FUNDO, GERENTE);
 
         caixa.registrarSuprimento(new ContagemCedulas(Map.of(Cedula.NOTA_2, 25)), "Reposição de troco", GERENTE);
         caixa.registrarSangria(dinheiro("100.00"), "Cofre", OPERADOR, dinheiro("200.00"));
@@ -66,19 +66,19 @@ class SessaoCaixaTest {
 
     @Test
     void oQueEntrouDesconsideraReposicaoESomaSangria() {
-        SessaoCaixa caixa = SessaoCaixa.abrir(OPERADOR, FUNDO);
+        SessaoCaixa caixa = SessaoCaixa.abrir(OPERADOR, FUNDO, GERENTE);
         caixa.registrarSuprimento(new ContagemCedulas(Map.of(Cedula.NOTA_10, 5)), "Reposição de troco", GERENTE);
         caixa.registrarSangria(dinheiro("100.00"), "Cofre", OPERADOR, dinheiro("120.00"));
 
         // Gaveta: 90 + 120 + 50 − 100 = 160.
-        caixa.fechar(new ContagemCedulas(Map.of(Cedula.NOTA_100, 1, Cedula.NOTA_50, 1, Cedula.NOTA_10, 1)), dinheiro("120.00"), null);
+        caixa.fechar(new ContagemCedulas(Map.of(Cedula.NOTA_100, 1, Cedula.NOTA_50, 1, Cedula.NOTA_10, 1)), dinheiro("120.00"), null, GERENTE);
 
         assertThat(caixa.dinheiroQueEntrou()).contains(new BigDecimal("120.00"));
     }
 
     @Test
     void sangriaMaiorQueODinheiroDaGavetaEhRecusada() {
-        SessaoCaixa caixa = SessaoCaixa.abrir(OPERADOR, FUNDO);
+        SessaoCaixa caixa = SessaoCaixa.abrir(OPERADOR, FUNDO, GERENTE);
 
         assertThatThrownBy(() -> caixa.registrarSangria(dinheiro("100.00"), "Cofre", OPERADOR, dinheiro("5.00")))
                 .isInstanceOf(DomainException.class)
@@ -87,7 +87,7 @@ class SessaoCaixaTest {
 
     @Test
     void sangriaExigeMotivoEValorPositivo() {
-        SessaoCaixa caixa = SessaoCaixa.abrir(OPERADOR, FUNDO);
+        SessaoCaixa caixa = SessaoCaixa.abrir(OPERADOR, FUNDO, GERENTE);
 
         assertThatThrownBy(() -> caixa.registrarSangria(dinheiro("10.00"), " ", OPERADOR, Dinheiro.zero()))
                 .hasMessageContaining("motivo");
@@ -97,7 +97,7 @@ class SessaoCaixaTest {
 
     @Test
     void reposicaoSemCedulasEhRecusada() {
-        SessaoCaixa caixa = SessaoCaixa.abrir(OPERADOR, FUNDO);
+        SessaoCaixa caixa = SessaoCaixa.abrir(OPERADOR, FUNDO, GERENTE);
 
         assertThatThrownBy(() -> caixa.registrarSuprimento(ContagemCedulas.vazia(), "Troco", GERENTE))
                 .hasMessageContaining("cédulas");
@@ -105,16 +105,33 @@ class SessaoCaixaTest {
 
     @Test
     void caixaFechadoNaoAceitaMaisMovimentoNemNovoFechamento() {
-        SessaoCaixa caixa = SessaoCaixa.abrir(OPERADOR, FUNDO);
-        caixa.fechar(FUNDO, Dinheiro.zero(), null);
+        SessaoCaixa caixa = SessaoCaixa.abrir(OPERADOR, FUNDO, GERENTE);
+        caixa.fechar(FUNDO, Dinheiro.zero(), null, GERENTE);
 
         assertThatThrownBy(() -> caixa.registrarSuprimento(FUNDO, "Troco", GERENTE)).hasMessageContaining("fechado");
-        assertThatThrownBy(() -> caixa.fechar(FUNDO, Dinheiro.zero(), null)).hasMessageContaining("fechado");
+        assertThatThrownBy(() -> caixa.fechar(FUNDO, Dinheiro.zero(), null, GERENTE)).hasMessageContaining("fechado");
+    }
+
+    @Test
+    void guardaQuemAbriuEQuemFechouOCaixaDoOperador() {
+        SessaoCaixa caixa = SessaoCaixa.abrir(OPERADOR, FUNDO, GERENTE);
+        caixa.fechar(FUNDO, Dinheiro.zero(), null, "supervisora@empresax.com");
+
+        assertThat(caixa.operador()).isEqualTo(OPERADOR);
+        assertThat(caixa.abertaPor()).isEqualTo(GERENTE);
+        assertThat(caixa.fechadaPor()).contains("supervisora@empresax.com");
+    }
+
+    @Test
+    void aberturaEFechamentoExigemQuemFez() {
+        assertThatThrownBy(() -> SessaoCaixa.abrir(OPERADOR, FUNDO, " ")).hasMessageContaining("abrindo");
+        SessaoCaixa caixa = SessaoCaixa.abrir(OPERADOR, FUNDO, GERENTE);
+        assertThatThrownBy(() -> caixa.fechar(FUNDO, Dinheiro.zero(), null, null)).hasMessageContaining("fechando");
     }
 
     @Test
     void caixaPrecisaDeOperador() {
-        assertThatThrownBy(() -> SessaoCaixa.abrir(" ", FUNDO)).isInstanceOf(DomainException.class);
+        assertThatThrownBy(() -> SessaoCaixa.abrir(" ", FUNDO, GERENTE)).isInstanceOf(DomainException.class);
     }
 
     private static Dinheiro dinheiro(String valor) {

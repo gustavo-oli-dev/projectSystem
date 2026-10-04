@@ -35,9 +35,12 @@ export interface MovimentoCaixa {
   registradoEm: string;
 }
 
-/** O caixa visto pelo operador — sem o valor esperado (fechamento cego). */
+/** Um caixa aberto — sem o valor esperado (fechamento cego). */
 export interface CaixaAberto {
   id: string;
+  operador: string;
+  operadorNome: string;
+  abertaPorNome: string;
   abertaEm: string;
   fundoInicial: number;
   cedulasAbertura: CedulaContada[];
@@ -52,6 +55,8 @@ export interface ConferenciaCaixa {
   id: string;
   operador: string;
   operadorNome: string;
+  abertaPorNome: string;
+  fechadaPorNome: string | null;
   status: "ABERTA" | "FECHADA";
   abertaEm: string;
   fechadaEm: string | null;
@@ -85,25 +90,40 @@ export interface ResumoCaixa {
   diferenca: number | null;
 }
 
-/** null = o operador ainda não abriu o caixa (a API responde 204). */
+/** null = o caixa deste operador ainda não foi aberto (a API responde 204). */
 export async function buscarCaixaAberto(): Promise<CaixaAberto | null> {
   return (await httpClient.get<CaixaAberto | undefined>("/caixa/atual")) ?? null;
 }
 
-export function abrirCaixa(cedulas: Contagem): Promise<CaixaAberto> {
-  return httpClient.post<CaixaAberto>("/caixa/abrir", { cedulas });
+export interface OperadorCaixa {
+  id: string;
+  nome: string;
+  email: string;
+  caixaAberto: boolean;
 }
 
-export function registrarSuprimento(cedulas: Contagem, motivo: string): Promise<CaixaAberto> {
-  return httpClient.post<CaixaAberto>("/caixa/suprimento", { cedulas, motivo });
+export function listarCaixasAbertos(): Promise<CaixaAberto[]> {
+  return httpClient.get<CaixaAberto[]>("/caixa/abertos");
 }
 
-export function registrarSangria(valor: number, motivo: string): Promise<CaixaAberto> {
-  return httpClient.post<CaixaAberto>("/caixa/sangria", { valor, motivo });
+export function listarOperadoresDeCaixa(): Promise<OperadorCaixa[]> {
+  return httpClient.get<OperadorCaixa[]>("/caixa/operadores");
 }
 
-export function fecharCaixa(cedulas: Contagem, observacao: string | null): Promise<ConferenciaCaixa> {
-  return httpClient.post<ConferenciaCaixa>("/caixa/fechar", { cedulas, observacao });
+export function abrirCaixa(operadorId: string, cedulas: Contagem): Promise<CaixaAberto> {
+  return httpClient.post<CaixaAberto>("/caixa/abrir", { operadorId, cedulas });
+}
+
+export function registrarSuprimento(caixaId: string, cedulas: Contagem, motivo: string): Promise<CaixaAberto> {
+  return httpClient.post<CaixaAberto>(`/caixa/${encodeURIComponent(caixaId)}/suprimento`, { cedulas, motivo });
+}
+
+export function registrarSangria(caixaId: string, valor: number, motivo: string): Promise<CaixaAberto> {
+  return httpClient.post<CaixaAberto>(`/caixa/${encodeURIComponent(caixaId)}/sangria`, { valor, motivo });
+}
+
+export function fecharCaixa(caixaId: string, cedulas: Contagem, observacao: string | null): Promise<ConferenciaCaixa> {
+  return httpClient.post<ConferenciaCaixa>(`/caixa/${encodeURIComponent(caixaId)}/fechar`, { cedulas, observacao });
 }
 
 export function buscarFundoPadrao(): Promise<CedulaContada[]> {

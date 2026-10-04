@@ -7,14 +7,7 @@ import {
 } from "../../api/pdvApi.js";
 import { buscarCaixaAberto, type CaixaAberto } from "../../api/caixaApi.js";
 import { listarProdutos, type Produto } from "../../api/produtosApi.js";
-import { criarAberturaCaixa } from "../caixa/aberturaCaixaView.js";
-import {
-  criarBarraCaixa,
-  criarPainelFechamento,
-  criarPainelReposicao,
-  criarPainelSangria,
-  criarTelaCaixaFechado,
-} from "../caixa/operacaoCaixaView.js";
+import { navegarPara } from "../../router.js";
 import {
   adicionarAoCarrinho,
   aoMudarCarrinho,
@@ -34,6 +27,8 @@ import { criarPainelMaquininha } from "./maquininhaView.js";
 import { criarPainelPagamento, type ModoFechamento } from "./pagamentoView.js";
 import { criarPainelPix } from "./pixNaTelaView.js";
 import { carregarUltimasVendas, ROTULO_FORMA } from "./ultimasVendasView.js";
+
+const HORA = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
 /** Caixa (PDV): ler produtos → conferir → receber → finalizar. O estoque é o mesmo do site e do WhatsApp. */
 export async function montarPdv(container: HTMLElement): Promise<void> {
@@ -70,48 +65,66 @@ export async function montarPdv(container: HTMLElement): Promise<void> {
 }
 
 /**
- * Sem caixa aberto: tela de abertura (contagem do fundo de troco). Com caixa aberto: faixa do caixa
- * no topo e a venda embaixo. Reposição, sangria e fechamento abrem no lugar da venda sem perder o
- * carrinho — "Voltar para a venda" devolve tudo como estava.
+ * O operador só vende (D27): abrir, repor troco, sangria e fechar ficam na Gestão de caixa, com
+ * quem tem CAIXA_GERENCIAR. Sem caixa aberto, a tela avisa e deixa conferir de novo.
  */
 function iniciarCaixa(area: HTMLElement, produtos: Produto[], caixa: CaixaAberto | null, aoVender: () => void): void {
   if (caixa === null) {
-    area.replaceChildren(criarAberturaCaixa((aberto) => iniciarCaixa(area, produtos, aberto, aoVender)));
+    area.replaceChildren(criarAvisoCaixaFechado(() => {
+      area.replaceChildren(elementoCarregando("Verificando o caixa..."));
+      buscarCaixaAberto()
+        .then((atual) => iniciarCaixa(area, produtos, atual, aoVender))
+        .catch(() => area.replaceChildren(cartaoEstado("Não foi possível verificar o caixa.", "erro")));
+    }));
     return;
   }
-  const faixa = document.createElement("div");
-  const areaPainel = document.createElement("div");
-  areaPainel.hidden = true;
   const areaDaVenda = document.createElement("div");
-
-  const voltarParaVenda = (): void => {
-    areaPainel.hidden = true;
-    areaPainel.replaceChildren();
-    areaDaVenda.hidden = false;
-  };
-  const abrirPainel = (painel: HTMLElement): void => {
-    areaDaVenda.hidden = true;
-    areaPainel.replaceChildren(painel);
-    areaPainel.hidden = false;
-  };
-  const aoAtualizarCaixa = (atualizado: CaixaAberto): void => {
-    desenharFaixa(atualizado);
-    voltarParaVenda();
-  };
-  const desenharFaixa = (atual: CaixaAberto): void => {
-    faixa.replaceChildren(criarBarraCaixa(atual, {
-      aoRepor: () => abrirPainel(criarPainelReposicao(aoAtualizarCaixa, voltarParaVenda)),
-      aoSangria: () => abrirPainel(criarPainelSangria(aoAtualizarCaixa, voltarParaVenda)),
-      aoFechar: () => abrirPainel(criarPainelFechamento((conferencia) => {
-        limparCarrinho();
-        area.replaceChildren(criarTelaCaixaFechado(conferencia, () => iniciarCaixa(area, produtos, null, aoVender)));
-      }, voltarParaVenda)),
-    }));
-  };
-
-  desenharFaixa(caixa);
-  area.replaceChildren(faixa, areaPainel, areaDaVenda);
+  area.replaceChildren(criarFaixaCaixa(caixa), areaDaVenda);
   montarVenda(areaDaVenda, produtos, aoVender);
+}
+
+function criarAvisoCaixaFechado(aoVerificar: () => void): HTMLElement {
+  const titulo = document.createElement("h2");
+  titulo.textContent = "Seu caixa ainda não foi aberto";
+  const texto = document.createElement("p");
+  texto.className = "caixa-painel__instrucao";
+  texto.textContent = "Peça a um responsável pelo caixa para abrir com o fundo de troco. Depois, clique em \"Verificar de novo\".";
+  const verificar = document.createElement("button");
+  verificar.type = "button";
+  verificar.className = "btn btn-primary";
+  verificar.textContent = "Verificar de novo";
+  verificar.addEventListener("click", aoVerificar);
+  const acoes = document.createElement("div");
+  acoes.className = "caixa-painel__acoes";
+  if (possui("CAIXA_GERENCIAR")) {
+    const gestao = document.createElement("button");
+    gestao.type = "button";
+    gestao.className = "btn btn-ghost";
+    gestao.textContent = "Ir para a Gestão de caixa";
+    gestao.addEventListener("click", () => navegarPara("gestao-caixa"));
+    acoes.append(gestao);
+  }
+  acoes.append(verificar);
+  const aviso = document.createElement("div");
+  aviso.className = "caixa-painel";
+  aviso.append(titulo, texto, acoes);
+  return aviso;
+}
+
+/** Só informação: de quem é o caixa e quem abriu. Nenhuma ação de dinheiro aqui. */
+function criarFaixaCaixa(caixa: CaixaAberto): HTMLElement {
+  const marcador = document.createElement("span");
+  marcador.className = "barra-caixa__marcador";
+  marcador.setAttribute("aria-hidden", "true");
+  const texto = document.createElement("span");
+  texto.textContent = `Caixa aberto às ${HORA.format(new Date(caixa.abertaEm))} por ${caixa.abertaPorNome}`;
+  const situacao = document.createElement("p");
+  situacao.className = "barra-caixa__situacao";
+  situacao.append(marcador, texto);
+  const faixa = document.createElement("div");
+  faixa.className = "barra-caixa";
+  faixa.append(situacao);
+  return faixa;
 }
 
 function montarVenda(area: HTMLElement, produtos: Produto[], aoVender: () => void): void {

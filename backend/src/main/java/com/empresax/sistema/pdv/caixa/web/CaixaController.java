@@ -5,6 +5,7 @@ import com.empresax.sistema.pdv.caixa.CaixaService;
 import com.empresax.sistema.pdv.caixa.CaixaService.FechamentoCaixa;
 import com.empresax.sistema.pdv.caixa.CaixaService.ResumoSessaoCaixa;
 import com.empresax.sistema.pdv.caixa.ContagemCedulas;
+import com.empresax.sistema.pdv.caixa.SessaoCaixa;
 import com.empresax.sistema.shared.dinheiro.Dinheiro;
 import com.empresax.sistema.usuario.UsuarioService;
 import jakarta.validation.Valid;
@@ -22,14 +23,19 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
- * Caixa do operador (abrir, repor troco, sangria, fechar) e conferência de todos os caixas.
- * O operador só mexe no próprio caixa: o e-mail vem do login, nunca da requisição.
+ * Caixa separado da venda (D27):
+ * - o operador (PDV_VENDER) só consulta se o próprio caixa está aberto;
+ * - quem tem CAIXA_GERENCIAR abre, repõe troco, faz sangria e fecha qualquer caixa;
+ * - quem tem CAIXA_CONFERIR vê a conferência de todos e define o fundo de troco padrão.
+ * Quem fez cada operação vem do login, nunca da requisição.
  */
 @RestController
 @RequestMapping("/api/caixa")
@@ -43,50 +49,67 @@ public class CaixaController {
         this.usuarioService = usuarioService;
     }
 
-    /** 204 = o operador ainda não abriu o caixa. */
+    /** 204 = o caixa deste operador ainda não foi aberto. */
     @PreAuthorize(RegraAcesso.PDV_VENDER)
     @GetMapping("/atual")
     public ResponseEntity<CaixaAbertoResponse> atual(@AuthenticationPrincipal UserDetails operador) {
         return caixaService.caixaAberto(operador.getUsername())
-                .map(sessao -> ResponseEntity.ok(CaixaAbertoResponse.de(sessao)))
+                .map(sessao -> ResponseEntity.ok(responder(sessao)))
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
-    @PreAuthorize(RegraAcesso.PDV_VENDER)
+    @PreAuthorize(RegraAcesso.CAIXA_GERENCIAR)
+    @GetMapping("/abertos")
+    public List<CaixaAbertoResponse> abertos() {
+        List<SessaoCaixa> abertos = caixaService.listarAbertos();
+        Map<String, String> nomes = nomes(abertos.stream().flatMap(sessao -> Stream.of(sessao.operador(), sessao.abertaPor())).toList());
+        return abertos.stream().map(sessao -> CaixaAbertoResponse.de(sessao, nomes)).toList();
+    }
+
+    @PreAuthorize(RegraAcesso.CAIXA_GERENCIAR)
+    @GetMapping("/operadores")
+    public List<OperadorCaixaResponse> operadores() {
+        return caixaService.operadores().stream().map(OperadorCaixaResponse::de).toList();
+    }
+
+    @PreAuthorize(RegraAcesso.CAIXA_GERENCIAR)
     @PostMapping("/abrir")
     @ResponseStatus(HttpStatus.CREATED)
-    public CaixaAbertoResponse abrir(@Valid @RequestBody CedulasRequest requisicao, @AuthenticationPrincipal UserDetails operador) {
-        return CaixaAbertoResponse.de(caixaService.abrir(operador.getUsername(), new ContagemCedulas(requisicao.cedulas())));
+    public CaixaAbertoResponse abrir(@Valid @RequestBody AberturaCaixaRequest requisicao, @AuthenticationPrincipal UserDetails responsavel) {
+        return responder(caixaService.abrir(
+                requisicao.operadorId(), new ContagemCedulas(requisicao.cedulas()), responsavel.getUsername()));
     }
 
-    @PreAuthorize(RegraAcesso.PDV_VENDER)
-    @PostMapping("/suprimento")
+    @PreAuthorize(RegraAcesso.CAIXA_GERENCIAR)
+    @PostMapping("/{sessaoId}/suprimento")
     public CaixaAbertoResponse registrarSuprimento(
-            @Valid @RequestBody SuprimentoRequest requisicao, @AuthenticationPrincipal UserDetails operador
+            @PathVariable UUID sessaoId, @Valid @RequestBody SuprimentoRequest requisicao, @AuthenticationPrincipal UserDetails responsavel
     ) {
-        return CaixaAbertoResponse.de(caixaService.registrarSuprimento(
-                operador.getUsername(), new ContagemCedulas(requisicao.cedulas()), requisicao.motivo()));
+        return responder(caixaService.registrarSuprimento(
+                sessaoId, new ContagemCedulas(requisicao.cedulas()), requisicao.motivo(), responsavel.getUsername()));
     }
 
-    @PreAuthorize(RegraAcesso.PDV_VENDER)
-    @PostMapping("/sangria")
+    @PreAuthorize(RegraAcesso.CAIXA_GERENCIAR)
+    @PostMapping("/{sessaoId}/sangria")
     public CaixaAbertoResponse registrarSangria(
-            @Valid @RequestBody SangriaRequest requisicao, @AuthenticationPrincipal UserDetails operador
+            @PathVariable UUID sessaoId, @Valid @RequestBody SangriaRequest requisicao, @AuthenticationPrincipal UserDetails responsavel
     ) {
-        return CaixaAbertoResponse.de(caixaService.registrarSangria(
-                operador.getUsername(), new Dinheiro(requisicao.valor()), requisicao.motivo()));
+        return responder(caixaService.registrarSangria(
+                sessaoId, new Dinheiro(requisicao.valor()), requisicao.motivo(), responsavel.getUsername()));
     }
 
     /** O resultado (esperado × contado) só aparece depois de a contagem ser enviada. */
-    @PreAuthorize(RegraAcesso.PDV_VENDER)
-    @PostMapping("/fechar")
-    public ConferenciaCaixaResponse fechar(@Valid @RequestBody FechamentoRequest requisicao, @AuthenticationPrincipal UserDetails operador) {
+    @PreAuthorize(RegraAcesso.CAIXA_GERENCIAR)
+    @PostMapping("/{sessaoId}/fechar")
+    public ConferenciaCaixaResponse fechar(
+            @PathVariable UUID sessaoId, @Valid @RequestBody FechamentoRequest requisicao, @AuthenticationPrincipal UserDetails responsavel
+    ) {
         FechamentoCaixa fechamento = caixaService.fechar(
-                operador.getUsername(), new ContagemCedulas(requisicao.cedulas()), requisicao.observacao());
-        return ConferenciaCaixaResponse.de(fechamento, usuarioService.nomesPorEmail(List.of(operador.getUsername())));
+                sessaoId, new ContagemCedulas(requisicao.cedulas()), requisicao.observacao(), responsavel.getUsername());
+        return conferencia(fechamento);
     }
 
-    @PreAuthorize(RegraAcesso.PDV_VENDER + " or " + RegraAcesso.CAIXA_CONFERIR)
+    @PreAuthorize(RegraAcesso.CAIXA_GERENCIAR + " or " + RegraAcesso.CAIXA_CONFERIR)
     @GetMapping("/fundo-padrao")
     public List<CedulaContadaResponse> fundoDeTrocoPadrao() {
         return CedulaContadaResponse.de(caixaService.fundoDeTrocoPadrao());
@@ -102,15 +125,28 @@ public class CaixaController {
     @GetMapping("/conferencia")
     public List<ResumoCaixaResponse> listarParaConferencia() {
         List<ResumoSessaoCaixa> resumos = caixaService.listarParaConferencia();
-        Map<String, String> nomes = usuarioService.nomesPorEmail(
-                resumos.stream().map(resumo -> resumo.sessao().operador()).collect(Collectors.toSet()));
+        Map<String, String> nomes = nomes(resumos.stream().map(resumo -> resumo.sessao().operador()).toList());
         return resumos.stream().map(resumo -> ResumoCaixaResponse.de(resumo, nomes)).toList();
     }
 
     @PreAuthorize(RegraAcesso.CAIXA_CONFERIR)
     @GetMapping("/conferencia/{sessaoId}")
     public ConferenciaCaixaResponse detalharParaConferencia(@PathVariable UUID sessaoId) {
-        FechamentoCaixa fechamento = caixaService.detalharParaConferencia(sessaoId);
-        return ConferenciaCaixaResponse.de(fechamento, usuarioService.nomesPorEmail(List.of(fechamento.sessao().operador())));
+        return conferencia(caixaService.detalharParaConferencia(sessaoId));
+    }
+
+    private CaixaAbertoResponse responder(SessaoCaixa sessao) {
+        return CaixaAbertoResponse.de(sessao, nomes(List.of(sessao.operador(), sessao.abertaPor())));
+    }
+
+    private ConferenciaCaixaResponse conferencia(FechamentoCaixa fechamento) {
+        SessaoCaixa sessao = fechamento.sessao();
+        List<String> emails = Stream.concat(Stream.of(sessao.operador(), sessao.abertaPor()), sessao.fechadaPor().stream()).toList();
+        return ConferenciaCaixaResponse.de(fechamento, nomes(emails));
+    }
+
+    /** Nome de quem vendeu/abriu/fechou, resolvido numa consulta só (a sessão guarda o e-mail). */
+    private Map<String, String> nomes(Collection<String> emails) {
+        return usuarioService.nomesPorEmail(emails.stream().collect(Collectors.toSet()));
     }
 }
