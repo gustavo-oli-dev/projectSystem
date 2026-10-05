@@ -87,7 +87,7 @@ public class ProdutoController {
     public ProdutoResponse atualizar(@PathVariable UUID id, @Valid @RequestBody AtualizarProdutoRequest requisicao) {
         Produto produto = produtoService.atualizar(
                 id, requisicao.nome(), requisicao.descricao(), new Dinheiro(requisicao.precoUnitario()),
-                requisicao.codigoBarras(), dinheiroOuNulo(requisicao.custoUnitario()));
+                requisicao.codigoBarras(), dinheiroOuNulo(requisicao.custoUnitario()), requisicao.estoqueMinimo());
         return comFotos(produto);
     }
 

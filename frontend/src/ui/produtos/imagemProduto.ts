@@ -9,7 +9,7 @@ const ROTULO_SEM_ESTOQUE = "Sem estoque";
  */
 export function criarImagemPrincipal(produto: Produto, classe: string): HTMLElement {
   const imagem = criarFotoOuQuadro(produto, classe);
-  if (situacaoEstoque(produto.quantidadeEmEstoque).modificador !== "esgotado") {
+  if (situacaoEstoque(produto.quantidadeEmEstoque, produto.estoqueMinimo).modificador !== "esgotado") {
     return imagem;
   }
   return envolverComAvisoSemEstoque(imagem, classe);

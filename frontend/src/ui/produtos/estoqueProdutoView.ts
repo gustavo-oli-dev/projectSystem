@@ -38,7 +38,7 @@ const MODIFICADOR_MOVIMENTACAO: Record<TipoMovimentacao, string> = {
 const SAIDAS: ReadonlySet<TipoMovimentacao> = new Set<TipoMovimentacao>(["VENDA", "PERDA", "INVENTARIO_FALTA"]);
 
 export function criarSecaoEstoque(produto: Produto, recarregar: () => Promise<void>): HTMLElement {
-  const situacao = situacaoEstoque(produto.quantidadeEmEstoque);
+  const situacao = situacaoEstoque(produto.quantidadeEmEstoque, produto.estoqueMinimo);
   const saldo = document.createElement("p");
   saldo.className = "saldo-estoque";
   const numero = document.createElement("strong");

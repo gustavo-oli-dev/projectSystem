@@ -329,7 +329,7 @@ function blocoAssincrono(titulo: string, carregar: () => Promise<HTMLElement>): 
 
 async function carregarEstoqueBaixo(): Promise<HTMLElement> {
   const baixos = (await listarProdutos())
-    .filter((produto) => produto.ativo && situacaoEstoque(produto.quantidadeEmEstoque).modificador !== "em_estoque")
+    .filter((produto) => produto.ativo && situacaoEstoque(produto.quantidadeEmEstoque, produto.estoqueMinimo).modificador !== "em_estoque")
     .sort((a, b) => a.quantidadeEmEstoque - b.quantidadeEmEstoque)
     .slice(0, ESTOQUE_BAIXO_MAXIMO);
   if (baixos.length === 0) {
@@ -338,7 +338,7 @@ async function carregarEstoqueBaixo(): Promise<HTMLElement> {
   const lista = document.createElement("ul");
   lista.className = "lista-simples";
   lista.append(...baixos.map((produto) => {
-    const situacao = situacaoEstoque(produto.quantidadeEmEstoque);
+    const situacao = situacaoEstoque(produto.quantidadeEmEstoque, produto.estoqueMinimo);
     const nome = document.createElement("span");
     nome.textContent = produto.nome;
     const selo = document.createElement("span");

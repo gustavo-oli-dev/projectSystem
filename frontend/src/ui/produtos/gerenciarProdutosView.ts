@@ -86,7 +86,7 @@ function renderizarLista(areaLista: HTMLElement, produtos: Produto[]): void {
   }
 
   const linhas = produtos.map((produto) => {
-    const situacao = situacaoEstoque(produto.quantidadeEmEstoque);
+    const situacao = situacaoEstoque(produto.quantidadeEmEstoque, produto.estoqueMinimo);
 
     const botaoEditar = document.createElement("button");
     botaoEditar.type = "button";

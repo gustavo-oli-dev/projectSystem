@@ -17,6 +17,8 @@ public record ProdutoResponse(
         boolean ativo,
         String codigoBarras,
         int quantidadeEmEstoque,
+        /** Vazio = não definido (vale o aviso padrão de 5). */
+        Integer estoqueMinimo,
         List<FotoResponse> fotos,
         /** Só preenchido para quem gerencia o catálogo ou vê o faturamento (custo é dado sensível). */
         BigDecimal custoUnitario
@@ -43,6 +45,7 @@ public record ProdutoResponse(
                 produto.ativo(),
                 produto.codigoBarras().orElse(null),
                 produto.quantidadeEmEstoque(),
+                produto.estoqueMinimo().orElse(null),
                 fotos,
                 mostrarCusto ? produto.custoUnitario().map(Dinheiro::valor).orElse(null) : null
         );

@@ -18,6 +18,7 @@ import { montarPdv } from "../pdv/pdvView.js";
 import { montarConferenciaCaixas } from "../caixa/conferenciaCaixasView.js";
 import { montarGestaoCaixa } from "../caixa/gestaoCaixaView.js";
 import { montarInventario } from "../produtos/inventarioView.js";
+import { montarReposicao } from "../produtos/reposicaoView.js";
 import { criarBotaoAssistente } from "../assistente/assistenteChatView.js";
 import { limparToken } from "../../state/authState.js";
 import { barraLateralRecolhida, lembrarBarraLateralRecolhida } from "./barraLateral.js";
@@ -54,6 +55,7 @@ const GRUPOS_NAV: GrupoNav[] = [
       { rota: "produtos", rotulo: "Produtos", icone: "produtos" },
       { rota: "gerenciar-produtos", rotulo: "Gerenciar produtos", icone: "gerenciar" },
       { rota: "inventario", rotulo: "Inventário", icone: "inventario" },
+      { rota: "reposicao", rotulo: "Reposição", icone: "reposicao" },
       { rota: "servicos", rotulo: "Serviços", icone: "servicos" },
     ],
   },
@@ -89,6 +91,7 @@ const PERMISSOES_POR_ROTA: Record<Rota, readonly Permissao[]> = {
   caixas: ["CAIXA_CONFERIR"],
   "gestao-caixa": ["CAIXA_GERENCIAR"],
   inventario: ["ESTOQUE_GERENCIAR"],
+  reposicao: ["CATALOGO_VER"],
 };
 
 const MONTADORES: Record<Rota, Montador> = {
@@ -108,6 +111,7 @@ const MONTADORES: Record<Rota, Montador> = {
   caixas: montarConferenciaCaixas,
   "gestao-caixa": montarGestaoCaixa,
   inventario: montarInventario,
+  reposicao: montarReposicao,
 };
 
 export function montarShell(raiz: HTMLElement): void {

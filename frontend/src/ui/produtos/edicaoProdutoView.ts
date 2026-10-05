@@ -65,6 +65,11 @@ function criarSecaoDados(produto: Produto, recarregar: () => Promise<void>): HTM
   custo.entrada.step = "0.01";
   custo.entrada.min = "0";
   custo.entrada.value = produto.custoUnitario === null ? "" : produto.custoUnitario.toFixed(2);
+  const estoqueMinimo = criarCampoTexto("edicao-estoque-minimo", "Estoque mínimo (avisa para repor)", "number", false);
+  estoqueMinimo.entrada.step = "1";
+  estoqueMinimo.entrada.min = "0";
+  estoqueMinimo.entrada.placeholder = "Padrão: 5";
+  estoqueMinimo.entrada.value = produto.estoqueMinimo === null ? "" : String(produto.estoqueMinimo);
   const codigoBarras = criarCampoTexto("edicao-codigo-barras", "Código de barras (opcional)", "text", false);
   codigoBarras.entrada.inputMode = "numeric";
   codigoBarras.entrada.maxLength = 14;
@@ -87,7 +92,8 @@ function criarSecaoDados(produto: Produto, recarregar: () => Promise<void>): HTM
   const formulario = document.createElement("form");
   formulario.className = "formulario-grade";
   formulario.append(
-    nome.container, descricao.container, preco.container, custo.container, codigoBarras.container, fiscal, erro, acoes
+    nome.container, descricao.container, preco.container, custo.container, codigoBarras.container,
+    estoqueMinimo.container, fiscal, erro, acoes
   );
   formulario.addEventListener("submit", (evento) => {
     evento.preventDefault();
@@ -99,6 +105,7 @@ function criarSecaoDados(produto: Produto, recarregar: () => Promise<void>): HTM
       precoUnitario: Number(preco.entrada.value),
       codigoBarras: textoOuNulo(codigoBarras.entrada.value),
       custoUnitario: custo.entrada.value === "" ? null : Number(custo.entrada.value),
+      estoqueMinimo: estoqueMinimo.entrada.value === "" ? null : Number(estoqueMinimo.entrada.value),
     };
     atualizarProduto(produto.id, alteracao)
       .then(recarregar)

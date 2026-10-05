@@ -15,6 +15,8 @@ export interface Produto {
   ativo: boolean;
   codigoBarras: string | null;
   quantidadeEmEstoque: number;
+  /** null = sem mínimo definido (vale o aviso padrão de 5). */
+  estoqueMinimo: number | null;
   fotos: FotoProduto[];
   /** Só vem para quem gerencia o catálogo ou vê o faturamento; null = não informado ou sem permissão. */
   custoUnitario: number | null;
@@ -36,6 +38,8 @@ export interface AlteracaoProduto {
   precoUnitario: number;
   codigoBarras: string | null;
   custoUnitario: number | null;
+  /** Sempre enviado: o servidor grava o que vier (null = sem mínimo, vale o aviso padrão). */
+  estoqueMinimo: number | null;
 }
 
 export type TipoMovimentacao = "ENTRADA" | "VENDA" | "DEVOLUCAO" | "PERDA" | "INVENTARIO_SOBRA" | "INVENTARIO_FALTA";
@@ -118,4 +122,25 @@ export function removerFoto(produtoId: string, fotoId: string): Promise<void> {
 /** Leitor de código de barras (caixa e entrada de estoque). */
 export function buscarProdutoPorCodigoBarras(codigo: string): Promise<Produto> {
   return httpClient.get<Produto>(`/produtos/codigo-barras/${encodeURIComponent(codigo)}`);
+}
+
+/** Produto que chegou no estoque mínimo e quanto comprar (30 dias de venda + mínimo − estoque). */
+export interface SugestaoReposicao {
+  produtoId: string;
+  nome: string;
+  codigoBarras: string | null;
+  unidadeMedida: string;
+  estoque: number;
+  estoqueMinimo: number;
+  minimoDefinido: boolean;
+  vendidosEm30Dias: number;
+  quantidadeSugerida: number;
+}
+
+export function listarReposicao(): Promise<SugestaoReposicao[]> {
+  return httpClient.get<SugestaoReposicao[]>("/estoque/reposicao");
+}
+
+export function baixarListaDeCompra(): Promise<Blob> {
+  return httpClient.arquivo("/estoque/reposicao/lista-de-compra.csv");
 }

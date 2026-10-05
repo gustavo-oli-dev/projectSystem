@@ -54,11 +54,13 @@ public class ProdutoService {
 
     @Transactional
     public Produto atualizar(
-            UUID id, String nome, String descricao, Dinheiro precoUnitario, String codigoBarras, Dinheiro custoUnitario
+            UUID id, String nome, String descricao, Dinheiro precoUnitario, String codigoBarras, Dinheiro custoUnitario,
+            Integer estoqueMinimo
     ) {
         Produto produto = buscarPorId(id);
         produto.atualizar(nome, descricao, precoUnitario, codigoBarras);
         produto.definirCusto(custoUnitario);
+        produto.definirEstoqueMinimo(estoqueMinimo);
         garantirCodigoBarrasLivre(produto, id);
         return produto;
     }

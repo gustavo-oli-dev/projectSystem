@@ -1,6 +1,8 @@
 package com.empresax.sistema.produto.web;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -13,6 +15,9 @@ public record AtualizarProdutoRequest(
         @NotNull(message = "Preço unitário é obrigatório")
         @DecimalMin(value = "0.0", message = "Preço unitário não pode ser negativo") BigDecimal precoUnitario,
         @Size(max = 14, message = "Código de barras tem no máximo 14 dígitos") String codigoBarras,
-        @DecimalMin(value = "0.0", message = "Custo não pode ser negativo") BigDecimal custoUnitario
+        @DecimalMin(value = "0.0", message = "Custo não pode ser negativo") BigDecimal custoUnitario,
+        /** Vazio = não definido (vale o aviso padrão). */
+        @Min(value = 0, message = "Estoque mínimo não pode ser negativo")
+        @Max(value = 1_000_000, message = "Estoque mínimo fora do limite") Integer estoqueMinimo
 ) {
 }

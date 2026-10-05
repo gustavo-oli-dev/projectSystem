@@ -20,6 +20,10 @@ import java.util.regex.Pattern;
 @Table(name = "produtos")
 public class Produto {
 
+    /** Sem mínimo definido, vale o mesmo aviso de "estoque baixo" das telas (5 unidades). */
+    public static final int ESTOQUE_MINIMO_PADRAO = 5;
+    private static final int ESTOQUE_MINIMO_MAXIMO = 1_000_000;
+
     private static final Pattern NCM_VALIDO = Pattern.compile("\\d{8}");
     private static final Pattern GTIN_VALIDO = Pattern.compile("\\d{8}|\\d{12,14}");
     private static final int PESO_GTIN_IMPAR = 3;
@@ -61,6 +65,10 @@ public class Produto {
     /** Nunca negativo (o banco também garante com CHECK). Só muda pelas operações de estoque abaixo. */
     @Column(nullable = false)
     private int quantidadeEmEstoque;
+
+    /** Abaixo disso o produto entra na sugestão de compra. Vazio = vale o padrão. */
+    @Column
+    private Integer estoqueMinimo;
 
     protected Produto() {
         // exigido pelo JPA
@@ -144,6 +152,24 @@ public class Produto {
     }
 
     /** Nulo = custo não informado. Mudar o custo não altera o lucro de vendas já feitas (cada item guarda o seu). */
+    /** Vazio = não definido (vale ESTOQUE_MINIMO_PADRAO). */
+    public void definirEstoqueMinimo(Integer minimo) {
+        if (minimo != null && (minimo < 0 || minimo > ESTOQUE_MINIMO_MAXIMO)) {
+            throw new DomainException("Estoque mínimo deve ficar entre 0 e " + ESTOQUE_MINIMO_MAXIMO);
+        }
+        this.estoqueMinimo = minimo;
+    }
+
+    /** O mínimo que vale para este produto (o definido ou o padrão). */
+    public int estoqueMinimoEfetivo() {
+        return estoqueMinimo == null ? ESTOQUE_MINIMO_PADRAO : estoqueMinimo;
+    }
+
+    /** Hora de comprar: o estoque chegou no mínimo (ou abaixo). */
+    public boolean precisaRepor() {
+        return quantidadeEmEstoque <= estoqueMinimoEfetivo();
+    }
+
     public void definirCusto(Dinheiro custo) {
         this.custoUnitario = custo;
     }
@@ -229,6 +255,10 @@ public class Produto {
 
     public int quantidadeEmEstoque() {
         return quantidadeEmEstoque;
+    }
+
+    public Optional<Integer> estoqueMinimo() {
+        return Optional.ofNullable(estoqueMinimo);
     }
 
     public Optional<Dinheiro> custoUnitario() {

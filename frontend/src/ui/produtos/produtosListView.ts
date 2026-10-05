@@ -60,7 +60,7 @@ function criarCartaoProduto(produto: Produto): HTMLElement {
   preco.className = "cartao-produto__preco";
   preco.textContent = formatarMoeda(produto.precoUnitario);
 
-  const situacao = situacaoEstoque(produto.quantidadeEmEstoque);
+  const situacao = situacaoEstoque(produto.quantidadeEmEstoque, produto.estoqueMinimo);
   const selo = document.createElement("span");
   selo.className = `selo selo--${situacao.modificador}`;
   selo.textContent = produto.quantidadeEmEstoque > 0
@@ -84,7 +84,7 @@ function criarSecaoEstoque(produtos: Produto[]): HTMLElement {
 
   const ordenados = [...produtos].sort((a, b) => a.quantidadeEmEstoque - b.quantidadeEmEstoque);
   const linhas = ordenados.map((produto) => {
-    const situacao = situacaoEstoque(produto.quantidadeEmEstoque);
+    const situacao = situacaoEstoque(produto.quantidadeEmEstoque, produto.estoqueMinimo);
     return criarLinha(
       celula(produto.nome),
       celula(produto.codigoBarras ?? "—"),
