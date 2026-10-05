@@ -14,6 +14,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +57,17 @@ public class RelatorioCaixaService {
             WHERE s.aberta_em >= :comeco AND s.aberta_em < :fim AND c.meio = 'PIX' AND c.status = 'PAGA'
             GROUP BY p.sessao_caixa_id
             """;
+    /** Produtos vendidos em dinheiro nos caixas abertos no dia (venda cancelada sai: pagamento estornado). */
+    private static final String SQL_PRODUTOS_EM_DINHEIRO = """
+            SELECT i.descricao AS descricao, SUM(i.quantidade) AS quantidade, SUM(i.preco_unitario * i.quantidade) AS valor
+            FROM itens_pedido i
+            JOIN pedidos p ON p.id = i.pedido_id
+            JOIN pagamentos_presenciais pp ON pp.pedido_id = p.id
+            JOIN sessoes_caixa s ON s.id = p.sessao_caixa_id
+            WHERE s.aberta_em >= :comeco AND s.aberta_em < :fim AND pp.forma = 'DINHEIRO' AND pp.status = 'APROVADO'
+            GROUP BY i.descricao
+            ORDER BY valor DESC, descricao
+            """;
     private static final String SEM_CAIXA_NUMERADO = "Caixa sem número";
 
     private final NamedParameterJdbcTemplate jdbc;
@@ -66,11 +78,18 @@ public class RelatorioCaixaService {
         this.usuarioService = usuarioService;
     }
 
+    /** Conferência do dinheiro de um dia: caixas abertos no dia + produtos vendidos em dinheiro neles. */
+    @Transactional(readOnly = true)
+    public DinheiroDoDia conferirDia(LocalDate dia) {
+        PeriodoRelatorio periodo = new PeriodoRelatorio(dia, dia);
+        List<DinheiroDoDia.ProdutoEmDinheiro> produtos = jdbc.query(SQL_PRODUTOS_EM_DINHEIRO, parametrosDo(periodo), (linha, indice) ->
+                new DinheiroDoDia.ProdutoEmDinheiro(linha.getString("descricao"), linha.getInt("quantidade"), linha.getBigDecimal("valor")));
+        return new DinheiroDoDia(dia, gerar(periodo).caixas(), produtos);
+    }
+
     @Transactional(readOnly = true)
     public RelatorioCaixa gerar(PeriodoRelatorio periodo) {
-        MapSqlParameterSource parametros = new MapSqlParameterSource()
-                .addValue("comeco", Timestamp.from(periodo.comeco()))
-                .addValue("fim", Timestamp.from(periodo.fimExclusivo()));
+        MapSqlParameterSource parametros = parametrosDo(periodo);
         List<LinhaCaixa> linhas = jdbc.query(SQL_CAIXAS, parametros, (resultado, indice) -> LinhaCaixa.ler(resultado));
         Map<UUID, Map<String, BigDecimal>> vendasPorCaixa = new HashMap<>();
         jdbc.query(SQL_VENDAS_POR_FORMA, parametros, (RowCallbackHandler) resultado -> vendasPorCaixa
@@ -85,6 +104,12 @@ public class RelatorioCaixaService {
         return RelatorioCaixa.de(linhas.stream()
                 .map(linha -> linha.comNomes(nomes, vendasPorCaixa.getOrDefault(linha.id(), Map.of())))
                 .toList());
+    }
+
+    private static MapSqlParameterSource parametrosDo(PeriodoRelatorio periodo) {
+        return new MapSqlParameterSource()
+                .addValue("comeco", Timestamp.from(periodo.comeco()))
+                .addValue("fim", Timestamp.from(periodo.fimExclusivo()));
     }
 
     /** Linha crua do banco (e-mails); vira CaixaDoPeriodo com os nomes resolvidos em lote. */

@@ -40,6 +40,12 @@ public class RelatorioCaixaController {
         return RelatorioCaixaResponse.de(relatorioCaixaService.gerar(new PeriodoRelatorio(inicio, fim)));
     }
 
+    /** Conferência do dinheiro de um dia (o gerente compara a gaveta com o que o sistema registrou). */
+    @GetMapping("/dia")
+    public DinheiroDoDiaResponse conferirDia(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data) {
+        return DinheiroDoDiaResponse.de(relatorioCaixaService.conferirDia(data));
+    }
+
     @GetMapping("/fechamentos.csv")
     public ResponseEntity<byte[]> exportarFechamentos(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,

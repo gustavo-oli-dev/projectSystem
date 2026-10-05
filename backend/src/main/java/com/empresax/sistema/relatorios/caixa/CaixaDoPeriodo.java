@@ -51,6 +51,16 @@ public record CaixaDoPeriodo(
         return diferenca().map(ResultadoFechamento::de).orElse(ResultadoFechamento.ABERTO);
     }
 
+    /**
+     * O que entrou na gaveta por venda: contado − valor inicial − reposições + sangrias. Tem que
+     * dar o vendido em dinheiro (é a "autenticação" do dinheiro). Vazio enquanto aberto.
+     */
+    public Optional<BigDecimal> dinheiroQueEntrou() {
+        return fechado()
+                ? Optional.of(valorContado.subtract(fundoInicial).subtract(reposicoes).add(sangrias))
+                : Optional.empty();
+    }
+
     public BigDecimal totalVendido() {
         return vendasPorForma.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
     }

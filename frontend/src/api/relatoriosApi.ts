@@ -140,3 +140,34 @@ export function gerarRelatorioCaixa(periodo: Periodo): Promise<RelatorioCaixa> {
 export function baixarCsvCaixa(periodo: Periodo): Promise<Blob> {
   return httpClient.arquivo(`/relatorios/caixa/fechamentos.csv?${consulta(periodo)}`);
 }
+
+/** Conferência do dinheiro de um dia: o contado nas gavetas × o vendido em dinheiro no sistema. */
+export interface DinheiroDoDia {
+  dia: string;
+  vendidoEmDinheiro: number;
+  entrouNasGavetas: number;
+  /** Entrou − vendido: zero certo, negativo devendo, positivo sobrando. */
+  diferenca: number;
+  /** null = nenhum caixa fechado no dia ainda. */
+  resultado: ResultadoFechamento | null;
+  caixasAbertos: number;
+  caixas: Array<{
+    pontoNome: string;
+    operadorNome: string;
+    abertaEm: string;
+    fechadaEm: string | null;
+    valorInicial: number;
+    reposicoes: number;
+    sangrias: number;
+    contado: number | null;
+    entrouNaGaveta: number | null;
+    vendidoEmDinheiro: number | null;
+    diferenca: number | null;
+    resultado: ResultadoFechamento;
+  }>;
+  produtosEmDinheiro: Array<{ descricao: string; quantidade: number; valor: number }>;
+}
+
+export function conferirDinheiroDoDia(dia: string): Promise<DinheiroDoDia> {
+  return httpClient.get<DinheiroDoDia>(`/relatorios/caixa/dia?data=${encodeURIComponent(dia)}`);
+}

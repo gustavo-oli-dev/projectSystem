@@ -4119,3 +4119,16 @@ form.formulario-produto > .formulario-produto__fotos {
     grid-template-columns: 1fr;
   }
 }
+
+/* Dinheiro do dia (D31) */
+.dinheiro-do-dia__explicacao {
+  max-width: 52rem;
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--cor-texto-suave);
+}
+
+.dinheiro-do-dia__titulo {
+  margin: 0;
+  font-size: 1.125rem;
+}

@@ -17,6 +17,7 @@ import { criarGraficoRosca, type CorFatia, type Fatia } from "../graficos/grafic
 import { situacaoEstoque } from "../produtos/situacaoEstoque.js";
 import { criarIndicadores } from "./indicadoresView.js";
 import { ATALHOS, periodoDoAtalho, type AtalhoPeriodo } from "./periodoPainel.js";
+import { montarAbaDinheiroDoDia } from "./abaDinheiroDoDia.js";
 import { montarAbaCaixa } from "./secoesCaixa.js";
 import {
   criarSecaoCanais,
@@ -28,13 +29,13 @@ import {
   criarSecaoMaisVendidos,
 } from "./secoesRelatorio.js";
 
-type AbaPainel = "vendas" | "produtos" | "horarios" | "caixa" | "operacao";
+type AbaPainel = "vendas" | "produtos" | "horarios" | "caixa" | "dinheiro-do-dia" | "operacao";
 
 interface DefinicaoAba {
   aba: AbaPainel;
   rotulo: string;
   visivel: () => boolean;
-  /** Operação é "agora": não depende do período escolhido. */
+  /** Operação é "agora" e o Dinheiro do dia tem o seu próprio dia: não usam o filtro de período. */
   usaPeriodo: boolean;
 }
 
@@ -43,6 +44,10 @@ const ABAS: readonly DefinicaoAba[] = [
   { aba: "produtos", rotulo: "Produtos", visivel: () => possui("FATURAMENTO_VER"), usaPeriodo: true },
   { aba: "horarios", rotulo: "Horários", visivel: () => possui("FATURAMENTO_VER"), usaPeriodo: true },
   { aba: "caixa", rotulo: "Caixa", visivel: () => possuiAlguma(["FATURAMENTO_VER", "CAIXA_CONFERIR"]), usaPeriodo: true },
+  {
+    aba: "dinheiro-do-dia", rotulo: "Dinheiro do dia",
+    visivel: () => possuiAlguma(["FATURAMENTO_VER", "CAIXA_CONFERIR"]), usaPeriodo: false,
+  },
   {
     aba: "operacao", rotulo: "Operação agora",
     visivel: () => possuiAlguma(["CATALOGO_VER", "PEDIDOS_VER", "COBRANCAS_VER"]), usaPeriodo: false,
@@ -161,6 +166,8 @@ async function montarConteudoDaAba(
     case "caixa":
       return montarAbaCaixa(await gerarRelatorioCaixa(periodo), criarBotaoExportar(
         () => baixarCsvCaixa(periodo), `fechamentos-de-caixa_${periodo.inicio}_a_${periodo.fim}.csv`));
+    case "dinheiro-do-dia":
+      return montarAbaDinheiroDoDia();
     case "operacao":
       return montarAbaOperacao();
   }
