@@ -4,6 +4,7 @@ import com.empresax.sistema.common.domain.DomainException;
 import com.empresax.sistema.common.domain.EntidadeNaoEncontradaException;
 import com.empresax.sistema.produto.Produto;
 import com.empresax.sistema.produto.ProdutoRepository;
+import com.empresax.sistema.shared.dinheiro.Dinheiro;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,6 +52,21 @@ public class EstoqueService {
         produto.devolverAoEstoque(quantidade);
         movimentacaoRepository.save(MovimentacaoEstoque.devolucao(
                 produto.id(), quantidade, produto.quantidadeEmEstoque(), pedidoId, responsavel));
+    }
+
+    /**
+     * Entrada pela nota de compra: soma ao estoque e, se pedido, troca o custo do produto pelo da
+     * nota. Roda dentro da transação da entrada da nota (estoque, nota e contas juntos ou nada).
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void darEntradaPorNota(UUID produtoId, int quantidade, UUID notaEntradaId, Dinheiro novoCusto, String responsavel) {
+        Produto produto = travar(produtoId);
+        produto.darEntradaNoEstoque(quantidade);
+        if (novoCusto != null) {
+            produto.definirCusto(novoCusto);
+        }
+        movimentacaoRepository.save(MovimentacaoEstoque.entradaPorNota(
+                produto.id(), quantidade, produto.quantidadeEmEstoque(), notaEntradaId, responsavel));
     }
 
     /** Produto que sai sem ser vendido (vencido, avariado, furto...). Nunca deixa o estoque negativo. */

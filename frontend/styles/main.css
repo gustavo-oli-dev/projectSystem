@@ -4170,3 +4170,51 @@ form.formulario-produto > .formulario-produto__fotos {
   font-size: 0.875rem;
   color: var(--cor-texto-suave);
 }
+
+/* Compras: entrada por nota, contas a pagar, contatos (D34) */
+.entrada-nota__arquivo {
+  padding: 1rem;
+  border: 2px dashed var(--cor-borda-forte);
+  border-radius: var(--raio);
+  background: var(--cor-superficie-suave);
+  font-size: 0.9375rem;
+}
+
+.entrada-nota__produto {
+  width: 100%;
+  min-width: 14rem;
+}
+
+.entrada-nota__opcao {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.875rem;
+}
+
+.entrada-nota__opcao input {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.entrada-nota__titulo-lista {
+  margin: 1.5rem 0 1rem;
+}
+
+.contas__indicadores {
+  margin-bottom: 1.25rem;
+}
+
+.contas__filtros {
+  margin-bottom: 1rem;
+}
+
+.contas__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.contas__formulario {
+  margin-bottom: 1.25rem;
+}

@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -43,6 +44,12 @@ public class ProdutoService {
     public Produto buscarPorId(UUID id) {
         return produtoRepository.findById(id)
                 .orElseThrow(() -> new EntidadeNaoEncontradaException("Produto não encontrado: " + id));
+    }
+
+    /** Produto do código de barras, se houver (ex.: sugerir o produto de um item da nota do fornecedor). */
+    @Transactional(readOnly = true)
+    public Optional<Produto> encontrarPorCodigoBarras(String codigoBarras) {
+        return codigoBarras == null || codigoBarras.isBlank() ? Optional.empty() : produtoRepository.findByCodigoBarras(codigoBarras.trim());
     }
 
     /** Leitura pelo leitor de código de barras (caixa e entrada de estoque). */

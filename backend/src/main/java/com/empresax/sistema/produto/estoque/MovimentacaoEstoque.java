@@ -45,6 +45,10 @@ public class MovimentacaoEstoque {
     @Column(updatable = false)
     private UUID pedidoId;
 
+    /** Entrada que veio de uma nota de compra (XML do fornecedor). */
+    @Column(updatable = false)
+    private UUID notaEntradaId;
+
     /** Só em perda. */
     @Enumerated(EnumType.STRING)
     @Column(updatable = false, length = 30)
@@ -100,6 +104,16 @@ public class MovimentacaoEstoque {
     public static MovimentacaoEstoque devolucao(UUID produtoId, int quantidade, int saldoApos, UUID pedidoId, String responsavel) {
         return new MovimentacaoEstoque(produtoId, TipoMovimentacaoEstoque.DEVOLUCAO, quantidade, saldoApos,
                 exigirPedido(pedidoId), responsavel);
+    }
+
+    /** Entrada pela nota do fornecedor: o histórico mostra de qual nota veio. */
+    public static MovimentacaoEstoque entradaPorNota(UUID produtoId, int quantidade, int saldoApos, UUID notaEntradaId, String responsavel) {
+        if (notaEntradaId == null) {
+            throw new DomainException("Entrada por nota precisa da nota");
+        }
+        MovimentacaoEstoque entrada = new MovimentacaoEstoque(produtoId, TipoMovimentacaoEstoque.ENTRADA, quantidade, saldoApos, null, responsavel);
+        entrada.notaEntradaId = notaEntradaId;
+        return entrada;
     }
 
     /**
@@ -176,6 +190,10 @@ public class MovimentacaoEstoque {
 
     public Instant criadaEm() {
         return criadaEm;
+    }
+
+    public Optional<UUID> notaEntradaId() {
+        return Optional.ofNullable(notaEntradaId);
     }
 
     public Optional<MotivoPerda> motivo() {

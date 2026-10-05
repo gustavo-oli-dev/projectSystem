@@ -19,6 +19,9 @@ import { montarConferenciaCaixas } from "../caixa/conferenciaCaixasView.js";
 import { montarGestaoCaixa } from "../caixa/gestaoCaixaView.js";
 import { montarInventario } from "../produtos/inventarioView.js";
 import { montarReposicao } from "../produtos/reposicaoView.js";
+import { montarEntradaNota } from "../compras/entradaNotaView.js";
+import { montarContasAPagar } from "../compras/contasPagarView.js";
+import { montarContatos } from "../compras/contatosView.js";
 import { criarBotaoAssistente } from "../assistente/assistenteChatView.js";
 import { limparToken } from "../../state/authState.js";
 import { barraLateralRecolhida, lembrarBarraLateralRecolhida } from "./barraLateral.js";
@@ -60,6 +63,14 @@ const GRUPOS_NAV: GrupoNav[] = [
     ],
   },
   {
+    titulo: "Compras",
+    itens: [
+      { rota: "entrada-nota", rotulo: "Entrada por nota", icone: "nota" },
+      { rota: "contas-a-pagar", rotulo: "Contas a pagar", icone: "contas" },
+      { rota: "contatos", rotulo: "Contatos", icone: "contatos" },
+    ],
+  },
+  {
     titulo: "Operação",
     itens: [
       { rota: "fiscal", rotulo: "Fiscal · SEFAZ", icone: "fiscal" },
@@ -92,6 +103,9 @@ const PERMISSOES_POR_ROTA: Record<Rota, readonly Permissao[]> = {
   "gestao-caixa": ["CAIXA_GERENCIAR"],
   inventario: ["ESTOQUE_GERENCIAR"],
   reposicao: ["CATALOGO_VER"],
+  "entrada-nota": ["ESTOQUE_GERENCIAR"],
+  "contas-a-pagar": ["CONTAS_PAGAR_GERENCIAR"],
+  contatos: ["CONTATOS_GERENCIAR"],
 };
 
 const MONTADORES: Record<Rota, Montador> = {
@@ -112,6 +126,9 @@ const MONTADORES: Record<Rota, Montador> = {
   "gestao-caixa": montarGestaoCaixa,
   inventario: montarInventario,
   reposicao: montarReposicao,
+  "entrada-nota": montarEntradaNota,
+  "contas-a-pagar": montarContasAPagar,
+  contatos: montarContatos,
 };
 
 export function montarShell(raiz: HTMLElement): void {
