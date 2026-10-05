@@ -4218,3 +4218,44 @@ form.formulario-produto > .formulario-produto__fotos {
 .contas__formulario {
   margin-bottom: 1.25rem;
 }
+
+/* Autorização do gerente no caixa (D35) */
+.autorizacao__janela {
+  width: min(30rem, calc(100vw - 2rem));
+  padding: 0;
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio-cartao);
+  background: var(--cor-superficie);
+  box-shadow: 0 16px 48px rgba(18, 26, 44, 0.25);
+}
+
+.autorizacao__janela::backdrop {
+  background: rgba(18, 26, 44, 0.45);
+}
+
+.autorizacao {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.autorizacao h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.pdv__desconto:empty {
+  display: none;
+}
+
+.pdv__desconto-linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--texto-variacao-boa);
+}

@@ -8,6 +8,8 @@ import com.empresax.sistema.common.domain.DomainException;
 import com.empresax.sistema.common.domain.EntidadeNaoEncontradaException;
 import com.empresax.sistema.documentofiscal.DocumentoFiscalService;
 import com.empresax.sistema.pedido.Pedido;
+import com.empresax.sistema.pdv.autorizacao.AcaoAutorizada;
+import com.empresax.sistema.pdv.autorizacao.AutorizacaoCaixaService;
 import com.empresax.sistema.pdv.caixa.CaixaService;
 import com.empresax.sistema.pdv.maquininha.Maquininha;
 import com.empresax.sistema.pdv.maquininha.SituacaoCobrancaMaquininha;
@@ -44,6 +46,7 @@ public class PdvService {
     private final CancelamentoVendaService cancelamentoVendaService;
     private final Maquininha maquininha;
     private final CaixaService caixaService;
+    private final AutorizacaoCaixaService autorizacaoService;
 
     public PdvService(
             PedidoService pedidoService,
@@ -52,7 +55,8 @@ public class PdvService {
             DocumentoFiscalService documentoFiscalService,
             CancelamentoVendaService cancelamentoVendaService,
             Maquininha maquininha,
-            CaixaService caixaService
+            CaixaService caixaService,
+            AutorizacaoCaixaService autorizacaoService
     ) {
         this.pedidoService = pedidoService;
         this.pagamentoRepository = pagamentoRepository;
@@ -61,6 +65,7 @@ public class PdvService {
         this.cancelamentoVendaService = cancelamentoVendaService;
         this.maquininha = maquininha;
         this.caixaService = caixaService;
+        this.autorizacaoService = autorizacaoService;
     }
 
     @Transactional
@@ -225,6 +230,10 @@ public class PdvService {
         Cpf cpf = cpfNaNota == null || cpfNaNota.isBlank() ? null : new Cpf(cpfNaNota);
         UUID caixa = caixaService.exigirCaixaAberto(operador).id();
         Pedido pedido = pedidoService.criarNoBalcao(venda.itens(), cpf, venda.clienteId(), caixa);
+        if (venda.desconto() != null) {
+            String autorizadoPor = autorizacaoService.validar(venda.desconto().tokenAutorizacao(), AcaoAutorizada.DESCONTO, operador);
+            pedido.aplicarDesconto(new Dinheiro(venda.desconto().valor()), autorizadoPor);
+        }
         pedidoService.confirmar(pedido.id(), operador);
         return pedido;
     }

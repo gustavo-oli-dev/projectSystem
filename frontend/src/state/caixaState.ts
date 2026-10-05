@@ -6,9 +6,17 @@ export interface ItemCarrinho {
   quantidade: number;
 }
 
+/** Desconto autorizado por um gerente para ESTA venda (D35). */
+export interface DescontoNaVenda {
+  readonly valor: number;
+  readonly tokenAutorizacao: string;
+  readonly autorizadoPorNome: string;
+}
+
 type Ouvinte = () => void;
 
 let itens: ItemCarrinho[] = [];
+let desconto: DescontoNaVenda | null = null;
 const ouvintes: Ouvinte[] = [];
 
 export function itensDoCarrinho(): readonly ItemCarrinho[] {
@@ -17,6 +25,7 @@ export function itensDoCarrinho(): readonly ItemCarrinho[] {
 
 /** Ler o mesmo produto de novo soma uma unidade em vez de criar outra linha. */
 export function adicionarAoCarrinho(produto: Produto): void {
+  desconto = null;
   const existente = itens.find((item) => item.produto.id === produto.id);
   if (existente === undefined) {
     itens = [...itens, { produto, quantidade: 1 }];
@@ -27,6 +36,10 @@ export function adicionarAoCarrinho(produto: Produto): void {
 }
 
 export function alterarQuantidade(produtoId: string, quantidade: number): void {
+  const mudou = itens.some((item) => item.produto.id === produtoId && item.quantidade !== quantidade);
+  if (mudou) {
+    desconto = null;
+  }
   itens = quantidade <= 0
     ? itens.filter((item) => item.produto.id !== produtoId)
     : itens.map((item) => (item.produto.id === produtoId ? { ...item, quantidade } : item));
@@ -35,11 +48,30 @@ export function alterarQuantidade(produtoId: string, quantidade: number): void {
 
 export function limparCarrinho(): void {
   itens = [];
+  desconto = null;
   notificar();
 }
 
 export function totalDoCarrinho(): number {
   return itens.reduce((soma, item) => soma + item.produto.precoUnitario * item.quantidade, 0);
+}
+
+/**
+ * O desconto vale para a venda como ela estava quando o gerente autorizou: qualquer mudança no
+ * carrinho o retira (é preciso pedir de novo).
+ */
+export function definirDesconto(novo: DescontoNaVenda | null): void {
+  desconto = novo;
+  notificar();
+}
+
+export function descontoDaVenda(): DescontoNaVenda | null {
+  return desconto;
+}
+
+/** O que o cliente paga: soma dos itens − desconto. */
+export function totalAPagar(): number {
+  return Math.max(0, totalDoCarrinho() - (desconto?.valor ?? 0));
 }
 
 /** Substitui o ouvinte anterior: só existe uma tela de caixa aberta por vez. */

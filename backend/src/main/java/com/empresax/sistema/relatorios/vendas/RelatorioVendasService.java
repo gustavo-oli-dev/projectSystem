@@ -30,10 +30,10 @@ public class RelatorioVendasService {
 
     private static final String SQL_TOTAIS = """
             SELECT COUNT(DISTINCT p.id) AS vendas,
-                   COALESCE(SUM(i.preco_unitario * i.quantidade), 0) AS faturamento,
+                   COALESCE(SUM(i.preco_unitario * i.quantidade - i.desconto), 0) AS faturamento,
                    COALESCE(SUM(i.quantidade) FILTER (WHERE i.tipo = 'PRODUTO'), 0) AS unidades,
                    COALESCE(SUM(i.custo_unitario * i.quantidade), 0) AS custo,
-                   COALESCE(SUM(i.preco_unitario * i.quantidade) FILTER (WHERE i.custo_unitario IS NOT NULL), 0)
+                   COALESCE(SUM(i.preco_unitario * i.quantidade - i.desconto) FILTER (WHERE i.custo_unitario IS NOT NULL), 0)
                        AS receita_com_custo
             FROM pedidos p
             JOIN itens_pedido i ON i.pedido_id = p.id
@@ -44,10 +44,10 @@ public class RelatorioVendasService {
     private static final String SQL_SERIE = """
             SELECT CAST(date_trunc(:unidade, p.confirmado_em AT TIME ZONE :fuso) AS date) AS inicio,
                    COUNT(DISTINCT p.id) AS vendas,
-                   COALESCE(SUM(i.preco_unitario * i.quantidade), 0) AS faturamento,
+                   COALESCE(SUM(i.preco_unitario * i.quantidade - i.desconto), 0) AS faturamento,
                    COALESCE(SUM(i.quantidade) FILTER (WHERE i.tipo = 'PRODUTO'), 0) AS unidades,
                    COALESCE(SUM(i.custo_unitario * i.quantidade), 0) AS custo,
-                   COALESCE(SUM(i.preco_unitario * i.quantidade) FILTER (WHERE i.custo_unitario IS NOT NULL), 0)
+                   COALESCE(SUM(i.preco_unitario * i.quantidade - i.desconto) FILTER (WHERE i.custo_unitario IS NOT NULL), 0)
                        AS receita_com_custo
             FROM pedidos p
             JOIN itens_pedido i ON i.pedido_id = p.id
@@ -59,7 +59,7 @@ public class RelatorioVendasService {
 
     private static final String SQL_DESFEITAS = """
             SELECT 'DESFEITAS' AS chave, COUNT(DISTINCT p.id) AS vendas,
-                   COALESCE(SUM(i.preco_unitario * i.quantidade), 0) AS valor
+                   COALESCE(SUM(i.preco_unitario * i.quantidade - i.desconto), 0) AS valor
             FROM pedidos p
             JOIN itens_pedido i ON i.pedido_id = p.id
             WHERE p.status = 'CANCELADO'
@@ -68,7 +68,7 @@ public class RelatorioVendasService {
 
     private static final String SQL_POR_CANAL = """
             SELECT p.canal AS chave, COUNT(DISTINCT p.id) AS vendas,
-                   COALESCE(SUM(i.preco_unitario * i.quantidade), 0) AS valor
+                   COALESCE(SUM(i.preco_unitario * i.quantidade - i.desconto), 0) AS valor
             FROM pedidos p
             JOIN itens_pedido i ON i.pedido_id = p.id
             WHERE p.status IN ('AGUARDANDO_EMISSAO', 'CONCLUIDO')
@@ -98,7 +98,7 @@ public class RelatorioVendasService {
     private static final String SQL_POR_HORA = """
             SELECT CAST(EXTRACT(HOUR FROM p.confirmado_em AT TIME ZONE :fuso) AS int) AS chave,
                    COUNT(DISTINCT p.id) AS vendas,
-                   COALESCE(SUM(i.preco_unitario * i.quantidade), 0) AS valor
+                   COALESCE(SUM(i.preco_unitario * i.quantidade - i.desconto), 0) AS valor
             FROM pedidos p
             JOIN itens_pedido i ON i.pedido_id = p.id
             WHERE p.status IN ('AGUARDANDO_EMISSAO', 'CONCLUIDO')
@@ -110,7 +110,7 @@ public class RelatorioVendasService {
     private static final String SQL_POR_DIA_DA_SEMANA = """
             SELECT CAST(EXTRACT(ISODOW FROM p.confirmado_em AT TIME ZONE :fuso) AS int) AS chave,
                    COUNT(DISTINCT p.id) AS vendas,
-                   COALESCE(SUM(i.preco_unitario * i.quantidade), 0) AS valor
+                   COALESCE(SUM(i.preco_unitario * i.quantidade - i.desconto), 0) AS valor
             FROM pedidos p
             JOIN itens_pedido i ON i.pedido_id = p.id
             WHERE p.status IN ('AGUARDANDO_EMISSAO', 'CONCLUIDO')
@@ -123,8 +123,8 @@ public class RelatorioVendasService {
                    MAX(i.descricao) AS descricao,
                    MAX(i.tipo) AS tipo,
                    SUM(i.quantidade) AS unidades,
-                   SUM(i.preco_unitario * i.quantidade) AS faturamento,
-                   SUM((i.preco_unitario - i.custo_unitario) * i.quantidade) FILTER (WHERE i.custo_unitario IS NOT NULL) AS lucro,
+                   SUM(i.preco_unitario * i.quantidade - i.desconto) AS faturamento,
+                   SUM((i.preco_unitario - i.custo_unitario) * i.quantidade - i.desconto) FILTER (WHERE i.custo_unitario IS NOT NULL) AS lucro,
                    BOOL_AND(i.custo_unitario IS NOT NULL) AS custo_completo
             FROM pedidos p
             JOIN itens_pedido i ON i.pedido_id = p.id

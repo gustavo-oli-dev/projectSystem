@@ -13,6 +13,9 @@ import {
   aoMudarCarrinho,
   itensDoCarrinho,
   limparCarrinho,
+  definirDesconto,
+  descontoDaVenda,
+  totalAPagar,
   totalDoCarrinho,
 } from "../../state/caixaState.js";
 import { possui } from "../../state/sessaoState.js";
@@ -20,6 +23,7 @@ import { criarCampoTexto, criarMensagemErro, mostrarErro, textoOuNulo } from "..
 import { elementoCarregando } from "../estadoCarregamento.js";
 import { cartaoEstado } from "../estadoCard.js";
 import { formatarMoeda } from "../formatarMoeda.js";
+import { pedirDescontoAutorizado } from "./autorizacaoView.js";
 import { renderizarCarrinho } from "./carrinhoView.js";
 import { criarCampoLeitura } from "./leituraView.js";
 import { criarSeletorCliente } from "./clienteCaixaView.js";
@@ -170,7 +174,9 @@ function montarVenda(area: HTMLElement, produtos: Produto[], aoVender: () => voi
 
   const blocoTotal = document.createElement("div");
   blocoTotal.className = "pdv__bloco-total";
-  blocoTotal.append(rotuloTotal, total);
+  const linhaDesconto = document.createElement("div");
+  linhaDesconto.className = "pdv__desconto";
+  blocoTotal.append(rotuloTotal, total, linhaDesconto);
   colunaPagamento.append(blocoTotal, pagamento.elemento, opcionais, erro, finalizar);
 
   const grade = document.createElement("div");
@@ -180,9 +186,10 @@ function montarVenda(area: HTMLElement, produtos: Produto[], aoVender: () => voi
 
   const atualizar = (): void => {
     renderizarCarrinho(carrinho);
-    const valor = totalDoCarrinho();
+    const valor = totalAPagar();
     total.textContent = formatarMoeda(valor);
     pagamento.atualizarTotal(valor);
+    linhaDesconto.replaceChildren(criarLinhaDesconto(totalDoCarrinho()));
     finalizar.disabled = itensDoCarrinho().length === 0;
   };
   aoMudarCarrinho(atualizar);
@@ -202,6 +209,7 @@ function montarVenda(area: HTMLElement, produtos: Produto[], aoVender: () => voi
       itens: itensDoCarrinho().map((item) => ({ produtoId: item.produto.id, quantidade: item.quantidade })),
       cpfNaNota: textoOuNulo(cpf.entrada.value),
       clienteId: cliente.clienteId(),
+      desconto: descontoParaEnviar(),
     };
     const aoDesistir = (): void => {
       novaVenda();
@@ -236,6 +244,9 @@ function criarRecibo(venda: VendaBalcao, novaVenda: () => void): HTMLElement {
     ["Total", formatarMoeda(venda.total)],
     ["Pagamento", ROTULO_FORMA[venda.formaPagamento]],
   ];
+  if (venda.desconto > 0) {
+    linhas.splice(1, 0, ["Desconto", `− ${formatarMoeda(venda.desconto)}`]);
+  }
   if (venda.troco !== null) {
     linhas.push(["Troco", formatarMoeda(venda.troco)]);
   }
@@ -268,4 +279,51 @@ function criarRecibo(venda: VendaBalcao, novaVenda: () => void): HTMLElement {
   recibo.append(titulo, lista, botao);
   queueMicrotask(() => botao.focus());
   return recibo;
+}
+
+/**
+ * Desconto na venda (D35): "Dar desconto" pede o valor e a senha do gerente; aplicado, mostra
+ * "Desconto − R$ X · autorizado por Fulano" com a opção de tirar.
+ */
+function criarLinhaDesconto(totalDosItens: number): HTMLElement {
+  const desconto = descontoDaVenda();
+  const conteudo = document.createElement("div");
+  conteudo.className = "pdv__desconto-linha";
+  if (desconto !== null) {
+    const texto = document.createElement("span");
+    texto.textContent = `Desconto − ${formatarMoeda(desconto.valor)} · autorizado por ${desconto.autorizadoPorNome}`;
+    const tirar = document.createElement("button");
+    tirar.type = "button";
+    tirar.className = "link-tabela";
+    tirar.textContent = "tirar";
+    tirar.addEventListener("click", () => definirDesconto(null));
+    conteudo.append(texto, tirar);
+    return conteudo;
+  }
+  if (totalDosItens <= 0) {
+    return conteudo;
+  }
+  const dar = document.createElement("button");
+  dar.type = "button";
+  dar.className = "btn btn-ghost btn-pequeno";
+  dar.textContent = "Dar desconto";
+  dar.addEventListener("click", () => void pedirDesconto(totalDosItens));
+  conteudo.append(dar);
+  return conteudo;
+}
+
+async function pedirDesconto(totalDosItens: number): Promise<void> {
+  const escolhido = await pedirDescontoAutorizado(totalDosItens);
+  if (escolhido !== null) {
+    definirDesconto({
+      valor: escolhido.valor,
+      tokenAutorizacao: escolhido.autorizacao.token,
+      autorizadoPorNome: escolhido.autorizacao.autorizadoPorNome,
+    });
+  }
+}
+
+function descontoParaEnviar(): { valor: number; tokenAutorizacao: string } | null {
+  const desconto = descontoDaVenda();
+  return desconto === null ? null : { valor: desconto.valor, tokenAutorizacao: desconto.tokenAutorizacao };
 }

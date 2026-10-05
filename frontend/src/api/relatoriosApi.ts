@@ -185,3 +185,18 @@ export interface RelatorioPerdas {
 export function gerarRelatorioPerdas(periodo: Periodo): Promise<RelatorioPerdas> {
   return httpClient.get<RelatorioPerdas>(`/relatorios/perdas?${consulta(periodo)}`);
 }
+
+/** Itens tirados da venda no caixa, com quem autorizou (trilha para conferência). */
+export interface ItemCancelado {
+  id: string;
+  descricao: string;
+  quantidade: number;
+  valor: number;
+  operadorNome: string;
+  autorizadoPorNome: string;
+  canceladoEm: string;
+}
+
+export function listarItensCancelados(periodo: Periodo): Promise<ItemCancelado[]> {
+  return httpClient.get<ItemCancelado[]>(`/relatorios/itens-cancelados?${consulta(periodo)}`);
+}

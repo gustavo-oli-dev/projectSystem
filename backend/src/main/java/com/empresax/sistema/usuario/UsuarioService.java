@@ -41,6 +41,18 @@ public class UsuarioService {
                 .orElseThrow(() -> new EntidadeNaoEncontradaException("Usuário não encontrado: " + email));
     }
 
+    /**
+     * Confere e-mail e senha na hora (ex.: o gerente autorizando um desconto no caixa). Mensagem
+     * única para e-mail inexistente, senha errada ou funcionário desativado: não ajuda quem tenta adivinhar.
+     */
+    @Transactional(readOnly = true)
+    public Usuario conferirCredenciais(String email, String senha) {
+        return usuarioRepository.findComPermissoesByEmail(email == null ? "" : email.trim())
+                .filter(Usuario::ativo)
+                .filter(usuario -> senha != null && passwordEncoder.matches(senha, usuario.senhaCriptografada()))
+                .orElseThrow(() -> new DomainException("E-mail ou senha de quem autoriza estão incorretos"));
+    }
+
     /** Nome para exibir de quem registrou algo (vendas guardam o e-mail, que é a identidade). */
     @Transactional(readOnly = true)
     public Map<String, String> nomesPorEmail(Collection<String> emails) {

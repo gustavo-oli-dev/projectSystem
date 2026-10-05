@@ -25,6 +25,8 @@ public record VendaBalcaoResponse(
         String status,
         List<ItemPedidoResponse> itens,
         BigDecimal total,
+        /** Desconto autorizado por um gerente (zero = sem desconto); o total já vem com ele. */
+        BigDecimal desconto,
         String cpfNaNota,
         String formaPagamento,
         String bandeira,
@@ -53,7 +55,7 @@ public record VendaBalcaoResponse(
 
     private static VendaBalcaoResponse dePresencial(Pedido pedido, PagamentoPresencial pagamento, String operadorNome) {
         return new VendaBalcaoResponse(
-                pedido.id(), pedido.status().name(), itens(pedido), pedido.valorTotal().valor(),
+                pedido.id(), pedido.status().name(), itens(pedido), pedido.valorTotal().valor(), pedido.desconto().valor(),
                 pedido.cpfNaNota().orElse(null),
                 pagamento.forma().name(),
                 pagamento.bandeira().map(Enum::name).orElse(null),
@@ -69,7 +71,7 @@ public record VendaBalcaoResponse(
 
     private static VendaBalcaoResponse dePix(Pedido pedido, Cobranca cobranca) {
         return new VendaBalcaoResponse(
-                pedido.id(), pedido.status().name(), itens(pedido), pedido.valorTotal().valor(),
+                pedido.id(), pedido.status().name(), itens(pedido), pedido.valorTotal().valor(), pedido.desconto().valor(),
                 pedido.cpfNaNota().orElse(null),
                 FORMA_PIX_NA_TELA, null, null, false, null, null,
                 statusDoPix(cobranca.status()),

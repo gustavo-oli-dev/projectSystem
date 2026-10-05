@@ -20,6 +20,7 @@ public final class RegraAcesso {
     public static final String CONTAS_PAGAR_GERENCIAR = "hasAuthority('CONTAS_PAGAR_GERENCIAR')";
     public static final String PDV_VENDER = "hasAuthority('PDV_VENDER')";
     public static final String PDV_CANCELAR = "hasAuthority('PDV_CANCELAR')";
+    public static final String PDV_AUTORIZAR = "hasAuthority('PDV_AUTORIZAR')";
     public static final String CAIXA_GERENCIAR = "hasAuthority('CAIXA_GERENCIAR')";
     public static final String CAIXA_CONFERIR = "hasAuthority('CAIXA_CONFERIR')";
     public static final String FISCAL_VER = "hasAuthority('FISCAL_VER')";

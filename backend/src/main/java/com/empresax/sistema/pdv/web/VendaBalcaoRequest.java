@@ -12,6 +12,7 @@ public record VendaBalcaoRequest(
         @NotEmpty(message = "A venda precisa de ao menos um produto") @Size(max = 100) List<@Valid ItemVendaBalcaoRequest> itens,
         @Size(max = 14, message = "CPF inválido") String cpfNaNota,
         UUID clienteId,
+        @Valid DescontoVendaRequest desconto,
         @NotNull(message = "Informe o pagamento") @Valid PagamentoPresencialRequest pagamento
 ) {
 }

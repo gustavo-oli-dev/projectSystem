@@ -1,4 +1,4 @@
-import type { FormaVendaRelatorio, RelatorioCaixa, ResultadoFechamento } from "../../api/relatoriosApi.js";
+import type { FormaVendaRelatorio, ItemCancelado, RelatorioCaixa, ResultadoFechamento } from "../../api/relatoriosApi.js";
 import { cartaoEstado } from "../estadoCard.js";
 import { formatarMoeda } from "../formatarMoeda.js";
 import { formatarInteiro } from "../formatarNumero.js";
@@ -17,7 +17,7 @@ const FATIAS_RESULTADO: ReadonlyArray<{ resultado: ResultadoFechamento; rotulo: 
 ];
 
 /** Aba Caixa do painel: números da gestão de caixa no período (D28). */
-export function montarAbaCaixa(relatorio: RelatorioCaixa, acaoExportar: HTMLElement): HTMLElement[] {
+export function montarAbaCaixa(relatorio: RelatorioCaixa, cancelados: readonly ItemCancelado[], acaoExportar: HTMLElement): HTMLElement[] {
   if (relatorio.totais.caixas === 0) {
     return [cartaoEstado("Nenhum caixa foi aberto neste período.")];
   }
@@ -27,7 +27,8 @@ export function montarAbaCaixa(relatorio: RelatorioCaixa, acaoExportar: HTMLElem
   const linha = document.createElement("div");
   linha.className = "linha-relatorio";
   linha.append(criarSecaoResultado(relatorio), porOperador);
-  return [criarIndicadoresCaixa(relatorio), criarSecaoResumoDoDia(relatorio), linha, criarSecaoCaixas(relatorio)];
+  return [criarIndicadoresCaixa(relatorio), criarSecaoResumoDoDia(relatorio), linha, criarSecaoCaixas(relatorio),
+    criarSecaoItensCancelados(cancelados)];
 }
 
 function criarIndicadoresCaixa(relatorio: RelatorioCaixa): HTMLElement {
@@ -162,4 +163,23 @@ function formatarSaldo(saldo: number): string {
 
 function valorOuTraco(valor: number | null): string {
   return valor === null ? "—" : formatarMoeda(valor);
+}
+
+/** Itens tirados da venda depois de lidos: quem tirou e quem autorizou (D35). */
+function criarSecaoItensCancelados(cancelados: readonly ItemCancelado[]): HTMLElement {
+  if (cancelados.length === 0) {
+    return criarCartao("Itens cancelados no caixa", cartaoEstado("Nenhum item cancelado no período."));
+  }
+  return criarCartao("Itens cancelados no caixa", criarTabela(
+    ["Quando", "Produto", "Quantidade", "Valor", "Operador", "Autorizado por"],
+    cancelados.map((item) => criarLinha(
+      celula(DATA_HORA.format(new Date(item.canceladoEm))),
+      celula(item.descricao),
+      celula(formatarInteiro(item.quantidade)),
+      celula(formatarMoeda(item.valor)),
+      celula(item.operadorNome),
+      celula(item.autorizadoPorNome)
+    )),
+    "item(ns) cancelado(s)"
+  ));
 }

@@ -16,6 +16,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,6 +34,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "pedidos")
 public class Pedido {
+
+    private static final int CASAS_DO_REAL = 2;
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -67,6 +71,10 @@ public class Pedido {
     /** Momento da venda de fato (confirmação = baixa no estoque). É a data que os relatórios usam. */
     @Column
     private Instant confirmadoEm;
+
+    /** Gerente que autorizou o desconto (vazio = venda sem desconto). */
+    @Column
+    private String descontoAutorizadoPor;
 
     protected Pedido() {
         // exigido pelo JPA
@@ -163,6 +171,58 @@ public class Pedido {
         return itens.stream()
                 .map(ItemPedido::subtotal)
                 .reduce(Dinheiro.zero(), Dinheiro::somar);
+    }
+
+    /** Soma dos itens antes do desconto. */
+    public Dinheiro valorBruto() {
+        return itens.stream()
+                .map(ItemPedido::valorBruto)
+                .reduce(Dinheiro.zero(), Dinheiro::somar);
+    }
+
+    public Dinheiro desconto() {
+        return valorBruto().subtrair(valorTotal());
+    }
+
+    public Optional<String> descontoAutorizadoPor() {
+        return Optional.ofNullable(descontoAutorizadoPor);
+    }
+
+    /**
+     * Desconto na venda inteira, autorizado por um gerente (D35). É rateado pelos itens na proporção
+     * do valor de cada um (a NFC-e exige o desconto por item); os centavos que sobram do
+     * arredondamento vão para os itens que ainda comportam, para a soma bater exatamente.
+     */
+    public void aplicarDesconto(Dinheiro total, String autorizadoPor) {
+        garantirAberto();
+        if (autorizadoPor == null || autorizadoPor.isBlank()) {
+            throw new DomainException("Desconto precisa da autorização de um gerente");
+        }
+        BigDecimal bruto = valorBruto().valor();
+        if (total == null || total.valor().signum() == 0) {
+            throw new DomainException("O desconto precisa ser maior que zero");
+        }
+        if (total.valor().compareTo(bruto) >= 0) {
+            throw new DomainException("O desconto não pode ser igual ou maior que o total da venda");
+        }
+        BigDecimal[] partes = new BigDecimal[itens.size()];
+        BigDecimal distribuido = BigDecimal.ZERO;
+        for (int indice = 0; indice < itens.size(); indice++) {
+            partes[indice] = total.valor().multiply(itens.get(indice).valorBruto().valor())
+                    .divide(bruto, CASAS_DO_REAL, RoundingMode.DOWN);
+            distribuido = distribuido.add(partes[indice]);
+        }
+        BigDecimal sobra = total.valor().subtract(distribuido);
+        for (int indice = 0; indice < itens.size() && sobra.signum() > 0; indice++) {
+            BigDecimal espaco = itens.get(indice).valorBruto().valor().subtract(partes[indice]);
+            BigDecimal acrescimo = espaco.min(sobra);
+            partes[indice] = partes[indice].add(acrescimo);
+            sobra = sobra.subtract(acrescimo);
+        }
+        for (int indice = 0; indice < itens.size(); indice++) {
+            itens.get(indice).receberDesconto(new Dinheiro(partes[indice]));
+        }
+        this.descontoAutorizadoPor = autorizadoPor;
     }
 
     /**

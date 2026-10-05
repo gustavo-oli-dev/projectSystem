@@ -5,6 +5,7 @@ import {
   baixarCsvVendas,
   gerarRelatorioCaixa,
   gerarRelatorioPerdas,
+  listarItensCancelados,
   gerarRelatorioVendas,
   type Periodo,
   type RelatorioVendas,
@@ -169,7 +170,7 @@ async function montarConteudoDaAba(
     case "horarios":
       return montarAbaHorarios(await vendasDoPeriodo());
     case "caixa":
-      return montarAbaCaixa(await gerarRelatorioCaixa(periodo), criarBotaoExportar(
+      return montarAbaCaixa(await gerarRelatorioCaixa(periodo), await listarItensCancelados(periodo), criarBotaoExportar(
         () => baixarCsvCaixa(periodo), `fechamentos-de-caixa_${periodo.inicio}_a_${periodo.fim}.csv`));
     case "dinheiro-do-dia":
       return montarAbaDinheiroDoDia();

@@ -1,4 +1,6 @@
+import { registrarItemCancelado } from "../../api/pdvApi.js";
 import { alterarQuantidade, itensDoCarrinho, totalDoCarrinho, type ItemCarrinho } from "../../state/caixaState.js";
+import { pedirAutorizacao } from "./autorizacaoView.js";
 import { formatarMoeda } from "../formatarMoeda.js";
 import { criarImagemPrincipal } from "../produtos/imagemProduto.js";
 
@@ -49,7 +51,7 @@ function criarLinha(item: ItemCarrinho): HTMLLIElement {
   remover.className = "btn btn-perigo btn-pequeno";
   remover.textContent = "Remover";
   remover.setAttribute("aria-label", `Remover ${item.produto.nome}`);
-  remover.addEventListener("click", () => alterarQuantidade(item.produto.id, 0));
+  remover.addEventListener("click", () => void mudarQuantidade(item, 0));
 
   const linha = document.createElement("li");
   linha.className = "carrinho__linha";
@@ -71,7 +73,7 @@ function criarLinha(item: ItemCarrinho): HTMLLIElement {
 /** − [quantidade] + : mais rápido no balcão do que apagar e digitar. */
 function criarSeletorQuantidade(item: ItemCarrinho): HTMLElement {
   const menos = criarBotaoQuantidade("−", `Diminuir ${item.produto.nome}`,
-    () => alterarQuantidade(item.produto.id, item.quantidade - 1));
+    () => void mudarQuantidade(item, item.quantidade - 1));
   const mais = criarBotaoQuantidade("+", `Aumentar ${item.produto.nome}`,
     () => alterarQuantidade(item.produto.id, Math.min(item.quantidade + 1, QUANTIDADE_MAXIMA)));
 
@@ -82,7 +84,7 @@ function criarSeletorQuantidade(item: ItemCarrinho): HTMLElement {
   campo.value = String(item.quantidade);
   campo.className = "seletor-quantidade__campo";
   campo.setAttribute("aria-label", `Quantidade de ${item.produto.nome}`);
-  campo.addEventListener("change", () => alterarQuantidade(item.produto.id, Math.floor(Number(campo.value))));
+  campo.addEventListener("change", () => void mudarQuantidade(item, Math.floor(Number(campo.value))));
 
   const seletor = document.createElement("div");
   seletor.className = "seletor-quantidade";
@@ -124,4 +126,31 @@ function criarCarrinhoVazio(): HTMLElement {
   bloco.className = "carrinho-vazio";
   bloco.append(titulo, dica);
   return bloco;
+}
+
+/**
+ * Aumentar é livre. Diminuir ou remover um item já lido é "cancelamento de item" (D35): pede a
+ * senha do gerente e registra quem autorizou antes de mexer no carrinho. Se cancelarem a janela
+ * ou a autorização falhar, o carrinho fica como estava.
+ */
+async function mudarQuantidade(item: ItemCarrinho, novaQuantidade: number): Promise<void> {
+  const nova = Math.max(0, Number.isFinite(novaQuantidade) ? novaQuantidade : item.quantidade);
+  if (nova >= item.quantidade) {
+    alterarQuantidade(item.produto.id, Math.min(nova, QUANTIDADE_MAXIMA));
+    return;
+  }
+  const canceladas = item.quantidade - nova;
+  const autorizacao = await pedirAutorizacao("CANCELAR_ITEM", "Cancelar item",
+    `Tirar ${canceladas} × ${item.produto.nome} da venda precisa da autorização de um gerente.`);
+  if (autorizacao === null) {
+    alterarQuantidade(item.produto.id, item.quantidade);
+    return;
+  }
+  try {
+    await registrarItemCancelado(item.produto.id, canceladas, autorizacao.token);
+    alterarQuantidade(item.produto.id, nova);
+  } catch (falha) {
+    window.alert(falha instanceof Error && falha.message !== "" ? falha.message : "Não foi possível cancelar o item.");
+    alterarQuantidade(item.produto.id, item.quantidade);
+  }
 }

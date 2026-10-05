@@ -45,7 +45,7 @@ public class PdvController {
     public VendaBalcaoResponse vender(
             @Valid @RequestBody VendaBalcaoRequest requisicao, @AuthenticationPrincipal UserDetails operador
     ) {
-        DadosVendaBalcao venda = dadosDaVenda(requisicao.itens(), requisicao.cpfNaNota(), requisicao.clienteId());
+        DadosVendaBalcao venda = dadosDaVenda(requisicao.itens(), requisicao.cpfNaNota(), requisicao.clienteId(), requisicao.desconto());
         PagamentoPresencialRequest pagamento = requisicao.pagamento();
         DadosPagamentoPresencial dados = new DadosPagamentoPresencial(
                 pagamento.forma(), pagamento.valorRecebido(), pagamento.bandeira(), pagamento.codigoAutorizacao());
@@ -59,7 +59,7 @@ public class PdvController {
     public VendaBalcaoResponse iniciarNaMaquininha(
             @Valid @RequestBody VendaMaquininhaRequest requisicao, @AuthenticationPrincipal UserDetails operador
     ) {
-        DadosVendaBalcao venda = dadosDaVenda(requisicao.itens(), requisicao.cpfNaNota(), requisicao.clienteId());
+        DadosVendaBalcao venda = dadosDaVenda(requisicao.itens(), requisicao.cpfNaNota(), requisicao.clienteId(), requisicao.desconto());
         return responder(pdvService.iniciarNaMaquininha(venda, requisicao.forma(), operador.getUsername()));
     }
 
@@ -83,7 +83,7 @@ public class PdvController {
     public VendaPixResponse iniciarComPix(
             @Valid @RequestBody VendaPixRequest requisicao, @AuthenticationPrincipal UserDetails operador
     ) {
-        DadosVendaBalcao venda = dadosDaVenda(requisicao.itens(), requisicao.cpfNaNota(), requisicao.clienteId());
+        DadosVendaBalcao venda = dadosDaVenda(requisicao.itens(), requisicao.cpfNaNota(), requisicao.clienteId(), requisicao.desconto());
         return VendaPixResponse.de(pdvService.iniciarVendaComPix(venda, operador.getUsername()));
     }
 
@@ -116,11 +116,15 @@ public class PdvController {
         return responder(pdvService.cancelar(pedidoId, operador.getUsername()));
     }
 
-    private static DadosVendaBalcao dadosDaVenda(List<ItemVendaBalcaoRequest> itens, String cpfNaNota, UUID clienteId) {
+    private static DadosVendaBalcao dadosDaVenda(
+            List<ItemVendaBalcaoRequest> itens, String cpfNaNota, UUID clienteId, DescontoVendaRequest desconto
+    ) {
         List<ItemPedidoRequerido> requeridos = itens.stream()
                 .map(item -> new ItemPedidoRequerido(TipoItem.PRODUTO, item.produtoId(), item.quantidade()))
                 .toList();
-        return new DadosVendaBalcao(requeridos, cpfNaNota, clienteId);
+        DadosVendaBalcao.Desconto descontoAutorizado = desconto == null
+                ? null : new DadosVendaBalcao.Desconto(desconto.valor(), desconto.tokenAutorizacao());
+        return new DadosVendaBalcao(requeridos, cpfNaNota, clienteId, descontoAutorizado);
     }
 
     /** Uma venda só: resolve o nome de quem vendeu (a venda guarda o e-mail). */

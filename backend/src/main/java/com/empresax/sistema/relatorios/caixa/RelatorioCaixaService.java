@@ -59,7 +59,7 @@ public class RelatorioCaixaService {
             """;
     /** Produtos vendidos em dinheiro nos caixas abertos no dia (venda cancelada sai: pagamento estornado). */
     private static final String SQL_PRODUTOS_EM_DINHEIRO = """
-            SELECT i.descricao AS descricao, SUM(i.quantidade) AS quantidade, SUM(i.preco_unitario * i.quantidade) AS valor
+            SELECT i.descricao AS descricao, SUM(i.quantidade) AS quantidade, SUM(i.preco_unitario * i.quantidade - i.desconto) AS valor
             FROM itens_pedido i
             JOIN pedidos p ON p.id = i.pedido_id
             JOIN pagamentos_presenciais pp ON pp.pedido_id = p.id

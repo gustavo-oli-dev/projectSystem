@@ -16,6 +16,8 @@ export interface DadosVendaBalcao {
   itens: Array<{ produtoId: string; quantidade: number }>;
   cpfNaNota: string | null;
   clienteId: string | null;
+  /** Desconto em reais com o token da autorização do gerente; null = sem desconto. */
+  desconto: { valor: number; tokenAutorizacao: string } | null;
 }
 
 export interface NovaVendaBalcao extends DadosVendaBalcao {
@@ -30,6 +32,8 @@ export interface VendaBalcao {
   status: string;
   itens: ItemPedidoResponse[];
   total: number;
+  /** Desconto autorizado (zero = sem desconto); o total já vem com ele. */
+  desconto: number;
   cpfNaNota: string | null;
   formaPagamento: FormaVendaBalcao;
   bandeira: BandeiraCartao | null;
@@ -91,4 +95,24 @@ export function tentarDeNovoNaMaquininha(pedidoId: string): Promise<VendaBalcao>
 /** Como uma venda do caixa foi paga (detalhe do pedido). */
 export function buscarVendaDoBalcao(pedidoId: string): Promise<VendaBalcao> {
   return httpClient.get<VendaBalcao>(`/pdv/vendas/${pedidoId}`);
+}
+
+/** O que o gerente pode liberar no caixa com a senha dele. */
+export type AcaoAutorizada = "DESCONTO" | "CANCELAR_ITEM";
+
+export interface Autorizacao {
+  /** Vale 5 minutos, só para esta ação e este operador. */
+  token: string;
+  autorizadoPorNome: string;
+  expiraEm: string;
+}
+
+/** O gerente digita e-mail e senha na hora; a senha não fica guardada — só o token curto. */
+export function autorizarNoCaixa(email: string, senha: string, acao: AcaoAutorizada): Promise<Autorizacao> {
+  return httpClient.post<Autorizacao>("/pdv/autorizacoes", { email, senha, acao });
+}
+
+/** Registra o item tirado da venda (trilha para conferência). */
+export function registrarItemCancelado(produtoId: string, quantidade: number, tokenAutorizacao: string): Promise<unknown> {
+  return httpClient.post<unknown>("/pdv/itens-cancelados", { produtoId, quantidade, tokenAutorizacao });
 }

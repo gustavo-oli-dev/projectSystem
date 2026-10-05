@@ -32,6 +32,10 @@ public class ItemPedido {
     @Column(nullable = false)
     private int quantidade;
 
+    /** Parte do desconto da venda que cabe a este item (rateio). Zero = sem desconto. */
+    @Column(nullable = false)
+    private Dinheiro desconto = Dinheiro.zero();
+
     /** Custo unitário no momento da venda (snapshot), para o lucro não mudar se o custo mudar depois. */
     @Column
     private Dinheiro custoUnitario;
@@ -91,8 +95,26 @@ public class ItemPedido {
         return quantidade;
     }
 
-    public Dinheiro subtotal() {
+    /** Valor cheio do item (preço × quantidade), antes do desconto. */
+    public Dinheiro valorBruto() {
         return precoUnitario.multiplicar(quantidade);
+    }
+
+    /** Valor do item já com o desconto. */
+    public Dinheiro subtotal() {
+        return valorBruto().subtrair(desconto);
+    }
+
+    /** Recebe a sua parte do desconto da venda (nunca maior que o valor do item). */
+    void receberDesconto(Dinheiro parte) {
+        if (parte == null || valorBruto().menorQue(parte)) {
+            throw new DomainException("Desconto maior que o valor do item \"" + descricao + "\"");
+        }
+        this.desconto = parte;
+    }
+
+    public Dinheiro desconto() {
+        return desconto;
     }
 
     public TipoItem tipo() {

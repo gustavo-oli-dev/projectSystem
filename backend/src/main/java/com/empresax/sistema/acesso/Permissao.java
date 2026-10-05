@@ -11,6 +11,7 @@ public enum Permissao {
     ASSISTENTE_GESTOR_USAR("Assistente de IA", "Ver e conversar com o assistente (painel e WhatsApp interno)"),
     PDV_VENDER("Caixa (balcão)", "Vender no caixa: ler produtos e receber o pagamento"),
     PDV_CANCELAR("Caixa (balcão)", "Cancelar venda do caixa (estorno e devolução ao estoque)"),
+    PDV_AUTORIZAR("Caixa (balcão)", "Autorizar desconto e cancelamento de item no caixa (com e-mail e senha na hora)"),
     CAIXA_GERENCIAR("Caixa (balcão)", "Abrir e fechar caixas, repor troco e fazer sangria em qualquer caixa"),
     CAIXA_CONFERIR("Caixa (balcão)", "Conferir abertura e fechamento de todos os caixas e definir o fundo de troco"),
     PAINEL_VER("Painel", "Ver o painel"),
