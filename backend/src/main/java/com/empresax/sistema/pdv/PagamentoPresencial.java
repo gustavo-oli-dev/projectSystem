@@ -187,6 +187,10 @@ public class PagamentoPresencial {
         return status == StatusPagamentoPresencial.APROVADO;
     }
 
+    public boolean recusado() {
+        return status == StatusPagamentoPresencial.RECUSADO;
+    }
+
     private void garantirStatus(StatusPagamentoPresencial esperado, String mensagem) {
         if (status != esperado) {
             throw new DomainException(mensagem);

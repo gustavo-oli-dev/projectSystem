@@ -57,14 +57,29 @@ public class RelatorioCaixaService {
             WHERE s.aberta_em >= :comeco AND s.aberta_em < :fim AND c.meio = 'PIX' AND c.status = 'PAGA'
             GROUP BY p.sessao_caixa_id
             """;
-    /** Produtos vendidos em dinheiro nos caixas abertos no dia (venda cancelada sai: pagamento estornado). */
+    /**
+     * Produtos vendidos em dinheiro nos caixas abertos no dia (venda cancelada sai: pagamento estornado).
+     * Pagamento dividido (D36): o valor de cada produto entra na proporção paga em dinheiro.
+     */
     private static final String SQL_PRODUTOS_EM_DINHEIRO = """
-            SELECT i.descricao AS descricao, SUM(i.quantidade) AS quantidade, SUM(i.preco_unitario * i.quantidade - i.desconto) AS valor
+            WITH dinheiro_por_pedido AS (
+                SELECT pp.pedido_id, SUM(pp.valor) AS em_dinheiro
+                FROM pagamentos_presenciais pp
+                WHERE pp.forma = 'DINHEIRO' AND pp.status = 'APROVADO'
+                GROUP BY pp.pedido_id
+            ), total_por_pedido AS (
+                SELECT pedido_id, SUM(preco_unitario * quantidade - desconto) AS total
+                FROM itens_pedido
+                GROUP BY pedido_id
+            )
+            SELECT i.descricao AS descricao, SUM(i.quantidade) AS quantidade,
+                   ROUND(SUM((i.preco_unitario * i.quantidade - i.desconto) * d.em_dinheiro / t.total), 2) AS valor
             FROM itens_pedido i
             JOIN pedidos p ON p.id = i.pedido_id
-            JOIN pagamentos_presenciais pp ON pp.pedido_id = p.id
+            JOIN dinheiro_por_pedido d ON d.pedido_id = p.id
+            JOIN total_por_pedido t ON t.pedido_id = p.id
             JOIN sessoes_caixa s ON s.id = p.sessao_caixa_id
-            WHERE s.aberta_em >= :comeco AND s.aberta_em < :fim AND pp.forma = 'DINHEIRO' AND pp.status = 'APROVADO'
+            WHERE s.aberta_em >= :comeco AND s.aberta_em < :fim
             GROUP BY i.descricao
             ORDER BY valor DESC, descricao
             """;

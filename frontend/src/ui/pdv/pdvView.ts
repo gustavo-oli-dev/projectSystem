@@ -30,6 +30,7 @@ import { criarSeletorCliente } from "./clienteCaixaView.js";
 import { criarPainelMaquininha } from "./maquininhaView.js";
 import { criarPainelPagamento, type ModoFechamento } from "./pagamentoView.js";
 import { criarPainelPix } from "./pixNaTelaView.js";
+import { descreverParte } from "./partesPagamentoView.js";
 import { carregarUltimasVendas, ROTULO_FORMA } from "./ultimasVendasView.js";
 
 const HORA = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
@@ -223,10 +224,10 @@ function montarVenda(area: HTMLElement, produtos: Produto[], aoVender: () => voi
     const fechamentos: Record<ModoFechamento, () => Promise<unknown>> = {
       PIX_QR: () => iniciarVendaComPix(dados)
         .then((pix) => mostrarEspera(criarPainelPix(pix, mostrarRecibo, aoDesistir))),
-      MAQUININHA: () => iniciarNaMaquininha(dados, pagamento.formaCartao())
+      MAQUININHA: () => iniciarNaMaquininha(dados, pagamento.lerPartes(), pagamento.formaCartao())
         .then((venda) => mostrarEspera(criarPainelMaquininha(venda, mostrarRecibo, aoDesistir))),
-      DINHEIRO: () => venderNoBalcao({ ...dados, pagamento: pagamento.lerPagamento() }).then(mostrarRecibo),
-      CONTINGENCIA: () => venderNoBalcao({ ...dados, pagamento: pagamento.lerPagamento() }).then(mostrarRecibo),
+      DINHEIRO: () => venderNoBalcao({ ...dados, partes: pagamento.lerPartes(), pagamento: pagamento.lerPagamento() }).then(mostrarRecibo),
+      CONTINGENCIA: () => venderNoBalcao({ ...dados, partes: pagamento.lerPartes(), pagamento: pagamento.lerPagamento() }).then(mostrarRecibo),
     };
 
     fechamentos[pagamento.modo()]().catch((falha: unknown) => {
@@ -247,13 +248,18 @@ function criarRecibo(venda: VendaBalcao, novaVenda: () => void): HTMLElement {
   if (venda.desconto > 0) {
     linhas.splice(1, 0, ["Desconto", `− ${formatarMoeda(venda.desconto)}`]);
   }
+  const dividido = venda.pagamentos.length > 1;
+  if (dividido) {
+    // Pagamento dividido: uma linha por forma, na ordem (o troco é só do dinheiro).
+    venda.pagamentos.forEach((parte) => linhas.push([descreverParte(parte), formatarMoeda(parte.valor)]));
+  }
   if (venda.troco !== null) {
     linhas.push(["Troco", formatarMoeda(venda.troco)]);
   }
-  if (venda.bandeira !== null) {
+  if (!dividido && venda.bandeira !== null) {
     linhas.push(["Bandeira", venda.bandeira.replace("_", " ")]);
   }
-  if (venda.codigoAutorizacao !== null) {
+  if (!dividido && venda.codigoAutorizacao !== null) {
     linhas.push(["Autorização", venda.codigoAutorizacao]);
   }
   linhas.push(["Nota fiscal", "NFC-e gerada (pendente de transmissão)"]);

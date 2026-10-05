@@ -1,7 +1,6 @@
 package com.empresax.sistema.pdv.web;
 
 import com.empresax.sistema.acesso.RegraAcesso;
-import com.empresax.sistema.pdv.DadosPagamentoPresencial;
 import com.empresax.sistema.pdv.DadosVendaBalcao;
 import com.empresax.sistema.pdv.PdvService;
 import com.empresax.sistema.pdv.VendaBalcao;
@@ -46,10 +45,8 @@ public class PdvController {
             @Valid @RequestBody VendaBalcaoRequest requisicao, @AuthenticationPrincipal UserDetails operador
     ) {
         DadosVendaBalcao venda = dadosDaVenda(requisicao.itens(), requisicao.cpfNaNota(), requisicao.clienteId(), requisicao.desconto());
-        PagamentoPresencialRequest pagamento = requisicao.pagamento();
-        DadosPagamentoPresencial dados = new DadosPagamentoPresencial(
-                pagamento.forma(), pagamento.valorRecebido(), pagamento.bandeira(), pagamento.codigoAutorizacao());
-        return responder(pdvService.vender(venda, dados, operador.getUsername()));
+        return responder(pdvService.vender(venda, PagamentoPresencialRequest.partes(requisicao.partes()),
+                requisicao.pagamento().paraDados(), operador.getUsername()));
     }
 
     /** Maquininha integrada: separa o estoque e manda o valor para a maquininha. */
@@ -60,7 +57,8 @@ public class PdvController {
             @Valid @RequestBody VendaMaquininhaRequest requisicao, @AuthenticationPrincipal UserDetails operador
     ) {
         DadosVendaBalcao venda = dadosDaVenda(requisicao.itens(), requisicao.cpfNaNota(), requisicao.clienteId(), requisicao.desconto());
-        return responder(pdvService.iniciarNaMaquininha(venda, requisicao.forma(), operador.getUsername()));
+        return responder(pdvService.iniciarNaMaquininha(
+                venda, PagamentoPresencialRequest.partes(requisicao.partes()), requisicao.forma(), operador.getUsername()));
     }
 
     @PreAuthorize(RegraAcesso.PDV_VENDER)

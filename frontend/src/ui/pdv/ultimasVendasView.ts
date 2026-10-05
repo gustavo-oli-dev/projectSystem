@@ -6,6 +6,7 @@ import { elementoCarregando } from "../estadoCarregamento.js";
 import { cartaoEstado } from "../estadoCard.js";
 import { formatarMoeda } from "../formatarMoeda.js";
 import { celula, celulaComConteudo, celulaSelo, criarLinha, criarTabela } from "../tabela.js";
+import { descreverParte } from "./partesPagamentoView.js";
 
 export const ROTULO_FORMA: Record<VendaBalcao["formaPagamento"], string> = {
   DINHEIRO: "Dinheiro",
@@ -13,6 +14,7 @@ export const ROTULO_FORMA: Record<VendaBalcao["formaPagamento"], string> = {
   CARTAO_DEBITO: "Débito",
   PIX: "Pix (maquininha)",
   PIX_QR: "Pix (QR na tela)",
+  DIVIDIDO: "Dividido",
 };
 
 const SITUACAO_VENDA: Record<VendaBalcao["statusPagamento"], { rotulo: string; modificador: string }> = {
@@ -95,6 +97,11 @@ function mensagemDevolucao(venda: VendaBalcao): string {
   }
   if (venda.formaPagamento === "DINHEIRO") {
     return `Devolva ${valor} em dinheiro ao cliente.`;
+  }
+  if (venda.formaPagamento === "DIVIDIDO") {
+    return `Devolva cada parte: ${venda.pagamentos
+      .map((parte) => `${descreverParte(parte)} ${formatarMoeda(parte.valor)}`).join("; ")}.`
+      + " Dinheiro volta da gaveta; cartão e Pix são estornados na maquininha.";
   }
   return `Faça também o estorno de ${valor} na maquininha (ela ainda não é integrada).`;
 }

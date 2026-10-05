@@ -6,6 +6,8 @@ export type BandeiraCartao = "VISA" | "MASTERCARD" | "ELO" | "AMERICAN_EXPRESS" 
 
 export interface PagamentoPresencial {
   forma: FormaPagamentoPresencial;
+  /** Só nas partes do pagamento dividido: quanto esta parte paga. null = o que falta. */
+  valor: number | null;
   valorRecebido: number | null;
   bandeira: BandeiraCartao | null;
   codigoAutorizacao: string | null;
@@ -21,11 +23,31 @@ export interface DadosVendaBalcao {
 }
 
 export interface NovaVendaBalcao extends DadosVendaBalcao {
+  /** Pagamento dividido (D36): partes já recebidas, cada uma com valor; vazio = uma forma só. */
+  partes: PagamentoPresencial[];
+  /** A forma que fecha a venda com o que falta. */
   pagamento: PagamentoPresencial;
 }
 
-/** Como a venda foi paga. PIX_QR = QR code na tela (Mercado Pago); PIX = Pix na maquininha. */
-export type FormaVendaBalcao = FormaPagamentoPresencial | "PIX_QR";
+/**
+ * Como a venda foi paga. PIX_QR = QR code na tela (Mercado Pago); PIX = Pix na maquininha;
+ * DIVIDIDO = mais de uma forma (o detalhe vem em pagamentos).
+ */
+export type FormaVendaBalcao = FormaPagamentoPresencial | "PIX_QR" | "DIVIDIDO";
+
+export type StatusPagamentoBalcao = "AGUARDANDO" | "RECUSADO" | "APROVADO" | "ESTORNADO";
+
+/** Uma das formas usadas na venda, na ordem em que foram feitas. */
+export interface ParteDoPagamento {
+  forma: FormaPagamentoPresencial;
+  valor: number;
+  bandeira: BandeiraCartao | null;
+  codigoAutorizacao: string | null;
+  maquininhaIntegrada: boolean;
+  valorRecebido: number | null;
+  troco: number | null;
+  status: StatusPagamentoBalcao;
+}
 
 export interface VendaBalcao {
   pedidoId: string;
@@ -41,12 +63,14 @@ export interface VendaBalcao {
   maquininhaIntegrada: boolean;
   valorRecebido: number | null;
   troco: number | null;
-  statusPagamento: "AGUARDANDO" | "RECUSADO" | "APROVADO" | "ESTORNADO";
+  statusPagamento: StatusPagamentoBalcao;
   /** E-mail de quem vendeu (identidade). */
   operador: string | null;
   /** Nome para exibir; null em Pix na tela ou usuário removido. */
   operadorNome: string | null;
   criadaEm: string;
+  /** Vazio no Pix com QR na tela. */
+  pagamentos: ParteDoPagamento[];
 }
 
 export function venderNoBalcao(venda: NovaVendaBalcao): Promise<VendaBalcao> {
@@ -78,9 +102,11 @@ export function acompanharPix(pedidoId: string): Promise<VendaBalcao> {
   return httpClient.get<VendaBalcao>(`/pdv/vendas/${pedidoId}/pix`);
 }
 
-/** Maquininha integrada: separa o estoque e manda o valor para a maquininha. */
-export function iniciarNaMaquininha(venda: DadosVendaBalcao, forma: FormaPagamentoPresencial): Promise<VendaBalcao> {
-  return httpClient.post<VendaBalcao>("/pdv/vendas/maquininha", { ...venda, forma });
+/** Maquininha integrada: separa o estoque e manda para a maquininha o que falta depois das partes. */
+export function iniciarNaMaquininha(
+  venda: DadosVendaBalcao, partes: PagamentoPresencial[], forma: FormaPagamentoPresencial
+): Promise<VendaBalcao> {
+  return httpClient.post<VendaBalcao>("/pdv/vendas/maquininha", { ...venda, partes, forma });
 }
 
 export function acompanharMaquininha(pedidoId: string): Promise<VendaBalcao> {

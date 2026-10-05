@@ -21,7 +21,11 @@ export function criarPainelMaquininha(
   aoCancelar: () => void
 ): HTMLElement {
   const titulo = document.createElement("h2");
-  titulo.textContent = `${ROTULO_FORMA[vendaInicial.formaPagamento]} · ${formatarMoeda(vendaInicial.total)}`;
+  // No pagamento dividido a maquininha cobra só a última parte (o que faltava).
+  const naMaquininha = vendaInicial.pagamentos.find((parte) => parte.maquininhaIntegrada);
+  titulo.textContent = naMaquininha === undefined
+    ? `${ROTULO_FORMA[vendaInicial.formaPagamento]} · ${formatarMoeda(vendaInicial.total)}`
+    : `${ROTULO_FORMA[naMaquininha.forma]} · ${formatarMoeda(naMaquininha.valor)}`;
 
   const situacao = document.createElement("p");
   situacao.className = "maquininha__situacao";

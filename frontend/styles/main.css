@@ -4259,3 +4259,69 @@ form.formulario-produto > .formulario-produto__fotos {
   font-weight: 600;
   color: var(--texto-variacao-boa);
 }
+
+/* Pagamento dividido (D36): partes já recebidas antes da forma que fecha a venda. */
+.partes-pagamento {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio);
+}
+
+.partes-pagamento__titulo {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--cor-texto-suave);
+}
+
+.partes-pagamento__lista {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.partes-pagamento__item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--cor-borda);
+  font-size: 0.875rem;
+}
+
+.partes-pagamento__campos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.partes-pagamento__rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.partes-pagamento__restante {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.partes-pagamento__restante:empty {
+  display: none;
+}
+
+.partes-pagamento__restante--excedeu {
+  color: var(--cor-erro);
+}
+
+.partes-pagamento__rodape .link-discreto {
+  align-self: center;
+}

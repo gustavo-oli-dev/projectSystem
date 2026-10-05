@@ -20,6 +20,7 @@ import com.empresax.sistema.venda.CancelamentoVendaService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -68,49 +69,67 @@ public class PdvService {
         this.autorizacaoService = autorizacaoService;
     }
 
+    /**
+     * Venda paga na hora: as partes já recebidas (pagamento dividido, opcional) e a forma que fecha
+     * a venda com o que falta (dinheiro com troco ou cartão/Pix em contingência).
+     */
     @Transactional
-    public VendaBalcao vender(DadosVendaBalcao venda, DadosPagamentoPresencial dadosPagamento, String operador) {
+    public VendaBalcao vender(DadosVendaBalcao venda, PartesDoPagamento partes, DadosPagamentoPresencial fechamento, String operador) {
         Pedido pedido = criarEConfirmar(venda, operador);
-        PagamentoPresencial pagamento = pagamentoRepository.save(
-                montarPagamento(pedido.id(), pedido.valorTotal(), dadosPagamento, operador));
+        List<PagamentoPresencial> pagamentos = new ArrayList<>(salvarPartes(pedido, partes, operador));
+        pagamentos.add(pagamentoRepository.save(
+                montarPagamento(pedido.id(), partes.restante(pedido.valorTotal()), fechamento, operador, false)));
         documentoFiscalService.gerarPendentes(pedido.id());
-        return VendaBalcao.presencial(pedido, pagamento);
+        return VendaBalcao.presencial(pedido, pagamentos);
     }
 
     /**
-     * Maquininha integrada: separa o estoque e manda o valor para a maquininha. Se a maquininha não
-     * responder, nada é gravado (transação única) — o operador pode usar a contingência.
+     * Maquininha integrada: separa o estoque, grava as partes já recebidas (se dividido) e manda o
+     * que falta para a maquininha. Se a maquininha não responder, nada é gravado (transação única).
      */
     @Transactional
-    public VendaBalcao iniciarNaMaquininha(DadosVendaBalcao venda, FormaPagamentoPresencial forma, String operador) {
+    public VendaBalcao iniciarNaMaquininha(DadosVendaBalcao venda, PartesDoPagamento partes, FormaPagamentoPresencial forma, String operador) {
         Pedido pedido = criarEConfirmar(venda, operador);
-        String idTransacao = maquininha.enviarCobranca(pedido.valorTotal(), forma, pedido.id());
-        PagamentoPresencial pagamento = pagamentoRepository.save(
-                PagamentoPresencial.aguardandoMaquininha(pedido.id(), forma, pedido.valorTotal(), idTransacao, operador));
-        return VendaBalcao.presencial(pedido, pagamento);
+        List<PagamentoPresencial> pagamentos = new ArrayList<>(salvarPartes(pedido, partes, operador));
+        Dinheiro restante = partes.restante(pedido.valorTotal());
+        String idTransacao = maquininha.enviarCobranca(restante, forma, pedido.id());
+        pagamentos.add(pagamentoRepository.save(
+                PagamentoPresencial.aguardandoMaquininha(pedido.id(), forma, restante, idTransacao, operador)));
+        return VendaBalcao.presencial(pedido, pagamentos);
     }
 
     /** O caixa pergunta a cada poucos segundos: aprovado gera a NFC-e; recusado permite tentar de novo. */
     @Transactional
     public VendaBalcao acompanharMaquininha(UUID pedidoId) {
         Pedido pedido = buscarDoBalcao(pedidoId);
-        PagamentoPresencial pagamento = buscarPagamento(pedidoId);
-        if (pagamento.aguardandoMaquininha()) {
-            aplicarResultado(pagamento, maquininha.consultar(pagamento.idTransacaoMaquininha().orElseThrow()));
-        }
-        if (pagamento.aprovado() && documentoFiscalService.listarPorPedido(pedidoId).isEmpty()) {
+        List<PagamentoPresencial> pagamentos = buscarPagamentos(pedidoId);
+        pagamentos.stream().filter(PagamentoPresencial::aguardandoMaquininha).forEach(pagamento ->
+                aplicarResultado(pagamento, maquininha.consultar(pagamento.idTransacaoMaquininha().orElseThrow())));
+        boolean tudoAprovado = pagamentos.stream().allMatch(PagamentoPresencial::aprovado);
+        if (tudoAprovado && documentoFiscalService.listarPorPedido(pedidoId).isEmpty()) {
             documentoFiscalService.gerarPendentes(pedidoId);
         }
-        return VendaBalcao.presencial(pedido, pagamento);
+        return VendaBalcao.presencial(pedido, pagamentos);
     }
 
     @Transactional
     public VendaBalcao tentarDeNovoNaMaquininha(UUID pedidoId) {
         Pedido pedido = buscarDoBalcao(pedidoId);
-        PagamentoPresencial pagamento = buscarPagamento(pedidoId);
-        String idTransacao = maquininha.enviarCobranca(pagamento.valor(), pagamento.forma(), pedidoId);
-        pagamento.novaTentativaNaMaquininha(idTransacao);
-        return VendaBalcao.presencial(pedido, pagamento);
+        List<PagamentoPresencial> pagamentos = buscarPagamentos(pedidoId);
+        PagamentoPresencial recusado = pagamentos.stream().filter(PagamentoPresencial::recusado).findFirst()
+                .orElseThrow(() -> new DomainException("Só dá para tentar de novo depois de uma recusa"));
+        String idTransacao = maquininha.enviarCobranca(recusado.valor(), recusado.forma(), pedidoId);
+        recusado.novaTentativaNaMaquininha(idTransacao);
+        return VendaBalcao.presencial(pedido, pagamentos);
+    }
+
+    /** Partes já recebidas: dinheiro (valor exato ou com o recebido) ou cartão/Pix com o comprovante. */
+    private List<PagamentoPresencial> salvarPartes(Pedido pedido, PartesDoPagamento partes, String operador) {
+        partes.restante(pedido.valorTotal());
+        return partes.partes().stream()
+                .map(parte -> pagamentoRepository.save(
+                        montarPagamento(pedido.id(), new Dinheiro(parte.valor()), parte, operador, true)))
+                .toList();
     }
 
     /** Falha no Mercado Pago desfaz tudo (inclusive a baixa no estoque): a transação é uma só. */
@@ -144,11 +163,13 @@ public class PdvService {
     @Transactional
     public VendaBalcao cancelar(UUID pedidoId, String operador) {
         Pedido pedido = buscarDoBalcao(pedidoId);
-        Optional<PagamentoPresencial> presencial = pagamentoRepository.findByPedidoId(pedidoId);
-        if (presencial.isPresent()) {
-            devolverDinheiroAoCliente(pedido, presencial.get(), operador);
-            desfazerPagamentoPresencial(presencial.get());
-            return VendaBalcao.presencial(cancelamentoVendaService.cancelarVendaDoBalcao(pedidoId, operador), presencial.get());
+        List<PagamentoPresencial> presenciais = buscarPagamentos(pedidoId);
+        if (!presenciais.isEmpty()) {
+            presenciais.forEach(pagamento -> {
+                devolverDinheiroAoCliente(pedido, pagamento, operador);
+                desfazerPagamentoPresencial(pagamento);
+            });
+            return VendaBalcao.presencial(cancelamentoVendaService.cancelarVendaDoBalcao(pedidoId, operador), presenciais);
         }
         Cobranca pix = cobrancaPixMaisRecente(pedidoId)
                 .orElseThrow(() -> new EntidadeNaoEncontradaException("Pagamento da venda não encontrado: " + pedidoId));
@@ -195,17 +216,15 @@ public class PdvService {
         }
     }
 
-    private PagamentoPresencial buscarPagamento(UUID pedidoId) {
-        return pagamentoRepository.findByPedidoId(pedidoId)
-                .orElseThrow(() -> new EntidadeNaoEncontradaException("Pagamento da venda não encontrado: " + pedidoId));
+    private List<PagamentoPresencial> buscarPagamentos(UUID pedidoId) {
+        return pagamentoRepository.findByPedidoIdOrderByCriadoEmAsc(pedidoId);
     }
 
     /** Uma venda do caixa, para o detalhe do pedido mostrar como foi paga. */
     @Transactional(readOnly = true)
     public VendaBalcao buscarVenda(UUID pedidoId) {
         Pedido pedido = buscarDoBalcao(pedidoId);
-        return montarVenda(pedido, pagamentoRepository.findByPedidoId(pedidoId).orElse(null),
-                cobrancaPixMaisRecente(pedidoId).orElse(null))
+        return montarVenda(pedido, buscarPagamentos(pedidoId), cobrancaPixMaisRecente(pedidoId).orElse(null))
                 .orElseThrow(() -> new EntidadeNaoEncontradaException("Pagamento da venda não encontrado: " + pedidoId));
     }
 
@@ -213,14 +232,15 @@ public class PdvService {
     public List<VendaBalcao> ultimasVendas() {
         List<Pedido> pedidos = pedidoService.listarUltimasDoBalcao();
         List<UUID> ids = pedidos.stream().map(Pedido::id).toList();
-        Map<UUID, PagamentoPresencial> presenciais = pagamentoRepository.findByPedidoIdIn(ids).stream()
-                .collect(Collectors.toMap(PagamentoPresencial::pedidoId, Function.identity()));
+        Map<UUID, List<PagamentoPresencial>> presenciais = pagamentoRepository.findByPedidoIdIn(ids).stream()
+                .sorted(Comparator.comparing(PagamentoPresencial::criadoEm))
+                .collect(Collectors.groupingBy(PagamentoPresencial::pedidoId));
         Map<UUID, Cobranca> pixPorPedido = cobrancaService.listarPorPedidos(ids).stream()
                 .filter(cobranca -> cobranca.meio() == MeioCobranca.PIX)
                 .collect(Collectors.toMap(Cobranca::pedidoId, Function.identity(), PdvService::maisRecente));
 
         return pedidos.stream()
-                .map(pedido -> montarVenda(pedido, presenciais.get(pedido.id()), pixPorPedido.get(pedido.id())))
+                .map(pedido -> montarVenda(pedido, presenciais.getOrDefault(pedido.id(), List.of()), pixPorPedido.get(pedido.id())))
                 .flatMap(Optional::stream)
                 .toList();
     }
@@ -256,24 +276,29 @@ public class PdvService {
         return uma.criadoEm().isAfter(outra.criadoEm()) ? uma : outra;
     }
 
-    private static Optional<VendaBalcao> montarVenda(Pedido pedido, PagamentoPresencial presencial, Cobranca pix) {
-        if (presencial != null) {
-            return Optional.of(VendaBalcao.presencial(pedido, presencial));
+    private static Optional<VendaBalcao> montarVenda(Pedido pedido, List<PagamentoPresencial> presenciais, Cobranca pix) {
+        if (!presenciais.isEmpty()) {
+            return Optional.of(VendaBalcao.presencial(pedido, presenciais));
         }
         return Optional.ofNullable(pix).map(cobranca -> VendaBalcao.porPixNaTela(pedido, cobranca));
     }
 
+    /**
+     * @param parteDoDividido true = parte já recebida do pagamento dividido: em dinheiro, sem o valor
+     *                        recebido, vale o valor exato da parte (sem troco).
+     */
     private static PagamentoPresencial montarPagamento(
-            UUID pedidoId, Dinheiro total, DadosPagamentoPresencial dados, String operador
+            UUID pedidoId, Dinheiro valor, DadosPagamentoPresencial dados, String operador, boolean parteDoDividido
     ) {
         if (dados == null || dados.forma() == null) {
             throw new DomainException("Escolha a forma de pagamento");
         }
         if (dados.forma() == FormaPagamentoPresencial.DINHEIRO) {
-            Dinheiro recebido = dados.valorRecebido() == null ? null : new Dinheiro(dados.valorRecebido());
-            return PagamentoPresencial.emDinheiro(pedidoId, total, recebido, operador);
+            Dinheiro recebido = dados.valorRecebido() != null ? new Dinheiro(dados.valorRecebido())
+                    : parteDoDividido ? valor : null;
+            return PagamentoPresencial.emDinheiro(pedidoId, valor, recebido, operador);
         }
         return PagamentoPresencial.naMaquininhaAvulsa(
-                pedidoId, dados.forma(), total, dados.bandeira(), dados.codigoAutorizacao(), operador);
+                pedidoId, dados.forma(), valor, dados.bandeira(), dados.codigoAutorizacao(), operador);
     }
 }

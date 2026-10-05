@@ -16,6 +16,7 @@ import { elementoCarregando } from "../estadoCarregamento.js";
 import { cartaoEstado } from "../estadoCard.js";
 import { formatarMoeda } from "../formatarMoeda.js";
 import { celula, celulaSelo, criarLinha, criarTabela, formatarDataCurta } from "../tabela.js";
+import { descreverParte } from "../pdv/partesPagamentoView.js";
 import { ROTULO_FORMA } from "../pdv/ultimasVendasView.js";
 
 const ROTULO_SITUACAO_PAGAMENTO: Record<VendaBalcao["statusPagamento"], string> = {
@@ -287,6 +288,13 @@ function criarCartaoPagamentoCaixa(venda: VendaBalcao): HTMLElement {
     ["Forma", ROTULO_FORMA[venda.formaPagamento]],
     ["Situação", ROTULO_SITUACAO_PAGAMENTO[venda.statusPagamento]],
   ];
+  if (venda.formaPagamento === "DIVIDIDO") {
+    venda.pagamentos.forEach((parte) => linhas.push([descreverParte(parte), formatarMoeda(parte.valor)]));
+    if (venda.troco !== null) {
+      linhas.push(["Troco", formatarMoeda(venda.troco)]);
+    }
+    return criarCartaoLateral("Pagamento no caixa", comVendedor(linhas, venda));
+  }
   if (venda.bandeira !== null) {
     linhas.push(["Bandeira", venda.bandeira.replace("_", " ")]);
   }
@@ -302,11 +310,12 @@ function criarCartaoPagamentoCaixa(venda: VendaBalcao): HTMLElement {
   if (venda.troco !== null) {
     linhas.push(["Troco", formatarMoeda(venda.troco)]);
   }
+  return criarCartaoLateral("Pagamento no caixa", comVendedor(linhas, venda));
+}
+
+function comVendedor(linhas: Array<[string, string]>, venda: VendaBalcao): Array<[string, string]> {
   const vendedor = nomeDeQuemVendeu(venda);
-  if (vendedor !== null) {
-    linhas.push(["Vendido por", vendedor]);
-  }
-  return criarCartaoLateral("Pagamento no caixa", linhas);
+  return vendedor === null ? linhas : [...linhas, ["Vendido por", vendedor]];
 }
 
 /** "Cliente: Ana Lima · Vendido por: Dono" — logo abaixo do número, para bater o olho. */

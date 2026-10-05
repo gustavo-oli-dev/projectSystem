@@ -1,6 +1,7 @@
 package com.empresax.sistema.pdv.web;
 
 import com.empresax.sistema.pdv.FormaPagamentoPresencial;
+import com.empresax.sistema.pdv.PartesDoPagamento;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -14,6 +15,9 @@ public record VendaMaquininhaRequest(
         @Size(max = 14, message = "CPF inválido") String cpfNaNota,
         UUID clienteId,
         @Valid DescontoVendaRequest desconto,
+        /** Pagamento dividido: partes já recebidas; a maquininha cobra só o que falta (D36). */
+        @Size(max = PartesDoPagamento.MAXIMO_DE_PARTES, message = "No máximo 5 partes já recebidas")
+        List<@Valid PagamentoPresencialRequest> partes,
         @NotNull(message = "Escolha crédito ou débito") FormaPagamentoPresencial forma
 ) {
 }

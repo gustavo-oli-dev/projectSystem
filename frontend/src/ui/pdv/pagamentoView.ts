@@ -1,6 +1,8 @@
 import type { BandeiraCartao, FormaPagamentoPresencial, PagamentoPresencial } from "../../api/pdvApi.js";
-import { criarCampoSelecao, criarCampoTexto, type OpcaoSelecao } from "../camposFormulario.js";
+import { criarCampoSelecao, criarCampoTexto } from "../camposFormulario.js";
 import { formatarMoeda } from "../formatarMoeda.js";
+import { BANDEIRAS } from "./bandeirasCartao.js";
+import { criarPartesPagamento } from "./partesPagamentoView.js";
 
 type FormaNoCaixa = "DINHEIRO" | "CARTAO_CREDITO" | "CARTAO_DEBITO" | "PIX_QR";
 
@@ -20,15 +22,6 @@ const FORMAS: ReadonlyArray<{ forma: FormaNoCaixa; rotulo: string }> = [
   { forma: "PIX_QR", rotulo: "Pix" },
 ];
 
-const BANDEIRAS: readonly OpcaoSelecao[] = [
-  { valor: "VISA", rotulo: "Visa" },
-  { valor: "MASTERCARD", rotulo: "Mastercard" },
-  { valor: "ELO", rotulo: "Elo" },
-  { valor: "AMERICAN_EXPRESS", rotulo: "American Express" },
-  { valor: "HIPERCARD", rotulo: "Hipercard" },
-  { valor: "OUTRA", rotulo: "Outra" },
-];
-
 const ROTULO_FINALIZAR: Record<ModoFechamento, string> = {
   DINHEIRO: "Finalizar venda",
   MAQUININHA: "Enviar para a maquininha",
@@ -40,6 +33,8 @@ export interface PainelPagamento {
   elemento: HTMLElement;
   /** Chamar quando o total mudar, para recalcular o troco. */
   atualizarTotal: (total: number) => void;
+  /** Partes já recebidas do pagamento dividido (vazio = uma forma só). */
+  lerPartes: () => PagamentoPresencial[];
   modo: () => ModoFechamento;
   /** Crédito ou débito escolhido (para a maquininha). */
   formaCartao: () => FormaPagamentoPresencial;
@@ -55,6 +50,9 @@ export function criarPainelPagamento(): PainelPagamento {
   let emContingencia = false;
   let totalAtual = 0;
   let ouvinteModo: () => void = () => undefined;
+  const partes = criarPartesPagamento();
+  // Troco e maquininha valem para o que falta depois das partes já recebidas.
+  const restante = (): number => totalAtual - partes.soma();
 
   const botoes = FORMAS.map((opcao) => {
     const botao = document.createElement("button");
@@ -120,7 +118,20 @@ export function criarPainelPagamento(): PainelPagamento {
 
   const elemento = document.createElement("div");
   elemento.className = "painel-pagamento";
-  elemento.append(grupoFormas, blocoDinheiro, blocoCartao, blocoPix);
+  elemento.append(partes.elemento, grupoFormas, blocoDinheiro, blocoCartao, blocoPix);
+
+  // Pix com QR na tela cobra a venda inteira no Mercado Pago: não entra no pagamento dividido.
+  const botaoPixNaTela = botoes.find(({ opcao }) => opcao.forma === "PIX_QR")?.botao;
+  partes.aoMudar(() => {
+    const dividido = partes.partes().length > 0;
+    if (botaoPixNaTela !== undefined) {
+      botaoPixNaTela.hidden = dividido;
+    }
+    if (dividido && formaEscolhida === "PIX_QR") {
+      escolher("DINHEIRO");
+    }
+    atualizarTroco();
+  });
 
   function modoAtual(): ModoFechamento {
     if (formaEscolhida === "DINHEIRO" || formaEscolhida === "PIX_QR") {
@@ -155,13 +166,14 @@ export function criarPainelPagamento(): PainelPagamento {
   function atualizarTroco(): void {
     const digitado = recebido.entrada.value;
     const valor = Number(digitado);
-    caixaTroco.classList.toggle("caixa-troco--falta", digitado !== "" && valor < totalAtual);
+    const aPagar = restante();
+    caixaTroco.classList.toggle("caixa-troco--falta", digitado !== "" && valor < aPagar);
     if (digitado === "") {
       valorTroco.textContent = formatarMoeda(0);
-    } else if (valor < totalAtual) {
-      valorTroco.textContent = `Falta ${formatarMoeda(totalAtual - valor)}`;
+    } else if (valor < aPagar) {
+      valorTroco.textContent = `Falta ${formatarMoeda(aPagar - valor)}`;
     } else {
-      valorTroco.textContent = formatarMoeda(valor - totalAtual);
+      valorTroco.textContent = formatarMoeda(valor - aPagar);
     }
   }
 
@@ -172,19 +184,23 @@ export function criarPainelPagamento(): PainelPagamento {
     elemento,
     atualizarTotal: (total) => {
       totalAtual = total;
+      partes.atualizarTotal(total);
       atualizarTroco();
     },
+    lerPartes: () => [...partes.partes()],
     modo: modoAtual,
     formaCartao: () => (formaEscolhida === "CARTAO_DEBITO" ? "CARTAO_DEBITO" : "CARTAO_CREDITO"),
     lerPagamento: () => (formaEscolhida === "DINHEIRO"
       ? {
         forma: "DINHEIRO",
+        valor: null,
         valorRecebido: recebido.entrada.value === "" ? null : Number(recebido.entrada.value),
         bandeira: null,
         codigoAutorizacao: null,
       }
       : {
         forma: formaEscolhida === "CARTAO_DEBITO" ? "CARTAO_DEBITO" : "CARTAO_CREDITO",
+        valor: null,
         valorRecebido: null,
         // Valor vem de uma lista fixa de opções (BANDEIRAS), então sempre é uma bandeira válida.
         bandeira: bandeira.selecao.value as BandeiraCartao,
