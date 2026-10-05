@@ -13,14 +13,20 @@ const ROTULO_FORMA: Record<FormaVendaCaixa, string> = {
 const HORA = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
 
 /**
- * Conferência de um caixa: a conta do dinheiro da gaveta, linha por linha, até a diferença.
- * Usada no fim do fechamento (operador) e na tela de conferência (gerente).
+ * Conferência de um caixa. Primeiro a pergunta que importa: o dinheiro que entrou na gaveta bate
+ * com o que foi vendido em dinheiro (produto por produto)? Certo, devendo ou sobrando. Depois a
+ * conta detalhada da gaveta, as outras formas e a maquininha.
+ * Usada no fim do fechamento e na tela de conferência.
  */
 export function criarResultadoFechamento(conferencia: ConferenciaCaixa): HTMLElement {
   const elemento = document.createElement("div");
   elemento.className = "resultado-caixa";
+  elemento.append(criarSituacao(conferencia));
+  if (conferencia.dinheiroQueEntrou !== null && conferencia.diferenca !== null) {
+    elemento.append(criarComparacao(conferencia.vendasEmDinheiro, conferencia.dinheiroQueEntrou, conferencia.diferenca));
+  }
   elemento.append(
-    criarSituacao(conferencia),
+    criarProdutosEmDinheiro(conferencia),
     criarContaDaGaveta(conferencia),
     criarVendasPorForma(conferencia)
   );
@@ -39,7 +45,7 @@ export function criarResultadoFechamento(conferencia: ConferenciaCaixa): HTMLEle
   return elemento;
 }
 
-/** "Bateu", "Sobrou R$ X" ou "Faltou R$ X" — texto e cor (nunca só a cor). */
+/** "Caixa certo", "Caixa devendo R$ X" ou "Caixa sobrando R$ X" — texto e cor (nunca só a cor). */
 function criarSituacao(conferencia: ConferenciaCaixa): HTMLElement {
   const situacao = document.createElement("p");
   situacao.className = "resultado-caixa__situacao";
@@ -50,15 +56,60 @@ function criarSituacao(conferencia: ConferenciaCaixa): HTMLElement {
   }
   if (diferenca === 0) {
     situacao.classList.add("resultado-caixa__situacao--bateu");
-    situacao.textContent = "✓ O caixa bateu";
+    situacao.textContent = "✓ Caixa certo — o dinheiro da gaveta bate com o que foi vendido em dinheiro";
   } else if (diferenca > 0) {
     situacao.classList.add("resultado-caixa__situacao--sobra");
-    situacao.textContent = `▲ Sobrou ${formatarMoeda(diferenca)}`;
+    situacao.textContent = `▲ Caixa sobrando ${formatarMoeda(diferenca)} — entrou mais dinheiro do que foi vendido`;
   } else {
     situacao.classList.add("resultado-caixa__situacao--falta");
-    situacao.textContent = `▼ Faltou ${formatarMoeda(-diferenca)}`;
+    situacao.textContent = `▼ Caixa devendo ${formatarMoeda(-diferenca)} — entrou menos dinheiro do que foi vendido`;
   }
   return situacao;
+}
+
+/**
+ * Vendido em dinheiro × o que entrou na gaveta. "Entrou" já desconta o valor inicial e as
+ * reposições e soma de volta as sangrias — sobra só o dinheiro das vendas.
+ */
+function criarComparacao(vendidoEmDinheiro: number, entrouNaGaveta: number, diferenca: number): HTMLElement {
+  const resultado = diferenca === 0 ? "Certo"
+    : diferenca > 0 ? `Sobrando ${formatarMoeda(diferenca)}` : `Devendo ${formatarMoeda(-diferenca)}`;
+  return secao("Vendido em dinheiro × dinheiro na gaveta", criarListaConta([
+    ["Vendido em dinheiro (produtos abaixo)", formatarMoeda(vendidoEmDinheiro)],
+    ["Entrou na gaveta (contado − valor inicial − reposições + sangrias)", formatarMoeda(entrouNaGaveta)],
+    ["Resultado", resultado, "resultado-caixa__linha--forte"],
+  ]));
+}
+
+function criarProdutosEmDinheiro(conferencia: ConferenciaCaixa): HTMLElement {
+  if (conferencia.produtosEmDinheiro.length === 0) {
+    const vazio = document.createElement("p");
+    vazio.className = "resultado-caixa__vazio";
+    vazio.textContent = "Nenhum produto vendido em dinheiro neste caixa.";
+    return secao("Produtos vendidos em dinheiro", vazio);
+  }
+  const tabela = criarTabela(["Produto", "Quantidade", "Valor"], conferencia.produtosEmDinheiro.map((produto) => criarLinha(
+    celula(produto.descricao),
+    celula(String(produto.quantidade)),
+    celula(formatarMoeda(produto.valor))
+  )), "produto(s)");
+  return secao("Produtos vendidos em dinheiro", tabela);
+}
+
+function criarListaConta(linhas: ReadonlyArray<readonly [string, string, string?]>): HTMLElement {
+  const lista = document.createElement("dl");
+  lista.className = "resultado-caixa__conta";
+  for (const [rotulo, valor, classe] of linhas) {
+    const termo = document.createElement("dt");
+    termo.textContent = rotulo;
+    const definicao = document.createElement("dd");
+    definicao.textContent = valor;
+    const linha = document.createElement("div");
+    linha.className = classe === undefined ? "resultado-caixa__linha" : `resultado-caixa__linha ${classe}`;
+    linha.append(termo, definicao);
+    lista.append(linha);
+  }
+  return lista;
 }
 
 function criarContaDaGaveta(conferencia: ConferenciaCaixa): HTMLElement {
@@ -119,11 +170,11 @@ function criarConferenciaMaquininha(conferencia: ConferenciaCaixa): HTMLElement 
 
 function celulaDiferenca(diferenca: number): HTMLTableCellElement {
   if (diferenca === 0) {
-    return celulaSelo("Bateu", "concluido");
+    return celulaSelo("Certo", "concluido");
   }
   return diferenca > 0
-    ? celulaSelo(`Sobrou ${formatarMoeda(diferenca)}`, "pendente")
-    : celulaSelo(`Faltou ${formatarMoeda(-diferenca)}`, "rejeitado");
+    ? celulaSelo(`Sobrando ${formatarMoeda(diferenca)}`, "pendente")
+    : celulaSelo(`Devendo ${formatarMoeda(-diferenca)}`, "rejeitado");
 }
 
 function criarMovimentos(conferencia: ConferenciaCaixa): HTMLElement {

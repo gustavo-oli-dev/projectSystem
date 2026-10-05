@@ -87,7 +87,7 @@ class RelatorioCaixaTest {
         String csv = new String(ExportacaoCaixaCsv.fechamentos(relatorio), StandardCharsets.UTF_8);
 
         assertThat(csv.lines()).hasSize(3);
-        assertThat(csv).contains("-19,80;Faltou");
+        assertThat(csv).contains("-19,80;Devendo");
         assertThat(csv).contains("'=Caio").contains("Ainda aberto");
     }
 

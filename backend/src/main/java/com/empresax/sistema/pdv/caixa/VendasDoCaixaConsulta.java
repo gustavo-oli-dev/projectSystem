@@ -40,6 +40,17 @@ public class VendasDoCaixaConsulta {
             GROUP BY p.sessao_caixa_id
             """;
 
+    /** Produtos vendidos em dinheiro no caixa (venda cancelada tem o pagamento estornado e sai da lista). */
+    private static final String SQL_PRODUTOS_EM_DINHEIRO = """
+            SELECT i.descricao AS descricao, SUM(i.quantidade) AS quantidade, SUM(i.preco_unitario * i.quantidade) AS valor
+            FROM itens_pedido i
+            JOIN pedidos p ON p.id = i.pedido_id
+            JOIN pagamentos_presenciais pp ON pp.pedido_id = p.id
+            WHERE p.sessao_caixa_id = :sessao AND pp.forma = 'DINHEIRO' AND pp.status = 'APROVADO'
+            GROUP BY i.descricao
+            ORDER BY valor DESC, descricao
+            """;
+
     private final NamedParameterJdbcTemplate jdbc;
 
     public VendasDoCaixaConsulta(NamedParameterJdbcTemplate jdbc) {
@@ -64,6 +75,14 @@ public class VendasDoCaixaConsulta {
                         Map.entry(linha.getObject("sessao", UUID.class), new Dinheiro(linha.getBigDecimal("valor"))))
                 .stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    public List<ProdutoVendido> produtosEmDinheiro(UUID sessaoId) {
+        return jdbc.query(SQL_PRODUTOS_EM_DINHEIRO, new MapSqlParameterSource("sessao", sessaoId), (linha, indice) ->
+                new ProdutoVendido(linha.getString("descricao"), linha.getInt("quantidade"), new Dinheiro(linha.getBigDecimal("valor"))));
+    }
+
+    public record ProdutoVendido(String descricao, int quantidade, Dinheiro valor) {
     }
 
     /** forma: DINHEIRO, CARTAO_CREDITO, CARTAO_DEBITO, PIX (na maquininha) ou PIX_QR (QR na tela). */

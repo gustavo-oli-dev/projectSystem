@@ -3,6 +3,7 @@ package com.empresax.sistema.pdv.caixa;
 import com.empresax.sistema.common.domain.DomainException;
 import com.empresax.sistema.common.domain.EntidadeNaoEncontradaException;
 import com.empresax.sistema.pdv.FormaPagamentoPresencial;
+import com.empresax.sistema.pdv.caixa.VendasDoCaixaConsulta.ProdutoVendido;
 import com.empresax.sistema.pdv.caixa.VendasDoCaixaConsulta.VendasPorForma;
 import com.empresax.sistema.shared.dinheiro.Dinheiro;
 import com.empresax.sistema.usuario.Usuario;
@@ -159,7 +160,7 @@ public class CaixaService {
         List<VendasPorForma> porForma = vendasDoCaixa.porForma(sessaoId);
         ConferenciaMaquininha maquininha = ConferenciaMaquininha.de(registradoPorForma(porForma), informadoDaMaquininha);
         sessao.fechar(contagem, vendasDoCaixa.emDinheiro(sessaoId), maquininha, observacao, fechadaPor);
-        return new FechamentoCaixa(carregada(sessao), porForma);
+        return new FechamentoCaixa(carregada(sessao), porForma, vendasDoCaixa.produtosEmDinheiro(sessaoId));
     }
 
     /** Vendas por forma da consulta → só as formas presenciais (Pix por QR é confirmado pelo Mercado Pago). */
@@ -218,7 +219,7 @@ public class CaixaService {
     public FechamentoCaixa detalharParaConferencia(UUID sessaoId) {
         SessaoCaixa sessao = sessaoRepository.findById(sessaoId)
                 .orElseThrow(() -> new EntidadeNaoEncontradaException("Caixa não encontrado: " + sessaoId));
-        return new FechamentoCaixa(carregada(sessao), vendasDoCaixa.porForma(sessaoId));
+        return new FechamentoCaixa(carregada(sessao), vendasDoCaixa.porForma(sessaoId), vendasDoCaixa.produtosEmDinheiro(sessaoId));
     }
 
     @Transactional(readOnly = true)
@@ -250,10 +251,11 @@ public class CaixaService {
                 .orElseThrow(() -> new EntidadeNaoEncontradaException("Caixa não encontrado: " + sessaoId));
     }
 
-    /** Caixa + quanto foi vendido em cada forma de pagamento. */
-    public record FechamentoCaixa(SessaoCaixa sessao, List<VendasPorForma> vendasPorForma) {
+    /** Caixa + quanto foi vendido em cada forma de pagamento + os produtos vendidos em dinheiro. */
+    public record FechamentoCaixa(SessaoCaixa sessao, List<VendasPorForma> vendasPorForma, List<ProdutoVendido> produtosEmDinheiro) {
         public FechamentoCaixa {
             vendasPorForma = List.copyOf(vendasPorForma);
+            produtosEmDinheiro = List.copyOf(produtosEmDinheiro);
         }
     }
 

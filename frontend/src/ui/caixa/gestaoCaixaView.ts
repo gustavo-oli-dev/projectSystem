@@ -142,38 +142,61 @@ function criarSecaoPontos(pontos: readonly PontoCaixa[], aoMudar: () => void): H
     : `Caixas da loja: ${ativos} em uso`;
 
   const erro = criarMensagemErro();
-  const itens = pontos.map((ponto) => {
-    const nome = document.createElement("span");
-    nome.textContent = ponto.ativo ? ponto.nome : `${ponto.nome} (desativado)`;
-    const item = document.createElement("div");
-    item.className = ponto.ativo ? "pontos-caixa__item" : "pontos-caixa__item pontos-caixa__item--inativo";
-    item.append(nome);
-    // Caixa aberto não pode ser desativado no meio do turno.
-    if (!ponto.aberto) {
-      item.append(botao(ponto.ativo ? "Desativar" : "Reativar", "btn btn-ghost btn-pequeno", () => {
-        definirPontoDeCaixaAtivo(ponto.id, !ponto.ativo).then(aoMudar)
-          .catch((falha: unknown) => mostrarErro(erro, falha, "Não foi possível alterar o caixa."));
-      }));
-    }
-    return item;
-  });
+  const lista = document.createElement("ul");
+  lista.className = "pontos-caixa__lista";
+  lista.append(...pontos.map((ponto) => criarLinhaPonto(ponto, aoMudar, erro)));
 
+  const corpo = document.createElement("div");
+  corpo.className = "pontos-caixa";
+  if (pontos.length > 0) {
+    corpo.append(lista);
+  }
+  corpo.append(criarCadastroPonto(pontos, aoMudar, erro), erro);
+
+  const detalhes = document.createElement("details");
+  detalhes.className = "secao-recolhivel";
+  detalhes.open = pontos.length === 0;
+  detalhes.append(resumo, corpo);
+  return detalhes;
+}
+
+/** "Caixa 01 · [Livre] ............ [Desativar]". Caixa aberto não é desativado no meio do turno. */
+function criarLinhaPonto(ponto: PontoCaixa, aoMudar: () => void, erro: HTMLElement): HTMLLIElement {
+  const nome = document.createElement("strong");
+  nome.className = "pontos-caixa__nome";
+  nome.textContent = ponto.nome;
+  const [textoSituacao, modificador] = !ponto.ativo ? ["Desativado", "inativo"]
+    : ponto.aberto ? ["Aberto agora", "aberta"] : ["Livre", "ativo"];
+  const situacao = document.createElement("span");
+  situacao.className = `selo selo--${modificador}`;
+  situacao.textContent = textoSituacao;
+
+  const item = document.createElement("li");
+  item.className = "pontos-caixa__item";
+  item.append(nome, situacao);
+  if (!ponto.aberto) {
+    item.append(botao(ponto.ativo ? "Desativar" : "Reativar", "btn btn-ghost btn-pequeno", () => {
+      definirPontoDeCaixaAtivo(ponto.id, !ponto.ativo).then(aoMudar)
+        .catch((falha: unknown) => mostrarErro(erro, falha, "Não foi possível alterar o caixa."));
+    }));
+  }
+  return item;
+}
+
+/** "Novo caixa nº [4] [Cadastrar caixa]" numa linha só (já sugere o próximo número). */
+function criarCadastroPonto(pontos: readonly PontoCaixa[], aoMudar: () => void, erro: HTMLElement): HTMLElement {
   const proximoNumero = Math.max(0, ...pontos.map((ponto) => ponto.numero)) + 1;
+  const rotulo = document.createElement("label");
+  rotulo.htmlFor = "novo-caixa-numero";
+  rotulo.textContent = "Novo caixa nº";
   const numero = document.createElement("input");
+  numero.id = "novo-caixa-numero";
   numero.type = "number";
   numero.min = "1";
   numero.max = "999";
   numero.value = String(proximoNumero);
-  numero.setAttribute("aria-label", "Número do novo caixa");
-  const novo = document.createElement("form");
-  novo.className = "pontos-caixa__novo";
-  const cadastrar = document.createElement("button");
-  cadastrar.type = "submit";
-  cadastrar.className = "btn btn-ghost btn-pequeno";
-  cadastrar.textContent = "Cadastrar caixa";
-  novo.append(numero, cadastrar);
-  novo.addEventListener("submit", (evento) => {
-    evento.preventDefault();
+
+  const cadastrar = botao("Cadastrar caixa", "btn btn-ghost btn-pequeno", () => {
     erro.hidden = true;
     cadastrar.disabled = true;
     cadastrarPontoDeCaixa(Number(numero.value)).then(aoMudar)
@@ -182,13 +205,14 @@ function criarSecaoPontos(pontos: readonly PontoCaixa[], aoMudar: () => void): H
         cadastrar.disabled = false;
       });
   });
+  numero.addEventListener("keydown", (evento) => {
+    if (evento.key === "Enter") {
+      cadastrar.click();
+    }
+  });
 
-  const lista = document.createElement("div");
-  lista.className = "pontos-caixa";
-  lista.append(...itens, novo);
-  const detalhes = document.createElement("details");
-  detalhes.className = "secao-recolhivel";
-  detalhes.open = pontos.length === 0;
-  detalhes.append(resumo, lista, erro);
-  return detalhes;
+  const linha = document.createElement("div");
+  linha.className = "pontos-caixa__novo";
+  linha.append(rotulo, numero, cadastrar);
+  return linha;
 }

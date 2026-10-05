@@ -84,6 +84,8 @@ export interface ConferenciaCaixa {
   valorEsperado: number;
   valorContado: number | null;
   cedulasFechamento: CedulaContada[];
+  /** O que foi vendido em dinheiro, produto por produto — é com isso que a gaveta é comparada. */
+  produtosEmDinheiro: Array<{ descricao: string; quantidade: number; valor: number }>;
   /** Crédito, débito e Pix da maquininha: sistema × relatório da maquininha. */
   conferenciasForma: Array<{ forma: FormaMaquininha; valorSistema: number; valorInformado: number; diferenca: number }>;
   /** Sobra (positivo) ou falta (negativo). */

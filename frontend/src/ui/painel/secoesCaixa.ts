@@ -11,9 +11,9 @@ const DIA = new Intl.DateTimeFormat("pt-BR", { weekday: "short", day: "2-digit",
 const DATA_HORA = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 /** Slots validados juntos (pares adjacentes do anel); a cor segue o resultado, nunca a posição. */
 const FATIAS_RESULTADO: ReadonlyArray<{ resultado: ResultadoFechamento; rotulo: string; cor: CorFatia }> = [
-  { resultado: "SOBROU", rotulo: "Sobrou", cor: 1 },
-  { resultado: "FALTOU", rotulo: "Faltou", cor: 2 },
-  { resultado: "BATEU", rotulo: "Bateu", cor: 3 },
+  { resultado: "SOBROU", rotulo: "Sobrando", cor: 1 },
+  { resultado: "FALTOU", rotulo: "Devendo", cor: 2 },
+  { resultado: "BATEU", rotulo: "Certo", cor: 3 },
 ];
 
 /** Aba Caixa do painel: números da gestão de caixa no período (D28). */
@@ -38,8 +38,8 @@ function criarIndicadoresCaixa(relatorio: RelatorioCaixa): HTMLElement {
   const indicadores: Array<[string, string, string]> = [
     ["Caixas no período", formatarInteiro(totais.caixas),
       `${formatarInteiro(totais.fechados)} fechado(s) · ${formatarInteiro(abertos)} ainda aberto(s)`],
-    ["Faltas", formatarMoeda(totais.faltas), `em ${formatarInteiro(quantidade("FALTOU"))} caixa(s)`],
-    ["Sobras", formatarMoeda(totais.sobras),
+    ["Caixas devendo", formatarMoeda(totais.faltas), `em ${formatarInteiro(quantidade("FALTOU"))} caixa(s)`],
+    ["Caixas sobrando", formatarMoeda(totais.sobras),
       `em ${formatarInteiro(quantidade("SOBROU"))} caixa(s) · saldo ${formatarSaldo(totais.saldo)}`],
     ["Sangrias", formatarMoeda(totais.sangrias), `Reposições de troco: ${formatarMoeda(totais.reposicoes)}`],
   ];
@@ -81,7 +81,7 @@ function criarSecaoResultado(relatorio: RelatorioCaixa): HTMLElement {
 
 function criarSecaoPorOperador(relatorio: RelatorioCaixa): HTMLElement {
   const tabela = criarTabela(
-    ["Operador", "Caixas", "Com falta", "Faltas", "Sobras", "Saldo", "Sangrias", "Reposições"],
+    ["Operador", "Caixas", "Vezes devendo", "Devendo", "Sobrando", "Saldo", "Sangrias", "Reposições"],
     relatorio.porOperador.map((operador) => criarLinha(
       celula(operador.operadorNome),
       celula(formatarInteiro(operador.caixas)),
@@ -145,11 +145,11 @@ function celulaResultado(resultado: ResultadoFechamento, diferenca: number | nul
     return celulaSelo("Aberto", "aberta");
   }
   if (resultado === "BATEU") {
-    return celulaSelo("Bateu", "concluido");
+    return celulaSelo("Certo", "concluido");
   }
   return resultado === "SOBROU"
-    ? celulaSelo(`Sobrou ${formatarMoeda(diferenca)}`, "pendente")
-    : celulaSelo(`Faltou ${formatarMoeda(-diferenca)}`, "rejeitado");
+    ? celulaSelo(`Sobrando ${formatarMoeda(diferenca)}`, "pendente")
+    : celulaSelo(`Devendo ${formatarMoeda(-diferenca)}`, "rejeitado");
 }
 
 /** Saldo com sinal explícito: "+ R$ 5,00" sobrou, "− R$ 10,00" faltou. */

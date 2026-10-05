@@ -31,6 +31,8 @@ public record ConferenciaCaixaResponse(
         BigDecimal totalSuprimentos,
         BigDecimal totalSangrias,
         List<VendaPorFormaResponse> vendasPorForma,
+        /** O que foi vendido em dinheiro, produto por produto — é com isso que a gaveta é comparada. */
+        List<ProdutoEmDinheiroResponse> produtosEmDinheiro,
         BigDecimal vendasEmDinheiro,
         BigDecimal valorEsperado,
         BigDecimal valorContado,
@@ -44,6 +46,9 @@ public record ConferenciaCaixaResponse(
     private static final String FORMA_DINHEIRO = "DINHEIRO";
 
     public record VendaPorFormaResponse(String forma, int vendas, BigDecimal valor) {
+    }
+
+    public record ProdutoEmDinheiroResponse(String descricao, int quantidade, BigDecimal valor) {
     }
 
     static ConferenciaCaixaResponse de(FechamentoCaixa fechamento, NomesDoCaixa nomes) {
@@ -70,6 +75,9 @@ public record ConferenciaCaixaResponse(
                 sessao.totalSangrias().valor(),
                 fechamento.vendasPorForma().stream()
                         .map(forma -> new VendaPorFormaResponse(forma.forma(), forma.vendas(), forma.valor().valor()))
+                        .toList(),
+                fechamento.produtosEmDinheiro().stream()
+                        .map(produto -> new ProdutoEmDinheiroResponse(produto.descricao(), produto.quantidade(), produto.valor().valor()))
                         .toList(),
                 vendasEmDinheiro.valor(),
                 sessao.valorEsperado().orElseGet(() -> sessao.dinheiroEsperado(vendasEmDinheiro)),

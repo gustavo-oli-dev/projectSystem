@@ -139,11 +139,11 @@ function celulaResultado(diferenca: number | null): HTMLTableCellElement {
     return celulaSelo("Aberto", "aberta");
   }
   if (diferenca === 0) {
-    return celulaSelo("Bateu", "concluido");
+    return celulaSelo("Certo", "concluido");
   }
   return diferenca > 0
-    ? celulaSelo(`Sobra ${formatarMoeda(diferenca)}`, "pendente")
-    : celulaSelo(`Falta ${formatarMoeda(-diferenca)}`, "rejeitado");
+    ? celulaSelo(`Sobrando ${formatarMoeda(diferenca)}`, "pendente")
+    : celulaSelo(`Devendo ${formatarMoeda(-diferenca)}`, "rejeitado");
 }
 
 async function mostrarDetalhe(area: HTMLElement, caixaId: string): Promise<void> {

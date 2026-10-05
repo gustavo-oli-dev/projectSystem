@@ -51,9 +51,9 @@ public final class ExportacaoCaixaCsv {
     private static String rotulo(ResultadoFechamento resultado) {
         return switch (resultado) {
             case ABERTO -> "Ainda aberto";
-            case BATEU -> "Bateu";
-            case SOBROU -> "Sobrou";
-            case FALTOU -> "Faltou";
+            case BATEU -> "Certo";
+            case SOBROU -> "Sobrando";
+            case FALTOU -> "Devendo";
         };
     }
 
