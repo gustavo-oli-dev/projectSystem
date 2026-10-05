@@ -38,7 +38,9 @@ export interface AlteracaoProduto {
   custoUnitario: number | null;
 }
 
-export type TipoMovimentacao = "ENTRADA" | "VENDA" | "DEVOLUCAO";
+export type TipoMovimentacao = "ENTRADA" | "VENDA" | "DEVOLUCAO" | "PERDA" | "INVENTARIO_SOBRA" | "INVENTARIO_FALTA";
+/** Por que o produto saiu do estoque sem ser vendido. */
+export type MotivoPerda = "VENCIDO" | "AVARIADO" | "FURTO" | "USO_INTERNO" | "OUTRO";
 
 export interface MovimentacaoEstoque {
   id: string;
@@ -48,6 +50,8 @@ export interface MovimentacaoEstoque {
   pedidoId: string | null;
   responsavel: string;
   criadaEm: string;
+  motivo: MotivoPerda | null;
+  observacao: string | null;
 }
 
 export function listarProdutos(): Promise<Produto[]> {
@@ -76,6 +80,25 @@ export function ativarProduto(id: string): Promise<Produto> {
 
 export function darEntradaNoEstoque(id: string, quantidade: number): Promise<Produto> {
   return httpClient.post<Produto>(`/produtos/${id}/estoque/entradas`, { quantidade });
+}
+
+/** Saída sem venda (vencido, avariado, furto, uso interno): nunca deixa o estoque negativo. */
+export function registrarPerda(id: string, quantidade: number, motivo: MotivoPerda, observacao: string | null): Promise<Produto> {
+  return httpClient.post<Produto>(`/produtos/${id}/estoque/perdas`, { quantidade, motivo, observacao });
+}
+
+export interface AjusteInventario {
+  produtoId: string;
+  nome: string;
+  noSistema: number;
+  contado: number;
+  /** Positivo = sobrou; negativo = faltou. */
+  diferenca: number;
+}
+
+/** Acerta o estoque dos produtos contados ao que tem na prateleira (tudo ou nada). */
+export function aplicarInventario(contagens: ReadonlyArray<{ produtoId: string; quantidadeContada: number }>): Promise<AjusteInventario[]> {
+  return httpClient.post<AjusteInventario[]>("/estoque/inventario", { contagens });
 }
 
 export function listarMovimentacoes(id: string): Promise<MovimentacaoEstoque[]> {

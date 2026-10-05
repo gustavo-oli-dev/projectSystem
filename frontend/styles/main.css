@@ -3419,6 +3419,8 @@ form.formulario-produto > .formulario-produto__fotos {
   --fatia-4: #eda100;
   --fatia-5: #e87ba4;
   --fatia-6: #008300;
+  /* Slot 7 (índigo): usado com 1, 2 e 3 quando a combinação é livre — validado em todos os pares. */
+  --fatia-7: #4a3aa7;
   --fatia-restante: #c9ced8;
 }
 
@@ -3457,6 +3459,7 @@ form.formulario-produto > .formulario-produto__fotos {
 .rosca__fatia--4 { fill: var(--fatia-4); background: var(--fatia-4); }
 .rosca__fatia--5 { fill: var(--fatia-5); background: var(--fatia-5); }
 .rosca__fatia--6 { fill: var(--fatia-6); background: var(--fatia-6); }
+.rosca__fatia--7 { fill: var(--fatia-7); background: var(--fatia-7); }
 .rosca__fatia--restante { fill: var(--fatia-restante); background: var(--fatia-restante); }
 
 .rosca__centro {
@@ -4131,4 +4134,39 @@ form.formulario-produto > .formulario-produto__fotos {
 .dinheiro-do-dia__titulo {
   margin: 0;
   font-size: 1.125rem;
+}
+
+/* Perdas e inventário (D32) */
+.perda {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--cor-borda);
+}
+
+.perda__campos {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.perda__campos .campo-formulario:last-child {
+  grid-column: 1 / -1;
+}
+
+.perda > .btn {
+  align-self: flex-start;
+}
+
+.inventario__contado {
+  width: 7rem;
+  padding: 0.375rem 0.5rem;
+  text-align: right;
+}
+
+.secao-perdas__resumo {
+  margin: -0.75rem 0 0;
+  font-size: 0.875rem;
+  color: var(--cor-texto-suave);
 }

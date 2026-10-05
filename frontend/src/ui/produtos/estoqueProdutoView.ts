@@ -1,17 +1,20 @@
 import {
   darEntradaNoEstoque,
   listarMovimentacoes,
+  registrarPerda,
+  type MotivoPerda,
   type MovimentacaoEstoque,
   type Produto,
   type TipoMovimentacao,
 } from "../../api/produtosApi.js";
 import { navegarPara } from "../../router.js";
 import { possui } from "../../state/sessaoState.js";
-import { criarCampoTexto, criarMensagemErro, mostrarErro } from "../camposFormulario.js";
+import { criarCampoSelecao, criarCampoTexto, criarMensagemErro, mostrarErro, textoOuNulo } from "../camposFormulario.js";
 import { elementoCarregando } from "../estadoCarregamento.js";
 import { cartaoEstado } from "../estadoCard.js";
 import { celula, celulaComConteudo, celulaSelo, criarLinha, criarTabela } from "../tabela.js";
 import { criarEntradaPorLeitura } from "./entradaPorLeituraView.js";
+import { ROTULO_MOTIVO_PERDA } from "./motivosPerda.js";
 import { criarSecao } from "./secaoEdicao.js";
 import { situacaoEstoque } from "./situacaoEstoque.js";
 
@@ -19,12 +22,20 @@ const ROTULO_MOVIMENTACAO: Record<TipoMovimentacao, string> = {
   ENTRADA: "Entrada",
   VENDA: "Venda",
   DEVOLUCAO: "Devolução",
+  PERDA: "Perda",
+  INVENTARIO_SOBRA: "Inventário (sobra)",
+  INVENTARIO_FALTA: "Inventário (falta)",
 };
 const MODIFICADOR_MOVIMENTACAO: Record<TipoMovimentacao, string> = {
   ENTRADA: "em_estoque",
   VENDA: "aberto",
   DEVOLUCAO: "estoque_baixo",
+  PERDA: "esgotado",
+  INVENTARIO_SOBRA: "em_estoque",
+  INVENTARIO_FALTA: "esgotado",
 };
+/** Tipos que tiram do estoque (o histórico mostra "−"). */
+const SAIDAS: ReadonlySet<TipoMovimentacao> = new Set<TipoMovimentacao>(["VENDA", "PERDA", "INVENTARIO_FALTA"]);
 
 export function criarSecaoEstoque(produto: Produto, recarregar: () => Promise<void>): HTMLElement {
   const situacao = situacaoEstoque(produto.quantidadeEmEstoque);
@@ -46,7 +57,8 @@ export function criarSecaoEstoque(produto: Produto, recarregar: () => Promise<vo
   controles.className = "estoque__controles";
   controles.append(saldo);
   if (possui("ESTOQUE_GERENCIAR")) {
-    controles.append(criarEntradaPorLeitura(produto, recarregar), criarFormularioEntrada(produto, recarregar));
+    controles.append(criarEntradaPorLeitura(produto, recarregar), criarFormularioEntrada(produto, recarregar),
+      criarFormularioPerda(produto, recarregar));
   }
 
   const tituloHistorico = document.createElement("p");
@@ -89,6 +101,57 @@ function criarFormularioEntrada(produto: Produto, recarregar: () => Promise<void
   return formulario;
 }
 
+/**
+ * Perda: produto que sai sem ser vendido (vencido, avariado, furto, uso interno). Não há controle
+ * de validade — o vencido simplesmente sai do estoque, com o motivo registrado.
+ */
+function criarFormularioPerda(produto: Produto, recarregar: () => Promise<void>): HTMLElement {
+  const titulo = document.createElement("p");
+  titulo.className = "subtitulo-bloco";
+  titulo.textContent = "Registrar perda (saída sem venda)";
+  const quantidade = criarCampoTexto("perda-quantidade", "Quantidade", "number", true);
+  quantidade.entrada.min = "1";
+  quantidade.entrada.step = "1";
+  quantidade.entrada.max = String(produto.quantidadeEmEstoque);
+  const motivo = criarCampoSelecao("perda-motivo", "Motivo", Object.entries(ROTULO_MOTIVO_PERDA)
+    .map(([valor, rotulo]) => ({ valor, rotulo })));
+  const observacao = criarCampoTexto("perda-observacao", "Observação (obrigatória em \"Outro\")", "text", false);
+  observacao.entrada.maxLength = 200;
+
+  const erro = criarMensagemErro();
+  const botao = document.createElement("button");
+  botao.type = "button";
+  botao.className = "btn btn-perigo btn-pequeno";
+  botao.textContent = "Tirar do estoque";
+
+  const campos = document.createElement("div");
+  campos.className = "perda__campos";
+  campos.append(quantidade.container, motivo.container, observacao.container);
+  // Bloco comum (não <form>): o estilo genérico de formulário empilharia tudo e pintaria o botão de azul.
+  const formulario = document.createElement("div");
+  formulario.className = "perda";
+  formulario.append(titulo, campos, botao, erro);
+  botao.addEventListener("click", () => {
+    erro.hidden = true;
+    botao.disabled = true;
+    registrarPerda(produto.id, Number(quantidade.entrada.value), motivo.selecao.value as MotivoPerda, textoOuNulo(observacao.entrada.value))
+      .then(recarregar)
+      .catch((falha: unknown) => {
+        mostrarErro(erro, falha, "Não foi possível registrar a perda.");
+        botao.disabled = false;
+      });
+  });
+  return formulario;
+}
+
+function textoDoMotivo(movimentacao: MovimentacaoEstoque): string {
+  if (movimentacao.motivo === null) {
+    return "—";
+  }
+  const rotulo = ROTULO_MOTIVO_PERDA[movimentacao.motivo];
+  return movimentacao.observacao === null ? rotulo : `${rotulo}: ${movimentacao.observacao}`;
+}
+
 async function carregarHistorico(produto: Produto, area: HTMLElement): Promise<void> {
   try {
     const movimentacoes = await listarMovimentacoes(produto.id);
@@ -97,7 +160,7 @@ async function carregarHistorico(produto: Produto, area: HTMLElement): Promise<v
       return;
     }
     area.replaceChildren(criarTabela(
-      ["Quando", "Tipo", "Quantidade", "Saldo depois", "Pedido", "Responsável"],
+      ["Quando", "Tipo", "Quantidade", "Saldo depois", "Pedido / motivo", "Responsável"],
       movimentacoes.map(criarLinhaMovimentacao),
       "movimentação(ões) recentes"));
   } catch {
@@ -106,7 +169,7 @@ async function carregarHistorico(produto: Produto, area: HTMLElement): Promise<v
 }
 
 function criarLinhaMovimentacao(movimentacao: MovimentacaoEstoque): HTMLTableRowElement {
-  const sinal = movimentacao.tipo === "VENDA" ? "−" : "+";
+  const sinal = SAIDAS.has(movimentacao.tipo) ? "−" : "+";
   return criarLinha(
     celula(new Date(movimentacao.criadaEm).toLocaleString("pt-BR", {
       day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
@@ -114,7 +177,7 @@ function criarLinhaMovimentacao(movimentacao: MovimentacaoEstoque): HTMLTableRow
     celulaSelo(ROTULO_MOVIMENTACAO[movimentacao.tipo], MODIFICADOR_MOVIMENTACAO[movimentacao.tipo]),
     celula(`${sinal}${movimentacao.quantidade}`),
     celula(String(movimentacao.saldoApos)),
-    movimentacao.pedidoId === null ? celula("—") : celulaComConteudo(criarLinkPedido(movimentacao.pedidoId)),
+    movimentacao.pedidoId === null ? celula(textoDoMotivo(movimentacao)) : celulaComConteudo(criarLinkPedido(movimentacao.pedidoId)),
     celulaResponsavel(movimentacao.responsavel)
   );
 }

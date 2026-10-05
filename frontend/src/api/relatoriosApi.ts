@@ -171,3 +171,17 @@ export interface DinheiroDoDia {
 export function conferirDinheiroDoDia(dia: string): Promise<DinheiroDoDia> {
   return httpClient.get<DinheiroDoDia>(`/relatorios/caixa/dia?data=${encodeURIComponent(dia)}`);
 }
+
+/** Perdas e quebras no período: perdas registradas + faltas de inventário ("INVENTARIO"). */
+export interface RelatorioPerdas {
+  unidades: number;
+  valor: number;
+  /** Unidades perdidas de produtos sem custo cadastrado (contam, mas sem valor). */
+  unidadesSemCusto: number;
+  porMotivo: Array<{ chave: string; unidades: number; valor: number }>;
+  porProduto: Array<{ chave: string; unidades: number; valor: number }>;
+}
+
+export function gerarRelatorioPerdas(periodo: Periodo): Promise<RelatorioPerdas> {
+  return httpClient.get<RelatorioPerdas>(`/relatorios/perdas?${consulta(periodo)}`);
+}

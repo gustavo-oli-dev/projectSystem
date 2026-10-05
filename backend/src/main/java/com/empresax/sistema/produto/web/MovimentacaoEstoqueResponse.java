@@ -12,7 +12,9 @@ public record MovimentacaoEstoqueResponse(
         int saldoApos,
         UUID pedidoId,
         String responsavel,
-        Instant criadaEm
+        Instant criadaEm,
+        String motivo,
+        String observacao
 ) {
 
     public static MovimentacaoEstoqueResponse de(MovimentacaoEstoque movimentacao) {
@@ -23,6 +25,8 @@ public record MovimentacaoEstoqueResponse(
                 movimentacao.saldoApos(),
                 movimentacao.pedidoId().orElse(null),
                 movimentacao.responsavel(),
-                movimentacao.criadaEm());
+                movimentacao.criadaEm(),
+                movimentacao.motivo().map(Enum::name).orElse(null),
+                movimentacao.observacao().orElse(null));
     }
 }

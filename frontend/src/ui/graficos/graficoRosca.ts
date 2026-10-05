@@ -8,13 +8,15 @@ const VOLTA_COMPLETA = Math.PI * 2;
 /** Começa às 12h e segue no sentido horário. */
 const INICIO = -Math.PI / 2;
 const MAXIMO_FATIAS = 6;
+/** "restante" (cinza) sempre fecha o anel, depois de qualquer slot. */
+const POSICAO_DO_RESTANTE = 99;
 
 /**
  * Cor da fatia = slot da paleta categórica (validada com scripts/validate_palette.js, inclusive o
  * par "última ↔ primeira" do anel). A cor segue a categoria, nunca a posição no ranking.
  * "restante" = o que sobra e não é categoria (a receber, sem custo): cinza claro, sempre por último.
  */
-export type CorFatia = 1 | 2 | 3 | 4 | 5 | 6 | "restante";
+export type CorFatia = 1 | 2 | 3 | 4 | 5 | 6 | 7 | "restante";
 
 export interface Fatia {
   rotulo: string;
@@ -141,7 +143,7 @@ function criarItemLegenda(fatia: Fatia, fracao: number, formatarValor: (valor: n
 
 /** A ordem do anel é a ordem da paleta (validada par a par); "restante" fecha a volta. */
 function ordenarPorCor(fatias: readonly Fatia[]): Fatia[] {
-  const posicao = (cor: CorFatia): number => (cor === "restante" ? MAXIMO_FATIAS + 1 : cor);
+  const posicao = (cor: CorFatia): number => (cor === "restante" ? POSICAO_DO_RESTANTE : cor);
   return [...fatias].sort((a, b) => posicao(a.cor) - posicao(b.cor));
 }
 

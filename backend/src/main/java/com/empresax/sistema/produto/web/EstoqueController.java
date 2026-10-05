@@ -41,6 +41,19 @@ public class EstoqueController {
         return ProdutoResponse.de(produto, fotoProdutoService.idsDasFotosPorProduto().getOrDefault(produtoId, List.of()));
     }
 
+    /** Saída sem venda (vencido, avariado, furto, uso interno) — sempre com motivo. */
+    @PreAuthorize(RegraAcesso.ESTOQUE_GERENCIAR)
+    @PostMapping("/perdas")
+    public ProdutoResponse registrarPerda(
+            @PathVariable UUID produtoId,
+            @Valid @RequestBody PerdaEstoqueRequest requisicao,
+            @AuthenticationPrincipal UserDetails usuario
+    ) {
+        Produto produto = estoqueService.registrarPerda(
+                produtoId, requisicao.quantidade(), requisicao.motivo(), requisicao.observacao(), usuario.getUsername());
+        return ProdutoResponse.de(produto, fotoProdutoService.idsDasFotosPorProduto().getOrDefault(produtoId, List.of()));
+    }
+
     @PreAuthorize(RegraAcesso.CATALOGO_VER)
     @GetMapping("/movimentacoes")
     public List<MovimentacaoEstoqueResponse> movimentacoes(@PathVariable UUID produtoId) {

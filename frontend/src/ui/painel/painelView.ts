@@ -4,6 +4,7 @@ import {
   baixarCsvCaixa,
   baixarCsvVendas,
   gerarRelatorioCaixa,
+  gerarRelatorioPerdas,
   gerarRelatorioVendas,
   type Periodo,
   type RelatorioVendas,
@@ -19,6 +20,7 @@ import { criarIndicadores } from "./indicadoresView.js";
 import { ATALHOS, periodoDoAtalho, type AtalhoPeriodo } from "./periodoPainel.js";
 import { montarAbaDinheiroDoDia } from "./abaDinheiroDoDia.js";
 import { montarAbaCaixa } from "./secoesCaixa.js";
+import { montarSecaoPerdas } from "./secoesPerdas.js";
 import {
   criarSecaoCanais,
   criarSecaoCustoLucro,
@@ -158,9 +160,12 @@ async function montarConteudoDaAba(
   switch (aba) {
     case "vendas":
       return montarAbaVendas(await vendasDoPeriodo(), periodo);
-    case "produtos":
-      return [criarSecaoMaisVendidos(await vendasDoPeriodo(), criarBotaoExportar(
-        () => baixarCsvVendas(periodo, "mais-vendidos"), `mais-vendidos_${periodo.inicio}_a_${periodo.fim}.csv`))];
+    case "produtos": {
+      const [vendas, perdas] = await Promise.all([vendasDoPeriodo(), gerarRelatorioPerdas(periodo)]);
+      return [criarSecaoMaisVendidos(vendas, criarBotaoExportar(
+        () => baixarCsvVendas(periodo, "mais-vendidos"), `mais-vendidos_${periodo.inicio}_a_${periodo.fim}.csv`)),
+      montarSecaoPerdas(perdas)];
+    }
     case "horarios":
       return montarAbaHorarios(await vendasDoPeriodo());
     case "caixa":

@@ -162,6 +162,19 @@ public class Produto {
         this.quantidadeEmEstoque -= quantidadeValidada;
     }
 
+    /**
+     * Inventário: o estoque passa a ser o que foi contado na prateleira. Devolve a diferença
+     * (positiva = sobrou, negativa = faltou) para registrar o acerto.
+     */
+    public int ajustarAoContado(int quantidadeContada) {
+        if (quantidadeContada < 0) {
+            throw new DomainException("A quantidade contada não pode ser negativa");
+        }
+        int diferenca = quantidadeContada - quantidadeEmEstoque;
+        this.quantidadeEmEstoque = quantidadeContada;
+        return diferenca;
+    }
+
     /** Volta ao estoque o que tinha saído por uma venda cancelada ou reembolsada. */
     public void devolverAoEstoque(int quantidade) {
         this.quantidadeEmEstoque += validarQuantidade(quantidade);

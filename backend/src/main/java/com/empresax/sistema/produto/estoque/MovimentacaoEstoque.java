@@ -1,6 +1,7 @@
 package com.empresax.sistema.produto.estoque;
 
 import com.empresax.sistema.common.domain.DomainException;
+import com.empresax.sistema.shared.dinheiro.Dinheiro;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -22,6 +23,8 @@ import java.util.UUID;
 @Table(name = "movimentacoes_estoque")
 public class MovimentacaoEstoque {
 
+    private static final int TAMANHO_MAXIMO_OBSERVACAO = 200;
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -41,6 +44,18 @@ public class MovimentacaoEstoque {
 
     @Column(updatable = false)
     private UUID pedidoId;
+
+    /** Só em perda. */
+    @Enumerated(EnumType.STRING)
+    @Column(updatable = false, length = 30)
+    private MotivoPerda motivo;
+
+    @Column(updatable = false, length = TAMANHO_MAXIMO_OBSERVACAO)
+    private String observacao;
+
+    /** Custo do produto na hora da perda (o relatório mostra quanto se perdeu em dinheiro). */
+    @Column(updatable = false)
+    private Dinheiro custoUnitario;
 
     @Column(nullable = false, updatable = false)
     private String responsavel;
@@ -87,6 +102,43 @@ public class MovimentacaoEstoque {
                 exigirPedido(pedidoId), responsavel);
     }
 
+    /**
+     * Produto que saiu sem ser vendido. "Outro" exige observação; o custo (se cadastrado) fica
+     * congelado para o relatório de perdas.
+     */
+    public static MovimentacaoEstoque perda(
+            UUID produtoId, int quantidade, int saldoApos, MotivoPerda motivo, String observacao, Dinheiro custoUnitario,
+            String responsavel
+    ) {
+        if (motivo == null) {
+            throw new DomainException("Informe o motivo da perda");
+        }
+        String observacaoLimpa = observacao == null || observacao.isBlank() ? null : observacao.trim();
+        if (motivo.exigeObservacao() && observacaoLimpa == null) {
+            throw new DomainException("Explique o motivo da perda na observação");
+        }
+        if (observacaoLimpa != null && observacaoLimpa.length() > TAMANHO_MAXIMO_OBSERVACAO) {
+            throw new DomainException("Observação muito longa (máximo de " + TAMANHO_MAXIMO_OBSERVACAO + " caracteres)");
+        }
+        MovimentacaoEstoque perda = new MovimentacaoEstoque(
+                produtoId, TipoMovimentacaoEstoque.PERDA, quantidade, saldoApos, null, responsavel);
+        perda.motivo = motivo;
+        perda.observacao = observacaoLimpa;
+        perda.custoUnitario = custoUnitario;
+        return perda;
+    }
+
+    /** Acerto do inventário: diferença positiva = sobrou; negativa = faltou. */
+    public static MovimentacaoEstoque ajusteDeInventario(UUID produtoId, int diferenca, int saldoApos, Dinheiro custoUnitario, String responsavel) {
+        if (diferenca == 0) {
+            throw new DomainException("Inventário sem diferença não gera movimentação");
+        }
+        TipoMovimentacaoEstoque tipo = diferenca > 0 ? TipoMovimentacaoEstoque.INVENTARIO_SOBRA : TipoMovimentacaoEstoque.INVENTARIO_FALTA;
+        MovimentacaoEstoque ajuste = new MovimentacaoEstoque(produtoId, tipo, Math.abs(diferenca), saldoApos, null, responsavel);
+        ajuste.custoUnitario = custoUnitario;
+        return ajuste;
+    }
+
     private static UUID exigirPedido(UUID pedidoId) {
         if (pedidoId == null) {
             throw new DomainException("Venda e devolução de estoque precisam do pedido de origem");
@@ -124,5 +176,17 @@ public class MovimentacaoEstoque {
 
     public Instant criadaEm() {
         return criadaEm;
+    }
+
+    public Optional<MotivoPerda> motivo() {
+        return Optional.ofNullable(motivo);
+    }
+
+    public Optional<String> observacao() {
+        return Optional.ofNullable(observacao);
+    }
+
+    public Optional<Dinheiro> custoUnitario() {
+        return Optional.ofNullable(custoUnitario);
     }
 }

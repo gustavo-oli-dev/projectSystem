@@ -1,5 +1,6 @@
 package com.empresax.sistema.produto.estoque;
 
+import com.empresax.sistema.common.domain.DomainException;
 import com.empresax.sistema.common.domain.EntidadeNaoEncontradaException;
 import com.empresax.sistema.produto.Produto;
 import com.empresax.sistema.produto.ProdutoRepository;
@@ -8,6 +9,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -49,6 +51,48 @@ public class EstoqueService {
         produto.devolverAoEstoque(quantidade);
         movimentacaoRepository.save(MovimentacaoEstoque.devolucao(
                 produto.id(), quantidade, produto.quantidadeEmEstoque(), pedidoId, responsavel));
+    }
+
+    /** Produto que sai sem ser vendido (vencido, avariado, furto...). Nunca deixa o estoque negativo. */
+    @Transactional
+    public Produto registrarPerda(UUID produtoId, int quantidade, MotivoPerda motivo, String observacao, String responsavel) {
+        Produto produto = travar(produtoId);
+        produto.baixarDoEstoque(quantidade);
+        movimentacaoRepository.save(MovimentacaoEstoque.perda(
+                produto.id(), quantidade, produto.quantidadeEmEstoque(), motivo, observacao,
+                produto.custoUnitario().orElse(null), responsavel));
+        return produto;
+    }
+
+    /**
+     * Inventário: cada produto contado passa a ter o estoque contado; a diferença vira um acerto
+     * registrado. Tudo numa transação — ou o inventário inteiro vale, ou nada muda.
+     */
+    @Transactional
+    public List<AjusteInventario> aplicarInventario(Map<UUID, Integer> contagens, String responsavel) {
+        if (contagens == null || contagens.isEmpty()) {
+            throw new DomainException("Informe a contagem de ao menos um produto");
+        }
+        // Sempre na mesma ordem: dois inventários ao mesmo tempo não travam um ao outro.
+        return contagens.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(contagem -> ajustar(contagem.getKey(), contagem.getValue(), responsavel))
+                .toList();
+    }
+
+    private AjusteInventario ajustar(UUID produtoId, int quantidadeContada, String responsavel) {
+        Produto produto = travar(produtoId);
+        int noSistema = produto.quantidadeEmEstoque();
+        int diferenca = produto.ajustarAoContado(quantidadeContada);
+        if (diferenca != 0) {
+            movimentacaoRepository.save(MovimentacaoEstoque.ajusteDeInventario(
+                    produto.id(), diferenca, produto.quantidadeEmEstoque(), produto.custoUnitario().orElse(null), responsavel));
+        }
+        return new AjusteInventario(produto.id(), produto.nome(), noSistema, quantidadeContada, diferenca);
+    }
+
+    /** Resultado do inventário de um produto: o que o sistema tinha × o que foi contado. */
+    public record AjusteInventario(UUID produtoId, String nome, int noSistema, int contado, int diferenca) {
     }
 
     @Transactional(readOnly = true)
