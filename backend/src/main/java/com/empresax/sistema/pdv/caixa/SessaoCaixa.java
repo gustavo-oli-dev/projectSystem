@@ -53,6 +53,10 @@ public class SessaoCaixa {
     @Column(nullable = false, updatable = false)
     private String operador;
 
+    /** Caixa físico (Caixa 01...). Vazio só nas sessões anteriores aos caixas numerados. */
+    @Column(updatable = false)
+    private UUID pontoCaixaId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private StatusSessaoCaixa status;
@@ -92,6 +96,10 @@ public class SessaoCaixa {
     @Column(name = "quantidade")
     private Map<Cedula, Integer> cedulasFechamento = new HashMap<>();
 
+    @ElementCollection
+    @CollectionTable(name = "conferencias_forma_caixa", joinColumns = @JoinColumn(name = "sessao_caixa_id"))
+    private List<ConferenciaForma> conferenciasForma = new ArrayList<>();
+
     @Column
     private Dinheiro valorContado;
 
@@ -110,9 +118,12 @@ public class SessaoCaixa {
         // exigido pelo JPA
     }
 
-    private SessaoCaixa(String operador, ContagemCedulas fundo, String abertaPor) {
+    private SessaoCaixa(String operador, UUID pontoCaixaId, ContagemCedulas fundo, String abertaPor) {
         if (operador == null || operador.isBlank()) {
             throw new DomainException("Caixa precisa de um operador");
+        }
+        if (pontoCaixaId == null) {
+            throw new DomainException("Escolha qual caixa (Caixa 01, 02...) está sendo aberto");
         }
         if (abertaPor == null || abertaPor.isBlank()) {
             throw new DomainException("Informe quem está abrindo o caixa");
@@ -121,6 +132,7 @@ public class SessaoCaixa {
             throw new DomainException("Informe as cédulas do fundo de troco");
         }
         this.operador = operador;
+        this.pontoCaixaId = pontoCaixaId;
         this.abertaPor = abertaPor;
         this.status = StatusSessaoCaixa.ABERTA;
         this.abertaEm = Instant.now();
@@ -128,8 +140,9 @@ public class SessaoCaixa {
         this.cedulasAbertura = new HashMap<>(fundo.quantidades());
     }
 
-    public static SessaoCaixa abrir(String operador, ContagemCedulas fundoDeTroco, String abertaPor) {
-        return new SessaoCaixa(operador, fundoDeTroco, abertaPor);
+    /** Abre o caixa físico {@code pontoCaixaId} para o operador, com o fundo de troco contado. */
+    public static SessaoCaixa abrir(String operador, UUID pontoCaixaId, ContagemCedulas fundoDeTroco, String abertaPor) {
+        return new SessaoCaixa(operador, pontoCaixaId, fundoDeTroco, abertaPor);
     }
 
     /** Reposição de troco: o gerente traz notas trocadas para a gaveta. */
@@ -155,11 +168,16 @@ public class SessaoCaixa {
     }
 
     /**
-     * Fechamento cego: quem fecha conta a gaveta sem ver o valor esperado; o sistema compara
-     * depois. Diferença não impede o fechamento — fica registrada para a conferência.
+     * Fechamento cego: quem fecha conta a gaveta e digita o que o relatório da maquininha mostra
+     * (crédito, débito, Pix) sem ver o que o sistema registrou; o sistema compara depois. Diferença
+     * não impede o fechamento — fica registrada para a conferência.
      */
-    public void fechar(ContagemCedulas contagem, Dinheiro vendasEmDinheiroDoTurno, String observacao, String fechadaPor) {
+    public void fechar(ContagemCedulas contagem, Dinheiro vendasEmDinheiroDoTurno, ConferenciaMaquininha maquininha,
+                       String observacao, String fechadaPor) {
         garantirAberta();
+        if (maquininha == null) {
+            throw new DomainException("Informe os valores do relatório da maquininha");
+        }
         if (fechadaPor == null || fechadaPor.isBlank()) {
             throw new DomainException("Informe quem está fechando o caixa");
         }
@@ -172,6 +190,7 @@ public class SessaoCaixa {
         if (observacao != null && observacao.trim().length() > TAMANHO_MAXIMO_OBSERVACAO) {
             throw new DomainException("Observação muito longa (máximo de " + TAMANHO_MAXIMO_OBSERVACAO + " caracteres)");
         }
+        this.conferenciasForma = new ArrayList<>(maquininha.conferencias());
         this.cedulasFechamento = new HashMap<>(contagem.quantidades());
         this.valorContado = contagem.total();
         this.vendasEmDinheiro = vendasEmDinheiroDoTurno;
@@ -238,6 +257,14 @@ public class SessaoCaixa {
 
     public String operador() {
         return operador;
+    }
+
+    public Optional<UUID> pontoCaixaId() {
+        return Optional.ofNullable(pontoCaixaId);
+    }
+
+    public List<ConferenciaForma> conferenciasForma() {
+        return Collections.unmodifiableList(conferenciasForma);
     }
 
     public StatusSessaoCaixa status() {

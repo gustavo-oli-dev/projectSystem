@@ -124,3 +124,7 @@ marcar como feito.
 - [ ] **Caixa (D26) — pontos em aberto**: (1) ~~gerente fechar o caixa de outro operador~~ — resolvido pela
       Gestão de caixa (D27); (2) teste de integração (Testcontainers) do fluxo completo — hoje validado
       por script contra o sistema rodando em 04/10 (15 passos, todos ok).
+- [ ] **Diferença da maquininha no Painel (D29)**: o fechamento já guarda a diferença de crédito,
+      débito e Pix, mas o "Resultado dos fechamentos" e os totais de faltas/sobras do Painel ainda
+      consideram só o dinheiro. Decidir com o usuário se a diferença da maquininha entra no
+      resultado ou aparece separada.

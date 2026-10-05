@@ -7,12 +7,12 @@ import com.empresax.sistema.shared.dinheiro.Dinheiro;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.Map;
 import java.util.UUID;
 
 /** Linha da lista de conferência de caixas. Caixa aberto ainda não tem contagem nem diferença. */
 public record ResumoCaixaResponse(
         UUID id,
+        String pontoNome,
         String operador,
         String operadorNome,
         StatusSessaoCaixa status,
@@ -25,13 +25,14 @@ public record ResumoCaixaResponse(
         BigDecimal diferenca
 ) {
 
-    static ResumoCaixaResponse de(ResumoSessaoCaixa resumo, Map<String, String> nomes) {
+    static ResumoCaixaResponse de(ResumoSessaoCaixa resumo, NomesDoCaixa nomes) {
         SessaoCaixa sessao = resumo.sessao();
         Dinheiro vendasEmDinheiro = sessao.vendasEmDinheiro().orElse(resumo.vendasEmDinheiroAteAgora());
         return new ResumoCaixaResponse(
                 sessao.id(),
+                nomes.caixa(sessao.pontoCaixaId()),
                 sessao.operador(),
-                nomes.getOrDefault(sessao.operador(), sessao.operador()),
+                nomes.pessoa(sessao.operador()),
                 sessao.status(),
                 sessao.abertaEm(),
                 sessao.fechadaEm().orElse(null),

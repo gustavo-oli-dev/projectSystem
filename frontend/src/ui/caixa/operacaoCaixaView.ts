@@ -4,6 +4,7 @@ import {
   registrarSuprimento,
   type CaixaAberto,
   type ConferenciaCaixa,
+  type FormaMaquininha,
 } from "../../api/caixaApi.js";
 import { criarCampoTexto, criarMensagemErro, mostrarErro, textoOuNulo } from "../camposFormulario.js";
 import { criarContagemCedulas } from "./contagemCedulas.js";
@@ -12,6 +13,11 @@ import { criarResultadoFechamento } from "./resultadoFechamentoView.js";
 const MOTIVO_PADRAO_REPOSICAO = "Reposição de troco";
 const MOTIVO_PADRAO_SANGRIA = "Retirada para o cofre";
 const ROTULO_VOLTAR = "Voltar para os caixas";
+const FORMAS_MAQUININHA: ReadonlyArray<{ forma: FormaMaquininha; rotulo: string }> = [
+  { forma: "CARTAO_CREDITO", rotulo: "Crédito" },
+  { forma: "CARTAO_DEBITO", rotulo: "Débito" },
+  { forma: "PIX", rotulo: "Pix na maquininha" },
+];
 
 /** Reposição de troco no caixa escolhido: as cédulas trocadas que entram na gaveta. */
 export function criarPainelReposicao(caixa: CaixaAberto, aoConcluir: () => void, aoVoltar: () => void): HTMLElement {
@@ -20,7 +26,7 @@ export function criarPainelReposicao(caixa: CaixaAberto, aoConcluir: () => void,
   motivo.entrada.value = MOTIVO_PADRAO_REPOSICAO;
   motivo.entrada.maxLength = 200;
   return montarPainel({
-    titulo: `Reposição de troco · caixa de ${caixa.operadorNome}`,
+    titulo: `Reposição de troco · ${caixa.pontoNome} (${caixa.operadorNome})`,
     instrucao: "Conte as notas e moedas trocadas que estão entrando na gaveta.",
     campos: [contagem.elemento, motivo.container],
     rotuloConfirmar: "Registrar reposição",
@@ -40,7 +46,7 @@ export function criarPainelSangria(caixa: CaixaAberto, aoConcluir: () => void, a
   motivo.entrada.value = MOTIVO_PADRAO_SANGRIA;
   motivo.entrada.maxLength = 200;
   return montarPainel({
-    titulo: `Sangria · caixa de ${caixa.operadorNome}`,
+    titulo: `Sangria · ${caixa.pontoNome} (${caixa.operadorNome})`,
     instrucao: "Dinheiro retirado da gaveta durante o turno (levado ao cofre, por exemplo).",
     campos: [linhaDeCampos(valor.container, motivo.container)],
     rotuloConfirmar: "Registrar sangria",
@@ -59,16 +65,17 @@ export function criarPainelFechamento(
   caixa: CaixaAberto, aoFechar: (conferencia: ConferenciaCaixa) => void, aoVoltar: () => void
 ): HTMLElement {
   const contagem = criarContagemCedulas({});
+  const maquininha = criarCamposMaquininha();
   const observacao = criarCampoTexto("caixa-observacao-fechamento", "Observação (opcional)", "text", false);
   observacao.entrada.maxLength = 500;
   return montarPainel({
-    titulo: `Fechar o caixa de ${caixa.operadorNome}`,
-    instrucao: "Conte todas as notas e moedas da gaveta, inclusive o fundo de troco. Depois de fechado, o operador não consegue mais vender neste caixa.",
-    campos: [contagem.elemento, observacao.container],
+    titulo: `Fechar o ${caixa.pontoNome} (${caixa.operadorNome})`,
+    instrucao: "1) Conte todas as notas e moedas da gaveta, inclusive o fundo de troco. 2) Tire o relatório do dia na maquininha e digite o total de cada forma. Depois de fechado, o operador não vende mais neste caixa.",
+    campos: [secaoFechamento("Dinheiro na gaveta", contagem.elemento), secaoFechamento("Relatório da maquininha", maquininha.elemento), observacao.container],
     rotuloConfirmar: "Fechar caixa",
     focar: contagem.focar,
     aoVoltar,
-    enviar: () => fecharCaixa(caixa.id, contagem.contagem(), textoOuNulo(observacao.entrada.value)).then(aoFechar),
+    enviar: () => fecharCaixa(caixa.id, contagem.contagem(), maquininha.valores(), textoOuNulo(observacao.entrada.value)).then(aoFechar),
     mensagemFalha: "Não foi possível fechar o caixa.",
   });
 }
@@ -76,7 +83,7 @@ export function criarPainelFechamento(
 /** Depois do fechamento: a conferência completa e a volta para a lista de caixas. */
 export function criarTelaCaixaFechado(conferencia: ConferenciaCaixa, aoVoltar: () => void): HTMLElement {
   const titulo = document.createElement("h2");
-  titulo.textContent = `Caixa de ${conferencia.operadorNome} fechado`;
+  titulo.textContent = `${conferencia.pontoNome} fechado (${conferencia.operadorNome})`;
   const acoes = document.createElement("div");
   acoes.className = "caixa-painel__acoes";
   acoes.append(botao(ROTULO_VOLTAR, "btn btn-primary", aoVoltar));
@@ -128,6 +135,41 @@ function montarPainel(opcoes: OpcoesPainel): HTMLElement {
   });
   queueMicrotask(opcoes.focar);
   return formulario;
+}
+
+/** Crédito, débito e Pix: o total que o relatório da maquininha mostra (zero vale, em branco não). */
+function criarCamposMaquininha(): { elemento: HTMLElement; valores: () => Record<FormaMaquininha, number> } {
+  const campos = FORMAS_MAQUININHA.map(({ forma, rotulo }) => {
+    const campo = criarCampoTexto(`caixa-maquininha-${forma}`, `${rotulo} (R$)`, "number", true);
+    campo.entrada.min = "0";
+    campo.entrada.step = "0.01";
+    campo.entrada.inputMode = "decimal";
+    return { forma, campo };
+  });
+  const valores = (): Record<FormaMaquininha, number> => {
+    const resultado: Record<FormaMaquininha, number> = { CARTAO_CREDITO: 0, CARTAO_DEBITO: 0, PIX: 0 };
+    campos.forEach(({ forma, campo }) => {
+      resultado[forma] = Number(campo.entrada.value);
+    });
+    return resultado;
+  };
+  const nota = document.createElement("p");
+  nota.className = "caixa-painel__instrucao";
+  nota.textContent = "Pix por QR na tela não entra aqui: ele é confirmado direto pelo Mercado Pago.";
+  const elemento = document.createElement("div");
+  elemento.className = "caixa-painel__maquininha";
+  elemento.append(linhaDeCampos(...campos.map(({ campo }) => campo.container)), nota);
+  return { elemento, valores };
+}
+
+function secaoFechamento(titulo: string, conteudo: HTMLElement): HTMLElement {
+  const cabecalho = document.createElement("h3");
+  cabecalho.className = "abertura-caixas__titulo";
+  cabecalho.textContent = titulo;
+  const secao = document.createElement("section");
+  secao.className = "caixa-painel__secao";
+  secao.append(cabecalho, conteudo);
+  return secao;
 }
 
 function linhaDeCampos(...campos: HTMLElement[]): HTMLElement {

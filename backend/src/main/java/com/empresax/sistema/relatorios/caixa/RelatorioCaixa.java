@@ -1,30 +1,35 @@
 package com.empresax.sistema.relatorios.caixa;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
  * Estatísticas da gestão de caixa num período (D28): quantos caixas, quantos bateram, sobras,
- * faltas, sangrias e reposições — no total e por operador. Diferença só conta caixa fechado.
+ * faltas, sangrias e reposições — no total, por operador e por caixa físico em cada dia (com o
+ * vendido em cada forma de pagamento). Diferença só conta caixa fechado.
  */
 public record RelatorioCaixa(
         Totais totais,
         Map<ResultadoFechamento, Integer> porResultado,
         List<PorOperador> porOperador,
+        List<CaixaNoDia> porCaixaEDia,
         List<CaixaDoPeriodo> caixas
 ) {
 
     public RelatorioCaixa {
         porResultado = Map.copyOf(porResultado);
         porOperador = List.copyOf(porOperador);
+        porCaixaEDia = List.copyOf(porCaixaEDia);
         caixas = List.copyOf(caixas);
     }
 
@@ -54,6 +59,20 @@ public record RelatorioCaixa(
     ) {
     }
 
+    /** Resumo do dia de um caixa físico: o que vendeu em cada forma e quem operou nele. */
+    public record CaixaNoDia(
+            LocalDate dia,
+            String pontoNome,
+            List<String> operadores,
+            Map<String, BigDecimal> vendasPorForma,
+            BigDecimal totalVendido
+    ) {
+        public CaixaNoDia {
+            operadores = List.copyOf(operadores);
+            vendasPorForma = Map.copyOf(vendasPorForma);
+        }
+    }
+
     public static RelatorioCaixa de(List<CaixaDoPeriodo> caixas) {
         Map<ResultadoFechamento, Integer> porResultado = new EnumMap<>(ResultadoFechamento.class);
         for (ResultadoFechamento resultado : ResultadoFechamento.values()) {
@@ -69,7 +88,25 @@ public record RelatorioCaixa(
                 .sorted(Comparator.comparing(PorOperador::faltas).reversed().thenComparing(PorOperador::operadorNome))
                 .toList();
 
-        return new RelatorioCaixa(totalizar(caixas), porResultado, porOperador, caixas);
+        return new RelatorioCaixa(totalizar(caixas), porResultado, porOperador, resumirPorCaixaEDia(caixas), caixas);
+    }
+
+    /** Dia mais recente primeiro; no mesmo dia, Caixa 01, 02... */
+    private static List<CaixaNoDia> resumirPorCaixaEDia(List<CaixaDoPeriodo> caixas) {
+        Map<LocalDate, Map<String, List<CaixaDoPeriodo>>> porDia = caixas.stream().collect(Collectors.groupingBy(
+                CaixaDoPeriodo::dia, TreeMap::new, Collectors.groupingBy(CaixaDoPeriodo::pontoNome, TreeMap::new, Collectors.toList())));
+        return porDia.entrySet().stream()
+                .sorted(Map.Entry.<LocalDate, Map<String, List<CaixaDoPeriodo>>>comparingByKey().reversed())
+                .flatMap(dia -> dia.getValue().entrySet().stream().map(ponto -> resumirDia(dia.getKey(), ponto.getKey(), ponto.getValue())))
+                .toList();
+    }
+
+    private static CaixaNoDia resumirDia(LocalDate dia, String pontoNome, List<CaixaDoPeriodo> turnos) {
+        Map<String, BigDecimal> porForma = new TreeMap<>();
+        turnos.forEach(turno -> turno.vendasPorForma().forEach((forma, valor) -> porForma.merge(forma, valor, BigDecimal::add)));
+        List<String> operadores = turnos.stream().map(CaixaDoPeriodo::operadorNome).distinct().toList();
+        BigDecimal total = porForma.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+        return new CaixaNoDia(dia, pontoNome, operadores, porForma, total);
     }
 
     private static Totais totalizar(List<CaixaDoPeriodo> caixas) {

@@ -1,6 +1,6 @@
 import type { ConferenciaCaixa, FormaVendaCaixa } from "../../api/caixaApi.js";
 import { formatarMoeda } from "../formatarMoeda.js";
-import { celula, criarLinha, criarTabela } from "../tabela.js";
+import { celula, celulaSelo, criarLinha, criarTabela } from "../tabela.js";
 import { ROTULO_CEDULA } from "./contagemCedulas.js";
 
 const ROTULO_FORMA: Record<FormaVendaCaixa, string> = {
@@ -24,6 +24,9 @@ export function criarResultadoFechamento(conferencia: ConferenciaCaixa): HTMLEle
     criarContaDaGaveta(conferencia),
     criarVendasPorForma(conferencia)
   );
+  if (conferencia.conferenciasForma.length > 0) {
+    elemento.append(criarConferenciaMaquininha(conferencia));
+  }
   if (conferencia.movimentos.length > 0) {
     elemento.append(criarMovimentos(conferencia));
   }
@@ -60,7 +63,7 @@ function criarSituacao(conferencia: ConferenciaCaixa): HTMLElement {
 
 function criarContaDaGaveta(conferencia: ConferenciaCaixa): HTMLElement {
   const linhas: Array<[string, string, string?]> = [
-    ["Fundo de troco (início)", formatarMoeda(conferencia.fundoInicial)],
+    ["Valor inicial (fundo de troco)", formatarMoeda(conferencia.fundoInicial)],
     ["+ Vendas em dinheiro", formatarMoeda(conferencia.vendasEmDinheiro)],
     ["+ Reposições de troco", formatarMoeda(conferencia.totalSuprimentos)],
     ["− Sangrias", formatarMoeda(conferencia.totalSangrias)],
@@ -70,7 +73,7 @@ function criarContaDaGaveta(conferencia: ConferenciaCaixa): HTMLElement {
     linhas.push(["Contado na gaveta", formatarMoeda(conferencia.valorContado), "resultado-caixa__linha--forte"]);
   }
   if (conferencia.dinheiroQueEntrou !== null) {
-    linhas.push(["Entrou em dinheiro no dia (contado − fundo inicial)", formatarMoeda(conferencia.dinheiroQueEntrou)]);
+    linhas.push(["Entrou em dinheiro no dia (contado − valor inicial)", formatarMoeda(conferencia.dinheiroQueEntrou)]);
   }
 
   const lista = document.createElement("dl");
@@ -101,6 +104,26 @@ function criarVendasPorForma(conferencia: ConferenciaCaixa): HTMLElement {
     celula(formatarMoeda(forma.valor))
   )), "forma(s)");
   return secao("Vendas por forma de pagamento", tabela);
+}
+
+/** Crédito, débito e Pix: sistema × relatório da maquininha, com a diferença de cada um. */
+function criarConferenciaMaquininha(conferencia: ConferenciaCaixa): HTMLElement {
+  const tabela = criarTabela(["Forma", "No sistema", "Na maquininha", "Diferença"], conferencia.conferenciasForma.map((forma) => criarLinha(
+    celula(ROTULO_FORMA[forma.forma]),
+    celula(formatarMoeda(forma.valorSistema)),
+    celula(formatarMoeda(forma.valorInformado)),
+    celulaDiferenca(forma.diferenca)
+  )), "forma(s)");
+  return secao("Conferência da maquininha", tabela);
+}
+
+function celulaDiferenca(diferenca: number): HTMLTableCellElement {
+  if (diferenca === 0) {
+    return celulaSelo("Bateu", "concluido");
+  }
+  return diferenca > 0
+    ? celulaSelo(`Sobrou ${formatarMoeda(diferenca)}`, "pendente")
+    : celulaSelo(`Faltou ${formatarMoeda(-diferenca)}`, "rejeitado");
 }
 
 function criarMovimentos(conferencia: ConferenciaCaixa): HTMLElement {

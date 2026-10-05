@@ -15,6 +15,8 @@ public interface SessaoCaixaRepository extends JpaRepository<SessaoCaixa, UUID> 
 
     Optional<SessaoCaixa> findByOperadorAndStatus(String operador, StatusSessaoCaixa status);
 
+    Optional<SessaoCaixa> findByPontoCaixaIdAndStatus(UUID pontoCaixaId, StatusSessaoCaixa status);
+
     /** Reposição, sangria e fechamento travam o caixa: duas pessoas não mexem no mesmo saldo ao mesmo tempo. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT s FROM SessaoCaixa s WHERE s.id = :id")

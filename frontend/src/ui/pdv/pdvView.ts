@@ -117,7 +117,7 @@ function criarFaixaCaixa(caixa: CaixaAberto): HTMLElement {
   marcador.className = "barra-caixa__marcador";
   marcador.setAttribute("aria-hidden", "true");
   const texto = document.createElement("span");
-  texto.textContent = `Caixa aberto às ${HORA.format(new Date(caixa.abertaEm))} por ${caixa.abertaPorNome}`;
+  texto.textContent = `${caixa.pontoNome} aberto às ${HORA.format(new Date(caixa.abertaEm))} por ${caixa.abertaPorNome} · operador: ${caixa.operadorNome}`;
   const situacao = document.createElement("p");
   situacao.className = "barra-caixa__situacao";
   situacao.append(marcador, texto);

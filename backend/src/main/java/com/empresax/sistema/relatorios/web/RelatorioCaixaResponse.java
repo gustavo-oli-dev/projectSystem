@@ -8,12 +8,14 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public record RelatorioCaixaResponse(
         RelatorioCaixa.Totais totais,
         List<QuantidadePorResultado> porResultado,
         List<RelatorioCaixa.PorOperador> porOperador,
+        List<RelatorioCaixa.CaixaNoDia> porCaixaEDia,
         List<CaixaResponse> caixas
 ) {
 
@@ -22,6 +24,7 @@ public record RelatorioCaixaResponse(
 
     public record CaixaResponse(
             UUID id,
+            String pontoNome,
             String operadorNome,
             String abertaPorNome,
             String fechadaPorNome,
@@ -34,15 +37,17 @@ public record RelatorioCaixaResponse(
             BigDecimal valorEsperado,
             BigDecimal valorContado,
             BigDecimal diferenca,
-            ResultadoFechamento resultado
+            ResultadoFechamento resultado,
+            Map<String, BigDecimal> vendasPorForma,
+            BigDecimal totalVendido
     ) {
 
         static CaixaResponse de(CaixaDoPeriodo caixa) {
             return new CaixaResponse(
-                    caixa.id(), caixa.operadorNome(), caixa.abertaPorNome(), caixa.fechadaPorNome(),
+                    caixa.id(), caixa.pontoNome(), caixa.operadorNome(), caixa.abertaPorNome(), caixa.fechadaPorNome(),
                     caixa.abertaEm(), caixa.fechadaEm(), caixa.fundoInicial(), caixa.reposicoes(), caixa.sangrias(),
                     caixa.vendasEmDinheiro(), caixa.valorEsperado(), caixa.valorContado(),
-                    caixa.diferenca().orElse(null), caixa.resultado());
+                    caixa.diferenca().orElse(null), caixa.resultado(), caixa.vendasPorForma(), caixa.totalVendido());
         }
     }
 
@@ -53,6 +58,7 @@ public record RelatorioCaixaResponse(
                         .map(resultado -> new QuantidadePorResultado(resultado, relatorio.porResultado().getOrDefault(resultado, 0)))
                         .toList(),
                 relatorio.porOperador(),
+                relatorio.porCaixaEDia(),
                 relatorio.caixas().stream().map(CaixaResponse::de).toList());
     }
 }

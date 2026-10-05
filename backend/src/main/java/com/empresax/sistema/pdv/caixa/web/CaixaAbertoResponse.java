@@ -5,7 +5,6 @@ import com.empresax.sistema.pdv.caixa.SessaoCaixa;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -14,6 +13,7 @@ import java.util.UUID;
  */
 public record CaixaAbertoResponse(
         UUID id,
+        String pontoNome,
         String operador,
         String operadorNome,
         String abertaPorNome,
@@ -25,12 +25,13 @@ public record CaixaAbertoResponse(
         List<MovimentoCaixaResponse> movimentos
 ) {
 
-    static CaixaAbertoResponse de(SessaoCaixa sessao, Map<String, String> nomes) {
+    static CaixaAbertoResponse de(SessaoCaixa sessao, NomesDoCaixa nomes) {
         return new CaixaAbertoResponse(
                 sessao.id(),
+                nomes.caixa(sessao.pontoCaixaId()),
                 sessao.operador(),
-                nomes.getOrDefault(sessao.operador(), sessao.operador()),
-                nomes.getOrDefault(sessao.abertaPor(), sessao.abertaPor()),
+                nomes.pessoa(sessao.operador()),
+                nomes.pessoa(sessao.abertaPor()),
                 sessao.abertaEm(),
                 sessao.fundoInicial().valor(),
                 CedulaContadaResponse.de(sessao.cedulasAbertura()),

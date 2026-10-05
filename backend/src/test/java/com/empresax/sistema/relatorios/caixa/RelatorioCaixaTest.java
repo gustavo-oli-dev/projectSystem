@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -61,6 +62,24 @@ class RelatorioCaixaTest {
     }
 
     @Test
+    void resumoDoDiaSomaCadaFormaPorCaixaEListaQuemOperou() {
+        Instant manha = Instant.parse("2026-10-04T12:00:00Z");
+        Instant tarde = Instant.parse("2026-10-04T18:00:00Z");
+        RelatorioCaixa relatorio = RelatorioCaixa.de(List.of(
+                vendas("Caixa 01", "Ana", manha, Map.of("DINHEIRO", new BigDecimal("100"), "CARTAO_CREDITO", new BigDecimal("50"))),
+                vendas("Caixa 01", "Bia", tarde, Map.of("DINHEIRO", new BigDecimal("20"), "PIX", new BigDecimal("30"))),
+                vendas("Caixa 02", "Caio", manha, Map.of("CARTAO_DEBITO", new BigDecimal("70")))));
+
+        assertThat(relatorio.porCaixaEDia()).hasSize(2);
+        RelatorioCaixa.CaixaNoDia caixa01 = relatorio.porCaixaEDia().get(0);
+        assertThat(caixa01.pontoNome()).isEqualTo("Caixa 01");
+        assertThat(caixa01.operadores()).containsExactly("Ana", "Bia");
+        assertThat(caixa01.vendasPorForma().get("DINHEIRO")).isEqualByComparingTo("120");
+        assertThat(caixa01.totalVendido()).isEqualByComparingTo("200");
+        assertThat(relatorio.porCaixaEDia().get(1).pontoNome()).isEqualTo("Caixa 02");
+    }
+
+    @Test
     void csvTemUmaLinhaPorCaixaComDiferencaEmFormatoDoExcel() {
         RelatorioCaixa relatorio = RelatorioCaixa.de(List.of(
                 fechado("ana@x.com", "Ana", "100.00", "80.20", "0", "0"), aberto("caio@x.com", "=Caio")));
@@ -75,13 +94,18 @@ class RelatorioCaixaTest {
     private static CaixaDoPeriodo fechado(
             String email, String nome, String esperado, String contado, String reposicoes, String sangrias
     ) {
-        return new CaixaDoPeriodo(UUID.randomUUID(), email, nome, "Gerente", "Gerente", ABERTURA, FECHAMENTO,
+        return new CaixaDoPeriodo(UUID.randomUUID(), "Caixa 01", email, nome, "Gerente", "Gerente", ABERTURA, FECHAMENTO,
                 new BigDecimal("90.00"), new BigDecimal(reposicoes), new BigDecimal(sangrias), new BigDecimal("10.00"),
-                new BigDecimal(esperado), new BigDecimal(contado), null);
+                new BigDecimal(esperado), new BigDecimal(contado), null, Map.of());
+    }
+
+    private static CaixaDoPeriodo vendas(String caixa, String operador, Instant abertura, Map<String, BigDecimal> porForma) {
+        return new CaixaDoPeriodo(UUID.randomUUID(), caixa, operador + "@x.com", operador, "Gerente", null, abertura, null,
+                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, null, null, null, null, porForma);
     }
 
     private static CaixaDoPeriodo aberto(String email, String nome) {
-        return new CaixaDoPeriodo(UUID.randomUUID(), email, nome, "Gerente", null, ABERTURA, null,
-                new BigDecimal("90.00"), BigDecimal.ZERO, BigDecimal.ZERO, null, null, null, null);
+        return new CaixaDoPeriodo(UUID.randomUUID(), "Caixa 02", email, nome, "Gerente", null, ABERTURA, null,
+                new BigDecimal("90.00"), BigDecimal.ZERO, BigDecimal.ZERO, null, null, null, null, Map.of());
     }
 }

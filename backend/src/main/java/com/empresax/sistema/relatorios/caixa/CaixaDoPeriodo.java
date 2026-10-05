@@ -1,16 +1,22 @@
 package com.empresax.sistema.relatorios.caixa;
 
+import com.empresax.sistema.relatorios.vendas.PeriodoRelatorio;
+
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Um caixa aberto no período, como o relatório o enxerga: valores do fechamento (nulos enquanto
- * aberto) e os totais de reposição e sangria. Nomes já resolvidos (a sessão guarda e-mails).
+ * Um caixa aberto no período, como o relatório o enxerga: qual caixa físico, quem operou, valores do
+ * fechamento (nulos enquanto aberto), reposições, sangrias e o vendido em cada forma de pagamento.
+ * Nomes já resolvidos (a sessão guarda e-mails).
  */
 public record CaixaDoPeriodo(
         UUID id,
+        String pontoNome,
         String operador,
         String operadorNome,
         String abertaPorNome,
@@ -23,8 +29,14 @@ public record CaixaDoPeriodo(
         BigDecimal vendasEmDinheiro,
         BigDecimal valorEsperado,
         BigDecimal valorContado,
-        String observacao
+        String observacao,
+        /** Forma (DINHEIRO, CARTAO_CREDITO, CARTAO_DEBITO, PIX, PIX_QR) → valor vendido. */
+        Map<String, BigDecimal> vendasPorForma
 ) {
+
+    public CaixaDoPeriodo {
+        vendasPorForma = Map.copyOf(vendasPorForma);
+    }
 
     public boolean fechado() {
         return fechadaEm != null;
@@ -37,5 +49,14 @@ public record CaixaDoPeriodo(
 
     public ResultadoFechamento resultado() {
         return diferenca().map(ResultadoFechamento::de).orElse(ResultadoFechamento.ABERTO);
+    }
+
+    public BigDecimal totalVendido() {
+        return vendasPorForma.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /** Dia do caixa = dia da abertura, no fuso da loja. */
+    public LocalDate dia() {
+        return abertaEm.atZone(PeriodoRelatorio.FUSO_DA_LOJA).toLocalDate();
     }
 }

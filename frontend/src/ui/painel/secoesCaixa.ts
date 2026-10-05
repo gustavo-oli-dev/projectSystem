@@ -1,11 +1,13 @@
-import type { RelatorioCaixa, ResultadoFechamento } from "../../api/relatoriosApi.js";
+import type { FormaVendaRelatorio, RelatorioCaixa, ResultadoFechamento } from "../../api/relatoriosApi.js";
 import { cartaoEstado } from "../estadoCard.js";
 import { formatarMoeda } from "../formatarMoeda.js";
 import { formatarInteiro } from "../formatarNumero.js";
 import { criarGraficoRosca, type CorFatia, type Fatia } from "../graficos/graficoRosca.js";
 import { celula, celulaSelo, criarLinha, criarTabela } from "../tabela.js";
+import { deIso } from "./periodoPainel.js";
 import { criarCartao } from "./secoesRelatorio.js";
 
+const DIA = new Intl.DateTimeFormat("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" });
 const DATA_HORA = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 /** Slots validados juntos (pares adjacentes do anel); a cor segue o resultado, nunca a posição. */
 const FATIAS_RESULTADO: ReadonlyArray<{ resultado: ResultadoFechamento; rotulo: string; cor: CorFatia }> = [
@@ -25,7 +27,7 @@ export function montarAbaCaixa(relatorio: RelatorioCaixa, acaoExportar: HTMLElem
   const linha = document.createElement("div");
   linha.className = "linha-relatorio";
   linha.append(criarSecaoResultado(relatorio), porOperador);
-  return [criarIndicadoresCaixa(relatorio), linha, criarSecaoCaixas(relatorio)];
+  return [criarIndicadoresCaixa(relatorio), criarSecaoResumoDoDia(relatorio), linha, criarSecaoCaixas(relatorio)];
 }
 
 function criarIndicadoresCaixa(relatorio: RelatorioCaixa): HTMLElement {
@@ -95,10 +97,33 @@ function criarSecaoPorOperador(relatorio: RelatorioCaixa): HTMLElement {
   return criarCartao("Por operador", tabela);
 }
 
+/** Por dia e caixa físico: quanto vendeu em cada forma de pagamento e quem operou. */
+function criarSecaoResumoDoDia(relatorio: RelatorioCaixa): HTMLElement {
+  const valor = (porForma: Partial<Record<FormaVendaRelatorio, number>>, forma: FormaVendaRelatorio): string =>
+    formatarMoeda(porForma[forma] ?? 0);
+  const tabela = criarTabela(
+    ["Dia", "Caixa", "Operador(es)", "Dinheiro", "Crédito", "Débito", "Pix maquininha", "Pix QR", "Total vendido"],
+    relatorio.porCaixaEDia.map((dia) => criarLinha(
+      celula(DIA.format(deIso(dia.dia))),
+      celula(dia.pontoNome),
+      celula(dia.operadores.join(", ")),
+      celula(valor(dia.vendasPorForma, "DINHEIRO")),
+      celula(valor(dia.vendasPorForma, "CARTAO_CREDITO")),
+      celula(valor(dia.vendasPorForma, "CARTAO_DEBITO")),
+      celula(valor(dia.vendasPorForma, "PIX")),
+      celula(valor(dia.vendasPorForma, "PIX_QR")),
+      celula(formatarMoeda(dia.totalVendido))
+    )),
+    "caixa(s) no período"
+  );
+  return criarCartao("Resumo do dia por caixa", tabela);
+}
+
 function criarSecaoCaixas(relatorio: RelatorioCaixa): HTMLElement {
   const tabela = criarTabela(
-    ["Operador", "Abertura", "Fechamento", "Fundo", "Vendas em dinheiro", "Reposições", "Sangrias", "Esperado", "Contado", "Resultado"],
+    ["Caixa", "Operador", "Abertura", "Fechamento", "Fundo", "Vendas em dinheiro", "Reposições", "Sangrias", "Esperado", "Contado", "Resultado"],
     relatorio.caixas.map((caixa) => criarLinha(
+      celula(caixa.pontoNome),
       celula(caixa.operadorNome),
       celula(DATA_HORA.format(new Date(caixa.abertaEm))),
       celula(caixa.fechadaEm === null ? "—" : DATA_HORA.format(new Date(caixa.fechadaEm))),

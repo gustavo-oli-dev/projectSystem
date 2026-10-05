@@ -15,15 +15,17 @@ public final class ExportacaoCaixaCsv {
     private static final DateTimeFormatter DATA_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
             .withZone(PeriodoRelatorio.FUSO_DA_LOJA);
     private static final List<String> CABECALHO = List.of(
-            "Operador", "Aberto em", "Aberto por", "Fechado em", "Fechado por", "Fundo de troco (R$)",
+            "Caixa", "Operador", "Aberto em", "Aberto por", "Fechado em", "Fechado por", "Fundo de troco (R$)",
             "Vendas em dinheiro (R$)", "Reposições (R$)", "Sangrias (R$)", "Esperado (R$)", "Contado (R$)",
-            "Diferença (R$)", "Resultado", "Observação");
+            "Diferença (R$)", "Resultado", "Crédito (R$)", "Débito (R$)",
+            "Pix na maquininha (R$)", "Pix por QR (R$)", "Total vendido (R$)", "Observação");
 
     private ExportacaoCaixaCsv() {
     }
 
     public static byte[] fechamentos(RelatorioCaixa relatorio) {
         Stream<List<String>> linhas = relatorio.caixas().stream().map(caixa -> List.of(
+                ExportacaoCsv.texto(caixa.pontoNome()),
                 ExportacaoCsv.texto(caixa.operadorNome()),
                 dataHora(caixa.abertaEm()),
                 ExportacaoCsv.texto(caixa.abertaPorNome()),
@@ -37,6 +39,11 @@ public final class ExportacaoCaixaCsv {
                 decimal(caixa.valorContado()),
                 caixa.diferenca().map(ExportacaoCsv::decimal).orElse(""),
                 rotulo(caixa.resultado()),
+                forma(caixa, "CARTAO_CREDITO"),
+                forma(caixa, "CARTAO_DEBITO"),
+                forma(caixa, "PIX"),
+                forma(caixa, "PIX_QR"),
+                ExportacaoCsv.decimal(caixa.totalVendido()),
                 ExportacaoCsv.texto(caixa.observacao())));
         return ExportacaoCsv.montar(CABECALHO, linhas);
     }
@@ -48,6 +55,10 @@ public final class ExportacaoCaixaCsv {
             case SOBROU -> "Sobrou";
             case FALTOU -> "Faltou";
         };
+    }
+
+    private static String forma(CaixaDoPeriodo caixa, String forma) {
+        return ExportacaoCsv.decimal(caixa.vendasPorForma().getOrDefault(forma, BigDecimal.ZERO));
     }
 
     private static String dataHora(Instant instante) {

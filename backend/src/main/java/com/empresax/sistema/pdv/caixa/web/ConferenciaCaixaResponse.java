@@ -9,7 +9,6 @@ import com.empresax.sistema.shared.dinheiro.Dinheiro;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -18,6 +17,7 @@ import java.util.UUID;
  */
 public record ConferenciaCaixaResponse(
         UUID id,
+        String pontoNome,
         String operador,
         String operadorNome,
         String abertaPorNome,
@@ -35,6 +35,7 @@ public record ConferenciaCaixaResponse(
         BigDecimal valorEsperado,
         BigDecimal valorContado,
         List<CedulaContadaResponse> cedulasFechamento,
+        List<ConferenciaFormaResponse> conferenciasForma,
         BigDecimal diferenca,
         BigDecimal dinheiroQueEntrou,
         String observacao
@@ -45,7 +46,7 @@ public record ConferenciaCaixaResponse(
     public record VendaPorFormaResponse(String forma, int vendas, BigDecimal valor) {
     }
 
-    static ConferenciaCaixaResponse de(FechamentoCaixa fechamento, Map<String, String> nomes) {
+    static ConferenciaCaixaResponse de(FechamentoCaixa fechamento, NomesDoCaixa nomes) {
         SessaoCaixa sessao = fechamento.sessao();
         Dinheiro vendasEmDinheiro = sessao.vendasEmDinheiro().orElseGet(() -> fechamento.vendasPorForma().stream()
                 .filter(forma -> FORMA_DINHEIRO.equals(forma.forma()))
@@ -54,10 +55,11 @@ public record ConferenciaCaixaResponse(
                 .orElse(Dinheiro.zero()));
         return new ConferenciaCaixaResponse(
                 sessao.id(),
+                nomes.caixa(sessao.pontoCaixaId()),
                 sessao.operador(),
-                nomes.getOrDefault(sessao.operador(), sessao.operador()),
-                nomes.getOrDefault(sessao.abertaPor(), sessao.abertaPor()),
-                sessao.fechadaPor().map(email -> nomes.getOrDefault(email, email)).orElse(null),
+                nomes.pessoa(sessao.operador()),
+                nomes.pessoa(sessao.abertaPor()),
+                sessao.fechadaPor().map(nomes::pessoa).orElse(null),
                 sessao.status(),
                 sessao.abertaEm(),
                 sessao.fechadaEm().orElse(null),
@@ -73,6 +75,7 @@ public record ConferenciaCaixaResponse(
                 sessao.valorEsperado().orElseGet(() -> sessao.dinheiroEsperado(vendasEmDinheiro)),
                 sessao.valorContado().map(Dinheiro::valor).orElse(null),
                 CedulaContadaResponse.de(sessao.cedulasFechamento()),
+                ConferenciaFormaResponse.de(sessao),
                 sessao.diferenca().orElse(null),
                 sessao.dinheiroQueEntrou().orElse(null),
                 sessao.observacaoFechamento().orElse(null));

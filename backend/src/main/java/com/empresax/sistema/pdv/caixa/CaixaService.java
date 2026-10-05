@@ -2,6 +2,7 @@ package com.empresax.sistema.pdv.caixa;
 
 import com.empresax.sistema.common.domain.DomainException;
 import com.empresax.sistema.common.domain.EntidadeNaoEncontradaException;
+import com.empresax.sistema.pdv.FormaPagamentoPresencial;
 import com.empresax.sistema.pdv.caixa.VendasDoCaixaConsulta.VendasPorForma;
 import com.empresax.sistema.shared.dinheiro.Dinheiro;
 import com.empresax.sistema.usuario.Usuario;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -26,21 +28,25 @@ import java.util.stream.Collectors;
 @Service
 public class CaixaService {
 
-    private static final String MENSAGEM_JA_ABERTO = "Este operador já tem um caixa aberto — feche-o antes de abrir outro";
+    private static final String MENSAGEM_OPERADOR_JA_ABERTO = "%s já está em um caixa aberto — feche-o antes de abrir outro";
+    private static final String MENSAGEM_CAIXA_JA_ABERTO = "%s já está aberto — feche-o antes de abrir de novo";
     private static final String MOTIVO_DEVOLUCAO = "Devolução em dinheiro da venda %s (cancelada depois do fechamento do caixa dela)";
 
     private final SessaoCaixaRepository sessaoRepository;
+    private final PontoCaixaRepository pontoRepository;
     private final CedulaFundoTrocoPadraoRepository fundoPadraoRepository;
     private final VendasDoCaixaConsulta vendasDoCaixa;
     private final UsuarioService usuarioService;
 
     public CaixaService(
             SessaoCaixaRepository sessaoRepository,
+            PontoCaixaRepository pontoRepository,
             CedulaFundoTrocoPadraoRepository fundoPadraoRepository,
             VendasDoCaixaConsulta vendasDoCaixa,
             UsuarioService usuarioService
     ) {
         this.sessaoRepository = sessaoRepository;
+        this.pontoRepository = pontoRepository;
         this.fundoPadraoRepository = fundoPadraoRepository;
         this.vendasDoCaixa = vendasDoCaixa;
         this.usuarioService = usuarioService;
@@ -59,18 +65,75 @@ public class CaixaService {
                 "Seu caixa ainda não foi aberto — peça a um responsável pelo caixa para abrir"));
     }
 
+    /**
+     * Abre os caixas escolhidos (Caixa 01, 02...), cada um com o seu operador e o mesmo fundo de
+     * troco (uma gaveta para cada). Tudo ou nada: se um não puder abrir, nenhum é aberto.
+     */
     @Transactional
-    public SessaoCaixa abrir(UUID operadorId, ContagemCedulas fundoDeTroco, String abertaPor) {
-        Usuario operador = usuarioService.buscarOperadorDeCaixa(operadorId);
+    public List<SessaoCaixa> abrir(List<AberturaDeCaixa> aberturas, ContagemCedulas fundoDeTroco, String abertaPor) {
+        if (aberturas == null || aberturas.isEmpty()) {
+            throw new DomainException("Escolha ao menos um caixa para abrir");
+        }
+        if (aberturas.stream().map(AberturaDeCaixa::pontoCaixaId).distinct().count() != aberturas.size()) {
+            throw new DomainException("O mesmo caixa foi escolhido mais de uma vez");
+        }
+        if (aberturas.stream().map(AberturaDeCaixa::operadorId).distinct().count() != aberturas.size()) {
+            throw new DomainException("O mesmo operador foi escolhido para mais de um caixa");
+        }
+        return aberturas.stream().map(abertura -> abrirUm(abertura, fundoDeTroco, abertaPor)).toList();
+    }
+
+    private SessaoCaixa abrirUm(AberturaDeCaixa abertura, ContagemCedulas fundoDeTroco, String abertaPor) {
+        PontoCaixa ponto = pontoRepository.findById(abertura.pontoCaixaId())
+                .orElseThrow(() -> new EntidadeNaoEncontradaException("Caixa não encontrado: " + abertura.pontoCaixaId()));
+        if (!ponto.ativo()) {
+            throw new DomainException(ponto.nome() + " está desativado");
+        }
+        if (sessaoRepository.findByPontoCaixaIdAndStatus(ponto.id(), StatusSessaoCaixa.ABERTA).isPresent()) {
+            throw new DomainException(MENSAGEM_CAIXA_JA_ABERTO.formatted(ponto.nome()));
+        }
+        Usuario operador = usuarioService.buscarOperadorDeCaixa(abertura.operadorId());
         if (caixaAberto(operador.email()).isPresent()) {
-            throw new DomainException(MENSAGEM_JA_ABERTO);
+            throw new DomainException(MENSAGEM_OPERADOR_JA_ABERTO.formatted(operador.nome()));
         }
         try {
-            return carregada(sessaoRepository.saveAndFlush(SessaoCaixa.abrir(operador.email(), fundoDeTroco, abertaPor)));
+            return carregada(sessaoRepository.saveAndFlush(
+                    SessaoCaixa.abrir(operador.email(), ponto.id(), fundoDeTroco, abertaPor)));
         } catch (DataIntegrityViolationException duasAberturasAoMesmoTempo) {
-            // Duas pessoas abrindo o mesmo operador juntas: o índice único do banco barra a segunda.
-            throw new DomainException(MENSAGEM_JA_ABERTO);
+            // Duas pessoas abrindo o mesmo caixa ou operador juntas: o índice único do banco barra a segunda.
+            throw new DomainException(MENSAGEM_CAIXA_JA_ABERTO.formatted(ponto.nome()));
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<PontoCaixa> listarPontos() {
+        return pontoRepository.findAllByOrderByNumeroAsc();
+    }
+
+    @Transactional
+    public PontoCaixa cadastrarPonto(int numero) {
+        if (pontoRepository.existsByNumero(numero)) {
+            throw new DomainException("Já existe o caixa número " + numero);
+        }
+        return pontoRepository.save(new PontoCaixa(numero));
+    }
+
+    @Transactional
+    public PontoCaixa definirPontoAtivo(UUID pontoId, boolean ativo) {
+        PontoCaixa ponto = pontoRepository.findById(pontoId)
+                .orElseThrow(() -> new EntidadeNaoEncontradaException("Caixa não encontrado: " + pontoId));
+        if (ativo) {
+            ponto.ativar();
+        } else {
+            ponto.desativar();
+        }
+        return ponto;
+    }
+
+    /** Ids dos caixas físicos que estão abertos agora (a tela de abertura só oferece os livres). */
+    @Transactional(readOnly = true)
+    public Set<UUID> pontosAbertos() {
+        return listarAbertos().stream().flatMap(sessao -> sessao.pontoCaixaId().stream()).collect(Collectors.toSet());
     }
 
     @Transactional
@@ -88,10 +151,23 @@ public class CaixaService {
     }
 
     @Transactional
-    public FechamentoCaixa fechar(UUID sessaoId, ContagemCedulas contagem, String observacao, String fechadaPor) {
+    public FechamentoCaixa fechar(
+            UUID sessaoId, ContagemCedulas contagem, Map<FormaPagamentoPresencial, Dinheiro> informadoDaMaquininha,
+            String observacao, String fechadaPor
+    ) {
         SessaoCaixa sessao = buscarParaAlterar(sessaoId);
-        sessao.fechar(contagem, vendasDoCaixa.emDinheiro(sessaoId), observacao, fechadaPor);
-        return new FechamentoCaixa(carregada(sessao), vendasDoCaixa.porForma(sessaoId));
+        List<VendasPorForma> porForma = vendasDoCaixa.porForma(sessaoId);
+        ConferenciaMaquininha maquininha = ConferenciaMaquininha.de(registradoPorForma(porForma), informadoDaMaquininha);
+        sessao.fechar(contagem, vendasDoCaixa.emDinheiro(sessaoId), maquininha, observacao, fechadaPor);
+        return new FechamentoCaixa(carregada(sessao), porForma);
+    }
+
+    /** Vendas por forma da consulta → só as formas presenciais (Pix por QR é confirmado pelo Mercado Pago). */
+    private static Map<FormaPagamentoPresencial, Dinheiro> registradoPorForma(List<VendasPorForma> porForma) {
+        Set<String> presenciais = Arrays.stream(FormaPagamentoPresencial.values()).map(Enum::name).collect(Collectors.toSet());
+        return porForma.stream()
+                .filter(forma -> presenciais.contains(forma.forma()))
+                .collect(Collectors.toMap(forma -> FormaPagamentoPresencial.valueOf(forma.forma()), VendasPorForma::valor));
     }
 
     /**
@@ -165,6 +241,7 @@ public class CaixaService {
         sessao.movimentos().forEach(MovimentoCaixa::cedulas);
         sessao.cedulasAbertura();
         sessao.cedulasFechamento();
+        sessao.conferenciasForma().size();
         return sessao;
     }
 
@@ -182,6 +259,10 @@ public class CaixaService {
 
     /** Linha da lista de conferência: caixa aberto ainda não tem contagem, mas já tem as vendas em dinheiro. */
     public record ResumoSessaoCaixa(SessaoCaixa sessao, Dinheiro vendasEmDinheiroAteAgora) {
+    }
+
+    /** Qual caixa físico abre e quem vai operar nele. */
+    public record AberturaDeCaixa(UUID pontoCaixaId, UUID operadorId) {
     }
 
     public record OperadorDeCaixa(UUID id, String nome, String email, boolean caixaAberto) {

@@ -105,7 +105,7 @@ async function carregarLista(area: HTMLElement): Promise<void> {
       return;
     }
     area.replaceChildren(criarTabela(
-      ["Operador", "Abertura", "Fechamento", "Fundo", "Vendas em dinheiro", "Esperado", "Contado", "Resultado", ""],
+      ["Caixa", "Operador", "Abertura", "Fechamento", "Fundo", "Vendas em dinheiro", "Esperado", "Contado", "Resultado", ""],
       caixas.map((caixa) => criarLinhaCaixa(caixa, () => void mostrarDetalhe(area, caixa.id))),
       "caixa(s)"
     ));
@@ -121,6 +121,7 @@ function criarLinhaCaixa(caixa: ResumoCaixa, aoAbrir: () => void): HTMLTableRowE
   ver.textContent = "Ver conferência";
   ver.addEventListener("click", aoAbrir);
   return criarLinha(
+    celula(caixa.pontoNome),
     celula(caixa.operadorNome),
     celula(DATA_HORA.format(new Date(caixa.abertaEm))),
     celula(caixa.fechadaEm === null ? "—" : DATA_HORA.format(new Date(caixa.fechadaEm))),
@@ -156,7 +157,7 @@ async function mostrarDetalhe(area: HTMLElement, caixaId: string): Promise<void>
   try {
     const conferencia = await detalharCaixa(caixaId);
     const titulo = document.createElement("h2");
-    titulo.textContent = `Caixa de ${conferencia.operadorNome} · ${DATA_HORA.format(new Date(conferencia.abertaEm))}`;
+    titulo.textContent = `${conferencia.pontoNome} · ${conferencia.operadorNome} · ${DATA_HORA.format(new Date(conferencia.abertaEm))}`;
     const painel = document.createElement("div");
     painel.className = "caixa-painel";
     painel.append(titulo, criarResultadoFechamento(conferencia));

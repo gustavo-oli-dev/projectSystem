@@ -38,6 +38,8 @@ export interface MovimentoCaixa {
 /** Um caixa aberto — sem o valor esperado (fechamento cego). */
 export interface CaixaAberto {
   id: string;
+  /** "Caixa 01". */
+  pontoNome: string;
   operador: string;
   operadorNome: string;
   abertaPorNome: string;
@@ -50,9 +52,21 @@ export interface CaixaAberto {
 }
 
 export type FormaVendaCaixa = "DINHEIRO" | "CARTAO_CREDITO" | "CARTAO_DEBITO" | "PIX" | "PIX_QR";
+/** O que tem relatório na maquininha para conferir no fechamento. */
+export type FormaMaquininha = "CARTAO_CREDITO" | "CARTAO_DEBITO" | "PIX";
+
+/** Caixa físico da loja; "aberto" = tem abertura em andamento agora. */
+export interface PontoCaixa {
+  id: string;
+  numero: number;
+  nome: string;
+  ativo: boolean;
+  aberto: boolean;
+}
 
 export interface ConferenciaCaixa {
   id: string;
+  pontoNome: string;
   operador: string;
   operadorNome: string;
   abertaPorNome: string;
@@ -70,6 +84,8 @@ export interface ConferenciaCaixa {
   valorEsperado: number;
   valorContado: number | null;
   cedulasFechamento: CedulaContada[];
+  /** Crédito, débito e Pix da maquininha: sistema × relatório da maquininha. */
+  conferenciasForma: Array<{ forma: FormaMaquininha; valorSistema: number; valorInformado: number; diferenca: number }>;
   /** Sobra (positivo) ou falta (negativo). */
   diferenca: number | null;
   dinheiroQueEntrou: number | null;
@@ -78,6 +94,7 @@ export interface ConferenciaCaixa {
 
 export interface ResumoCaixa {
   id: string;
+  pontoNome: string;
   operador: string;
   operadorNome: string;
   status: "ABERTA" | "FECHADA";
@@ -110,8 +127,23 @@ export function listarOperadoresDeCaixa(): Promise<OperadorCaixa[]> {
   return httpClient.get<OperadorCaixa[]>("/caixa/operadores");
 }
 
-export function abrirCaixa(operadorId: string, cedulas: Contagem): Promise<CaixaAberto> {
-  return httpClient.post<CaixaAberto>("/caixa/abrir", { operadorId, cedulas });
+export function listarPontosDeCaixa(): Promise<PontoCaixa[]> {
+  return httpClient.get<PontoCaixa[]>("/caixa/pontos");
+}
+
+export function cadastrarPontoDeCaixa(numero: number): Promise<PontoCaixa> {
+  return httpClient.post<PontoCaixa>("/caixa/pontos", { numero });
+}
+
+export function definirPontoDeCaixaAtivo(id: string, ativo: boolean): Promise<PontoCaixa> {
+  return httpClient.post<PontoCaixa>(`/caixa/pontos/${encodeURIComponent(id)}/${ativo ? "ativar" : "desativar"}`, {});
+}
+
+/** Abre 1 ou mais caixas de uma vez, cada um com o seu operador e o mesmo fundo de troco. */
+export function abrirCaixas(
+  caixas: ReadonlyArray<{ pontoCaixaId: string; operadorId: string }>, cedulas: Contagem
+): Promise<CaixaAberto[]> {
+  return httpClient.post<CaixaAberto[]>("/caixa/abrir", { caixas, cedulas });
 }
 
 export function registrarSuprimento(caixaId: string, cedulas: Contagem, motivo: string): Promise<CaixaAberto> {
@@ -122,8 +154,10 @@ export function registrarSangria(caixaId: string, valor: number, motivo: string)
   return httpClient.post<CaixaAberto>(`/caixa/${encodeURIComponent(caixaId)}/sangria`, { valor, motivo });
 }
 
-export function fecharCaixa(caixaId: string, cedulas: Contagem, observacao: string | null): Promise<ConferenciaCaixa> {
-  return httpClient.post<ConferenciaCaixa>(`/caixa/${encodeURIComponent(caixaId)}/fechar`, { cedulas, observacao });
+export function fecharCaixa(
+  caixaId: string, cedulas: Contagem, maquininha: Record<FormaMaquininha, number>, observacao: string | null
+): Promise<ConferenciaCaixa> {
+  return httpClient.post<ConferenciaCaixa>(`/caixa/${encodeURIComponent(caixaId)}/fechar`, { cedulas, maquininha, observacao });
 }
 
 export function buscarFundoPadrao(): Promise<CedulaContada[]> {

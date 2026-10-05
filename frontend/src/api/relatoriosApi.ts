@@ -76,6 +76,7 @@ export function baixarCsvVendas(periodo: Periodo, tipo: ExportacaoVendas): Promi
 }
 
 export type ResultadoFechamento = "ABERTO" | "BATEU" | "SOBROU" | "FALTOU";
+export type FormaVendaRelatorio = "DINHEIRO" | "CARTAO_CREDITO" | "CARTAO_DEBITO" | "PIX" | "PIX_QR";
 
 export interface RelatorioCaixa {
   totais: {
@@ -103,8 +104,17 @@ export interface RelatorioCaixa {
     sangrias: number;
     reposicoes: number;
   }>;
+  /** Resumo do dia de cada caixa físico: vendido em cada forma e quem operou. */
+  porCaixaEDia: Array<{
+    dia: string;
+    pontoNome: string;
+    operadores: string[];
+    vendasPorForma: Partial<Record<FormaVendaRelatorio, number>>;
+    totalVendido: number;
+  }>;
   caixas: Array<{
     id: string;
+    pontoNome: string;
     operadorNome: string;
     abertaPorNome: string;
     fechadaPorNome: string | null;
@@ -118,6 +128,8 @@ export interface RelatorioCaixa {
     valorContado: number | null;
     diferenca: number | null;
     resultado: ResultadoFechamento;
+    vendasPorForma: Partial<Record<FormaVendaRelatorio, number>>;
+    totalVendido: number;
   }>;
 }
 
