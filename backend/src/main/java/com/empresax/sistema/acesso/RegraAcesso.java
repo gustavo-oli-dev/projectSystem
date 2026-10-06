@@ -7,7 +7,12 @@ package com.empresax.sistema.acesso;
  */
 public final class RegraAcesso {
 
-    public static final String PAINEL_VER = "hasAuthority('PAINEL_VER')";
+    public static final String PAINEL_VENDAS = "hasAuthority('PAINEL_VENDAS')";
+    public static final String PAINEL_PRODUTOS = "hasAuthority('PAINEL_PRODUTOS')";
+    public static final String PAINEL_HORARIOS = "hasAuthority('PAINEL_HORARIOS')";
+    public static final String PAINEL_CAIXA = "hasAuthority('PAINEL_CAIXA')";
+    public static final String PAINEL_DINHEIRO_DO_DIA = "hasAuthority('PAINEL_DINHEIRO_DO_DIA')";
+    public static final String PAINEL_OPERACAO = "hasAuthority('PAINEL_OPERACAO')";
     public static final String FATURAMENTO_VER = "hasAuthority('FATURAMENTO_VER')";
     public static final String PEDIDOS_VER = "hasAuthority('PEDIDOS_VER')";
     public static final String PEDIDOS_GERENCIAR = "hasAuthority('PEDIDOS_GERENCIAR')";

@@ -95,7 +95,7 @@ public class AutorizacaoController {
         return responder(List.of(cancelado)).get(0);
     }
 
-    @PreAuthorize(RegraAcesso.FATURAMENTO_VER + " or " + RegraAcesso.CAIXA_CONFERIR)
+    @PreAuthorize(RegraAcesso.PAINEL_CAIXA)
     @GetMapping("/api/relatorios/itens-cancelados")
     public List<ItemCanceladoResponse> doPeriodo(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,

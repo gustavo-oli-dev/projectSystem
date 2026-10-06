@@ -2,7 +2,12 @@ import { httpClient } from "./httpClient.js";
 
 /** Catálogo fixo de permissões — espelha o enum Permissao do backend. */
 export type Permissao =
-  | "PAINEL_VER"
+  | "PAINEL_VENDAS"
+  | "PAINEL_PRODUTOS"
+  | "PAINEL_HORARIOS"
+  | "PAINEL_CAIXA"
+  | "PAINEL_DINHEIRO_DO_DIA"
+  | "PAINEL_OPERACAO"
   | "FATURAMENTO_VER"
   | "PEDIDOS_VER"
   | "PEDIDOS_GERENCIAR"

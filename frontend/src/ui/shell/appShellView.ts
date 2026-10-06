@@ -92,7 +92,9 @@ const GRUPOS_NAV: GrupoNav[] = [
 
 /** Basta uma das permissões listadas para entrar na rota. */
 const PERMISSOES_POR_ROTA: Record<Rota, readonly Permissao[]> = {
-  painel: ["PAINEL_VER", "FINANCEIRO_VER"],
+  painel: [
+    "PAINEL_VENDAS", "PAINEL_PRODUTOS", "PAINEL_HORARIOS", "PAINEL_CAIXA", "PAINEL_DINHEIRO_DO_DIA", "FINANCEIRO_VER", "PAINEL_OPERACAO",
+  ],
   pedidos: ["PEDIDOS_VER"],
   "pedido-detalhe": ["PEDIDOS_VER"],
   clientes: ["CLIENTES_VER"],

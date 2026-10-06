@@ -18,7 +18,7 @@ import java.util.List;
 /** Perdas e quebras no painel (valores em dinheiro: exige ver faturamento). */
 @RestController
 @RequestMapping("/api/relatorios/perdas")
-@PreAuthorize(RegraAcesso.FATURAMENTO_VER)
+@PreAuthorize(RegraAcesso.PAINEL_PRODUTOS)
 public class RelatorioPerdasController {
 
     private final RelatorioPerdasService relatorioPerdasService;

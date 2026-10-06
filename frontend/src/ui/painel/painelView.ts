@@ -10,7 +10,7 @@ import {
   type Periodo,
   type RelatorioVendas,
 } from "../../api/relatoriosApi.js";
-import { possui, possuiAlguma } from "../../state/sessaoState.js";
+import { possui } from "../../state/sessaoState.js";
 import { elementoCarregando } from "../estadoCarregamento.js";
 import { cartaoEstado } from "../estadoCard.js";
 import { formatarMoeda } from "../formatarMoeda.js";
@@ -45,18 +45,18 @@ interface DefinicaoAba {
 }
 
 const ABAS: readonly DefinicaoAba[] = [
-  { aba: "vendas", rotulo: "Vendas", visivel: () => possui("FATURAMENTO_VER"), usaPeriodo: true },
-  { aba: "produtos", rotulo: "Produtos", visivel: () => possui("FATURAMENTO_VER"), usaPeriodo: true },
-  { aba: "horarios", rotulo: "Horários", visivel: () => possui("FATURAMENTO_VER"), usaPeriodo: true },
-  { aba: "caixa", rotulo: "Caixa", visivel: () => possuiAlguma(["FATURAMENTO_VER", "CAIXA_CONFERIR"]), usaPeriodo: true },
+  { aba: "vendas", rotulo: "Vendas", visivel: () => possui("PAINEL_VENDAS"), usaPeriodo: true },
+  { aba: "produtos", rotulo: "Produtos", visivel: () => possui("PAINEL_PRODUTOS"), usaPeriodo: true },
+  { aba: "horarios", rotulo: "Horários", visivel: () => possui("PAINEL_HORARIOS"), usaPeriodo: true },
+  { aba: "caixa", rotulo: "Caixa", visivel: () => possui("PAINEL_CAIXA"), usaPeriodo: true },
   {
     aba: "dinheiro-do-dia", rotulo: "Dinheiro do dia",
-    visivel: () => possuiAlguma(["FATURAMENTO_VER", "CAIXA_CONFERIR"]), usaPeriodo: false,
+    visivel: () => possui("PAINEL_DINHEIRO_DO_DIA"), usaPeriodo: false,
   },
   { aba: "financeiro", rotulo: "Financeiro", visivel: () => possui("FINANCEIRO_VER"), usaPeriodo: true },
   {
     aba: "operacao", rotulo: "Operação agora",
-    visivel: () => possuiAlguma(["CATALOGO_VER", "PEDIDOS_VER", "COBRANCAS_VER"]), usaPeriodo: false,
+    visivel: () => possui("PAINEL_OPERACAO"), usaPeriodo: false,
   },
 ];
 const ATALHO_INICIAL: AtalhoPeriodo = "TRINTA_DIAS";

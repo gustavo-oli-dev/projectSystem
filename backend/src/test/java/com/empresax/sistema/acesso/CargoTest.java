@@ -27,19 +27,19 @@ class CargoTest {
 
     @Test
     void rejeitaNomeEmBranco() {
-        assertThatThrownBy(() -> new Cargo(" ", null, Set.of(Permissao.PAINEL_VER)))
+        assertThatThrownBy(() -> new Cargo(" ", null, Set.of(Permissao.PAINEL_OPERACAO)))
                 .isInstanceOf(DomainException.class);
     }
 
     @Test
     void rejeitaNomeMaiorQueOitentaCaracteres() {
-        assertThatThrownBy(() -> new Cargo("x".repeat(81), null, Set.of(Permissao.PAINEL_VER)))
+        assertThatThrownBy(() -> new Cargo("x".repeat(81), null, Set.of(Permissao.PAINEL_OPERACAO)))
                 .isInstanceOf(DomainException.class);
     }
 
     @Test
     void rejeitaDescricaoMaiorQueDuzentosECinquentaECincoCaracteres() {
-        assertThatThrownBy(() -> new Cargo("Gerente", "x".repeat(256), Set.of(Permissao.PAINEL_VER)))
+        assertThatThrownBy(() -> new Cargo("Gerente", "x".repeat(256), Set.of(Permissao.PAINEL_OPERACAO)))
                 .isInstanceOf(DomainException.class);
     }
 

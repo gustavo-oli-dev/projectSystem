@@ -22,7 +22,7 @@ import java.util.function.Function;
 /** Relatórios do painel. Valores em dinheiro (faturamento, lucro) exigem ver faturamento. */
 @RestController
 @RequestMapping("/api/relatorios/vendas")
-@PreAuthorize(RegraAcesso.FATURAMENTO_VER)
+@PreAuthorize(RegraAcesso.PAINEL_VENDAS + " or " + RegraAcesso.PAINEL_PRODUTOS + " or " + RegraAcesso.PAINEL_HORARIOS)
 public class RelatorioVendasController {
 
     private static final MediaType CSV = new MediaType("text", "csv", java.nio.charset.StandardCharsets.UTF_8);

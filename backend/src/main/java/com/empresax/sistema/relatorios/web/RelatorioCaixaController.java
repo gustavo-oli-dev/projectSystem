@@ -18,10 +18,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 
-/** Relatório da gestão de caixa no painel: quem vê faturamento ou confere caixas. */
+/** Relatório da gestão de caixa no painel: aba Caixa e aba Dinheiro do dia, cada uma com a sua permissão (D44). */
 @RestController
 @RequestMapping("/api/relatorios/caixa")
-@PreAuthorize(RegraAcesso.FATURAMENTO_VER + " or " + RegraAcesso.CAIXA_CONFERIR)
 public class RelatorioCaixaController {
 
     private static final MediaType CSV = new MediaType("text", "csv", StandardCharsets.UTF_8);
@@ -32,6 +31,7 @@ public class RelatorioCaixaController {
         this.relatorioCaixaService = relatorioCaixaService;
     }
 
+    @PreAuthorize(RegraAcesso.PAINEL_CAIXA)
     @GetMapping
     public RelatorioCaixaResponse gerar(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
@@ -41,11 +41,13 @@ public class RelatorioCaixaController {
     }
 
     /** Conferência do dinheiro de um dia (o gerente compara a gaveta com o que o sistema registrou). */
+    @PreAuthorize(RegraAcesso.PAINEL_DINHEIRO_DO_DIA)
     @GetMapping("/dia")
     public DinheiroDoDiaResponse conferirDia(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data) {
         return DinheiroDoDiaResponse.de(relatorioCaixaService.conferirDia(data));
     }
 
+    @PreAuthorize(RegraAcesso.PAINEL_CAIXA)
     @GetMapping("/fechamentos.csv")
     public ResponseEntity<byte[]> exportarFechamentos(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
