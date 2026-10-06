@@ -118,7 +118,7 @@ public class PdvController {
             List<ItemVendaBalcaoRequest> itens, String cpfNaNota, UUID clienteId, DescontoVendaRequest desconto
     ) {
         List<ItemPedidoRequerido> requeridos = itens.stream()
-                .map(item -> new ItemPedidoRequerido(TipoItem.PRODUTO, item.produtoId(), item.quantidade()))
+                .map(item -> new ItemPedidoRequerido(TipoItem.PRODUTO, item.produtoId(), item.quantidade(), item.embalagemId()))
                 .toList();
         DadosVendaBalcao.Desconto descontoAutorizado = desconto == null
                 ? null : new DadosVendaBalcao.Desconto(desconto.valor(), desconto.tokenAutorizacao());

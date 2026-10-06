@@ -15,7 +15,8 @@ export interface PagamentoPresencial {
 
 /** Comum a toda venda do caixa: produtos, CPF na nota e cliente cadastrado (os dois opcionais). */
 export interface DadosVendaBalcao {
-  itens: Array<{ produtoId: string; quantidade: number }>;
+  /** embalagemId: vendido numa embalagem do produto (ex.: fardo com 12); null = unidade avulsa. */
+  itens: Array<{ produtoId: string; embalagemId: string | null; quantidade: number }>;
   cpfNaNota: string | null;
   clienteId: string | null;
   /** Desconto em reais com o token da autorização do gerente; null = sem desconto. */

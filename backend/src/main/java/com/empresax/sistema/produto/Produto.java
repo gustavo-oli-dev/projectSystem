@@ -25,9 +25,6 @@ public class Produto {
     private static final int ESTOQUE_MINIMO_MAXIMO = 1_000_000;
 
     private static final Pattern NCM_VALIDO = Pattern.compile("\\d{8}");
-    private static final Pattern GTIN_VALIDO = Pattern.compile("\\d{8}|\\d{12,14}");
-    private static final int PESO_GTIN_IMPAR = 3;
-    private static final int MODULO_GTIN = 10;
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -139,25 +136,7 @@ public class Produto {
 
     /** Aceita vazio (produto sem código). Confere o dígito verificador GS1 — pega erro de digitação/leitura. */
     private static String validarCodigoBarras(String codigoBarras) {
-        if (codigoBarras == null || codigoBarras.isBlank()) {
-            return null;
-        }
-        String codigo = codigoBarras.trim();
-        if (!GTIN_VALIDO.matcher(codigo).matches() || !digitoVerificadorGtinConfere(codigo)) {
-            throw new DomainException("Código de barras inválido (EAN/GTIN de 8, 12, 13 ou 14 dígitos)");
-        }
-        return codigo;
-    }
-
-    private static boolean digitoVerificadorGtinConfere(String codigo) {
-        int soma = 0;
-        int ultimo = codigo.length() - 1;
-        for (int posicao = 0; posicao < ultimo; posicao++) {
-            int digito = codigo.charAt(ultimo - 1 - posicao) - '0';
-            soma += posicao % 2 == 0 ? digito * PESO_GTIN_IMPAR : digito;
-        }
-        int verificadorEsperado = (MODULO_GTIN - soma % MODULO_GTIN) % MODULO_GTIN;
-        return verificadorEsperado == codigo.charAt(ultimo) - '0';
+        return Gtin.validarOpcional(codigoBarras);
     }
 
     /** Nulo = custo não informado. Mudar o custo não altera o lucro de vendas já feitas (cada item guarda o seu). */

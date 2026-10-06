@@ -1,6 +1,7 @@
 package com.empresax.sistema.produto.web;
 
 import com.empresax.sistema.produto.Produto;
+import com.empresax.sistema.produto.embalagem.Embalagem;
 import com.empresax.sistema.shared.dinheiro.Dinheiro;
 
 import java.math.BigDecimal;
@@ -21,8 +22,18 @@ public record ProdutoResponse(
         Integer estoqueMinimo,
         List<FotoResponse> fotos,
         /** Só preenchido para quem gerencia o catálogo ou vê o faturamento (custo é dado sensível). */
-        BigDecimal custoUnitario
+        BigDecimal custoUnitario,
+        /** Formas de vender em quantidade (ex.: fardo com 12) — D41. */
+        List<EmbalagemResponse> embalagens
 ) {
+
+    public record EmbalagemResponse(UUID id, String nome, String codigoBarras, int unidades, BigDecimal preco) {
+
+        static EmbalagemResponse de(Embalagem embalagem) {
+            return new EmbalagemResponse(embalagem.id(), embalagem.nome(), embalagem.codigoBarras().orElse(null),
+                    embalagem.unidades(), embalagem.preco().valor());
+        }
+    }
 
     public record FotoResponse(UUID id, String url) {
     }
@@ -32,6 +43,10 @@ public record ProdutoResponse(
     }
 
     public static ProdutoResponse de(Produto produto, List<UUID> idsDasFotos, boolean mostrarCusto) {
+        return de(produto, idsDasFotos, mostrarCusto, List.of());
+    }
+
+    public static ProdutoResponse de(Produto produto, List<UUID> idsDasFotos, boolean mostrarCusto, List<Embalagem> embalagens) {
         List<FotoResponse> fotos = idsDasFotos.stream()
                 .map(fotoId -> new FotoResponse(fotoId, urlDaFoto(produto.id(), fotoId)))
                 .toList();
@@ -47,7 +62,8 @@ public record ProdutoResponse(
                 produto.quantidadeEmEstoque(),
                 produto.estoqueMinimo().orElse(null),
                 fotos,
-                mostrarCusto ? produto.custoUnitario().map(Dinheiro::valor).orElse(null) : null
+                mostrarCusto ? produto.custoUnitario().map(Dinheiro::valor).orElse(null) : null,
+                embalagens.stream().map(EmbalagemResponse::de).toList()
         );
     }
 

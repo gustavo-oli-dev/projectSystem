@@ -83,11 +83,12 @@ function montarFormulario(produtos: readonly Produto[]): HTMLElement {
   motivo.selecao.addEventListener("change", atualizarEscrito);
   atualizarEscrito();
 
-  const leitura = criarCampoLeitura(produtos, (produto) => {
+  const leitura = criarCampoLeitura(produtos, (produto, embalagem) => {
     escolhido = produto;
     erro.hidden = true;
     produtoEscolhido.textContent = `${produto.nome} · ${produto.quantidadeEmEstoque} em estoque`;
-    quantidade.entrada.value = "1";
+    // Leu o código do fardo: já sugere as unidades dele (o estoque é contado em unidades).
+    quantidade.entrada.value = String(embalagem?.unidades ?? 1);
     quantidade.entrada.max = String(produto.quantidadeEmEstoque);
     formulario.hidden = false;
     quantidade.entrada.focus();

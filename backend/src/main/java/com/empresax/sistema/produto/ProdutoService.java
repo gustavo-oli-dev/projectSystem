@@ -2,6 +2,7 @@ package com.empresax.sistema.produto;
 
 import com.empresax.sistema.common.domain.DomainException;
 import com.empresax.sistema.common.domain.EntidadeNaoEncontradaException;
+import com.empresax.sistema.produto.embalagem.EmbalagemRepository;
 import com.empresax.sistema.produto.preco.AlteracaoPreco;
 import com.empresax.sistema.produto.preco.AlteracaoPrecoRepository;
 import com.empresax.sistema.shared.dinheiro.Dinheiro;
@@ -17,10 +18,15 @@ public class ProdutoService {
 
     private final ProdutoRepository produtoRepository;
     private final AlteracaoPrecoRepository alteracaoPrecoRepository;
+    private final EmbalagemRepository embalagemRepository;
 
-    public ProdutoService(ProdutoRepository produtoRepository, AlteracaoPrecoRepository alteracaoPrecoRepository) {
+    public ProdutoService(
+            ProdutoRepository produtoRepository, AlteracaoPrecoRepository alteracaoPrecoRepository,
+            EmbalagemRepository embalagemRepository
+    ) {
         this.produtoRepository = produtoRepository;
         this.alteracaoPrecoRepository = alteracaoPrecoRepository;
+        this.embalagemRepository = embalagemRepository;
     }
 
     @Transactional
@@ -93,8 +99,8 @@ public class ProdutoService {
             boolean emUso = idProprio == null
                     ? produtoRepository.existsByCodigoBarras(codigo)
                     : produtoRepository.existsByCodigoBarrasAndIdNot(codigo, idProprio);
-            if (emUso) {
-                throw new DomainException("Já existe outro produto com o código de barras " + codigo);
+            if (emUso || embalagemRepository.existsByCodigoBarras(codigo)) {
+                throw new DomainException("Já existe outro produto ou embalagem com o código de barras " + codigo);
             }
         });
     }

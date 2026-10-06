@@ -213,7 +213,9 @@ function montarVenda(area: HTMLElement, produtos: Produto[], aoVender: () => voi
     erro.hidden = true;
     finalizar.disabled = true;
     const dados: DadosVendaBalcao = {
-      itens: itensDoCarrinho().map((item) => ({ produtoId: item.produto.id, quantidade: item.quantidade })),
+      itens: itensDoCarrinho().map((item) => ({
+        produtoId: item.produto.id, embalagemId: item.embalagem?.id ?? null, quantidade: item.quantidade,
+      })),
       cpfNaNota: textoOuNulo(cpf.entrada.value),
       clienteId: cliente.clienteId(),
       desconto: descontoParaEnviar(),

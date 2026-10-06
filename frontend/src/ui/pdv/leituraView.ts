@@ -1,23 +1,35 @@
-import { buscarProdutoPorCodigoBarras, type Produto } from "../../api/produtosApi.js";
+import { buscarProdutoPorCodigoBarras, type Embalagem, type Produto } from "../../api/produtosApi.js";
 import { formatarMoeda } from "../formatarMoeda.js";
 
 /** Leitor USB/Bluetooth "digita" o código e aperta Enter; dá para digitar o código ou parte do nome. */
 const SO_DIGITOS = /^\d{8,14}$/;
 const MAXIMO_SUGESTOES = 8;
 
+/** O que foi lido: o produto avulso ou uma embalagem dele (ex.: fardo com 12) — D41. */
+interface Leitura {
+  produto: Produto;
+  embalagem: Embalagem | null;
+}
+
 /**
- * Campo de leitura do caixa. Código de barras vai direto para o carrinho; texto mostra sugestões
- * pelo nome (para produto sem código). Produtos fora de venda nunca aparecem.
+ * Campo de leitura do caixa. Código de barras vai direto para o carrinho (do produto ou da
+ * embalagem); texto mostra sugestões pelo nome (para produto sem código), incluindo as embalagens.
+ * Produtos fora de venda nunca aparecem.
  */
 export function criarCampoLeitura(
   produtos: readonly Produto[],
-  aoEscolher: (produto: Produto) => void
+  aoEscolher: (produto: Produto, embalagem: Embalagem | null) => void
 ): { elemento: HTMLElement; focar: () => void } {
   const aVenda = produtos.filter((produto) => produto.ativo);
-  const porCodigo = new Map<string, Produto>();
-  for (const produto of aVenda) {
-    if (produto.codigoBarras !== null) {
-      porCodigo.set(produto.codigoBarras, produto);
+  const leituras: Leitura[] = aVenda.flatMap((produto) => [
+    { produto, embalagem: null },
+    ...produto.embalagens.map((embalagem) => ({ produto, embalagem })),
+  ]);
+  const porCodigo = new Map<string, Leitura>();
+  for (const leitura of leituras) {
+    const codigo = leitura.embalagem === null ? leitura.produto.codigoBarras : leitura.embalagem.codigoBarras;
+    if (codigo !== null) {
+      porCodigo.set(codigo, leitura);
     }
   }
 
@@ -35,11 +47,11 @@ export function criarCampoLeitura(
   const sugestoes = document.createElement("div");
   sugestoes.className = "leitura__sugestoes";
 
-  const escolher = (produto: Produto): void => {
+  const escolher = (leitura: Leitura): void => {
     aviso.textContent = "";
     sugestoes.replaceChildren();
     entrada.value = "";
-    aoEscolher(produto);
+    aoEscolher(leitura.produto, leitura.embalagem);
     entrada.focus();
   };
 
@@ -49,8 +61,8 @@ export function criarCampoLeitura(
       sugestoes.replaceChildren();
       return;
     }
-    const achados = aVenda.filter((produto) => produto.nome.toLowerCase().includes(termo)).slice(0, MAXIMO_SUGESTOES);
-    sugestoes.replaceChildren(...achados.map((produto) => criarSugestao(produto, () => escolher(produto))));
+    const achadas = leituras.filter((leitura) => leitura.produto.nome.toLowerCase().includes(termo)).slice(0, MAXIMO_SUGESTOES);
+    sugestoes.replaceChildren(...achadas.map((leitura) => criarSugestao(leitura, () => escolher(leitura))));
   });
 
   entrada.addEventListener("keydown", (evento) => {
@@ -76,7 +88,7 @@ export function criarCampoLeitura(
           aviso.textContent = `"${produto.nome}" está fora de venda.`;
           return;
         }
-        escolher(produto);
+        escolher({ produto, embalagem: null });
       })
       .catch(() => {
         aviso.textContent = `Código ${codigo} não encontrado. Cadastre o produto em Gerenciar produtos.`;
@@ -90,12 +102,13 @@ export function criarCampoLeitura(
   return { elemento, focar: () => entrada.focus() };
 }
 
-function criarSugestao(produto: Produto, aoClicar: () => void): HTMLButtonElement {
+function criarSugestao(leitura: Leitura, aoClicar: () => void): HTMLButtonElement {
+  const { produto, embalagem } = leitura;
   const nome = document.createElement("span");
-  nome.textContent = produto.nome;
+  nome.textContent = embalagem === null ? produto.nome : `${produto.nome} — ${embalagem.nome}`;
   const detalhe = document.createElement("span");
   detalhe.className = "leitura__sugestao-detalhe";
-  detalhe.textContent = `${formatarMoeda(produto.precoUnitario)} · ${produto.quantidadeEmEstoque} em estoque`;
+  detalhe.textContent = `${formatarMoeda(embalagem?.preco ?? produto.precoUnitario)} · ${produto.quantidadeEmEstoque} em estoque`;
 
   const botao = document.createElement("button");
   botao.type = "button";

@@ -43,6 +43,10 @@ public class ItemPedido {
     @Column(nullable = false)
     private Dinheiro descontoPromocao = Dinheiro.zero();
 
+    /** Vendido como embalagem (D41): quantas unidades do produto cada uma tem. 1 = avulso. */
+    @Column(nullable = false)
+    private int unidadesPorEmbalagem = 1;
+
     /** Custo unitário no momento da venda (snapshot), para o lucro não mudar se o custo mudar depois. */
     @Column
     private Dinheiro custoUnitario;
@@ -110,6 +114,29 @@ public class ItemPedido {
     /** Valor do item já com o desconto. */
     public Dinheiro subtotal() {
         return valorBruto().subtrair(desconto);
+    }
+
+    /**
+     * Item é uma embalagem (ex.: fardo com 12): o preço e a quantidade são da embalagem, mas o
+     * estoque baixa em unidades. Promoção do produto não vale para a embalagem (ela já tem preço próprio).
+     */
+    public void venderEmEmbalagem(int unidadesDaEmbalagem) {
+        if (unidadesDaEmbalagem < 2) {
+            throw new DomainException("Embalagem precisa ter ao menos 2 unidades");
+        }
+        if (descontoPromocao.valor().signum() > 0) {
+            throw new DomainException("Promoção não vale para a embalagem");
+        }
+        this.unidadesPorEmbalagem = unidadesDaEmbalagem;
+    }
+
+    /** Quantas unidades saem (ou voltam) do estoque por este item. */
+    public int unidadesDoEstoque() {
+        return quantidade * unidadesPorEmbalagem;
+    }
+
+    public int unidadesPorEmbalagem() {
+        return unidadesPorEmbalagem;
     }
 
     /** Valor do item com a promoção, antes do desconto do gerente. */

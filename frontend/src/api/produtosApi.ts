@@ -20,6 +20,32 @@ export interface Produto {
   fotos: FotoProduto[];
   /** Só vem para quem gerencia o catálogo ou vê o faturamento; null = não informado ou sem permissão. */
   custoUnitario: number | null;
+  /** Formas de vender em quantidade (ex.: fardo com 12) — D41. */
+  embalagens: Embalagem[];
+}
+
+/** Embalagem do produto: preço próprio; o estoque baixa "unidades" por embalagem vendida. */
+export interface Embalagem {
+  id: string;
+  nome: string;
+  codigoBarras: string | null;
+  unidades: number;
+  preco: number;
+}
+
+export interface NovaEmbalagem {
+  nome: string;
+  codigoBarras: string | null;
+  unidades: number;
+  preco: number;
+}
+
+export function adicionarEmbalagem(produtoId: string, embalagem: NovaEmbalagem): Promise<Produto> {
+  return httpClient.post<Produto>(`/produtos/${produtoId}/embalagens`, embalagem);
+}
+
+export function removerEmbalagem(produtoId: string, embalagemId: string): Promise<Produto> {
+  return httpClient.delete<Produto>(`/produtos/${produtoId}/embalagens/${embalagemId}`);
 }
 
 export interface NovoProduto {

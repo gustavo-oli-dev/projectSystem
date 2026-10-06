@@ -107,7 +107,7 @@ public class CancelamentoVendaService {
         documentoFiscalService.descartarPendentes(pedido.id());
         if (devolverEstoque) {
             for (ItemPedido item : pedido.itensDeProduto()) {
-                estoqueService.devolverPorCancelamento(item.referenciaId(), item.quantidade(), pedido.id(), responsavel);
+                estoqueService.devolverPorCancelamento(item.referenciaId(), item.unidadesDoEstoque(), pedido.id(), responsavel);
             }
         }
         return pedido;

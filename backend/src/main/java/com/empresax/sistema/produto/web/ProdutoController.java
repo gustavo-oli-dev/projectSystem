@@ -4,9 +4,17 @@ import com.empresax.sistema.acesso.Permissao;
 import com.empresax.sistema.acesso.RegraAcesso;
 import com.empresax.sistema.produto.Produto;
 import com.empresax.sistema.produto.ProdutoService;
+import com.empresax.sistema.produto.embalagem.Embalagem;
+import com.empresax.sistema.produto.embalagem.EmbalagemService;
 import com.empresax.sistema.produto.foto.FotoProdutoService;
 import com.empresax.sistema.shared.dinheiro.Dinheiro;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -41,10 +49,12 @@ public class ProdutoController {
 
     private final ProdutoService produtoService;
     private final FotoProdutoService fotoProdutoService;
+    private final EmbalagemService embalagemService;
 
-    public ProdutoController(ProdutoService produtoService, FotoProdutoService fotoProdutoService) {
+    public ProdutoController(ProdutoService produtoService, FotoProdutoService fotoProdutoService, EmbalagemService embalagemService) {
         this.produtoService = produtoService;
         this.fotoProdutoService = fotoProdutoService;
+        this.embalagemService = embalagemService;
     }
 
     @PreAuthorize(RegraAcesso.CATALOGO_GERENCIAR)
@@ -67,8 +77,10 @@ public class ProdutoController {
     @GetMapping
     public List<ProdutoResponse> listar() {
         Map<UUID, List<UUID>> fotos = fotoProdutoService.idsDasFotosPorProduto();
+        Map<UUID, List<Embalagem>> embalagens = embalagemService.ativasPorProduto();
         return produtoService.listarTodos().stream()
-                .map(produto -> ProdutoResponse.de(produto, fotos.getOrDefault(produto.id(), List.of()), podeVerCusto()))
+                .map(produto -> ProdutoResponse.de(produto, fotos.getOrDefault(produto.id(), List.of()), podeVerCusto(),
+                        embalagens.getOrDefault(produto.id(), List.of())))
                 .toList();
     }
 
@@ -109,9 +121,35 @@ public class ProdutoController {
         return comFotos(produtoService.ativar(id));
     }
 
+    public record EmbalagemRequest(
+            @NotBlank(message = "Dê um nome à embalagem") @Size(max = 60, message = "Nome com no máximo 60 caracteres") String nome,
+            @Size(max = 14, message = "Código de barras com no máximo 14 dígitos") String codigoBarras,
+            @Min(value = 2, message = "A embalagem precisa ter ao menos 2 unidades")
+            @Max(value = 1000, message = "No máximo 1000 unidades por embalagem") int unidades,
+            @NotNull(message = "Informe o preço da embalagem")
+            @DecimalMin(value = "0.01", message = "O preço precisa ser maior que zero") BigDecimal preco
+    ) {
+    }
+
+    /** Embalagem (D41): ex.: "Fardo com 12", com preço e, se tiver, código de barras próprio. */
+    @PreAuthorize(RegraAcesso.CATALOGO_GERENCIAR)
+    @PostMapping("/{id}/embalagens")
+    public ProdutoResponse adicionarEmbalagem(@PathVariable UUID id, @Valid @RequestBody EmbalagemRequest requisicao) {
+        embalagemService.adicionar(id, requisicao.nome(), requisicao.codigoBarras(), requisicao.unidades(),
+                new Dinheiro(requisicao.preco()));
+        return comFotos(produtoService.buscarPorId(id));
+    }
+
+    @PreAuthorize(RegraAcesso.CATALOGO_GERENCIAR)
+    @DeleteMapping("/{id}/embalagens/{embalagemId}")
+    public ProdutoResponse removerEmbalagem(@PathVariable UUID id, @PathVariable UUID embalagemId) {
+        embalagemService.remover(id, embalagemId);
+        return comFotos(produtoService.buscarPorId(id));
+    }
+
     private ProdutoResponse comFotos(Produto produto) {
         List<UUID> fotos = fotoProdutoService.idsDasFotosPorProduto().getOrDefault(produto.id(), List.of());
-        return ProdutoResponse.de(produto, fotos, podeVerCusto());
+        return ProdutoResponse.de(produto, fotos, podeVerCusto(), embalagemService.ativasDo(produto.id()));
     }
 
     /** Custo é dado sensível: só quem gerencia o catálogo ou vê o faturamento (o caixa, não). */

@@ -11,6 +11,7 @@ import { possui } from "../../state/sessaoState.js";
 import { criarCampoTexto, criarMensagemErro, mostrarErro, textoOuNulo } from "../camposFormulario.js";
 import { elementoCarregando } from "../estadoCarregamento.js";
 import { cartaoEstado } from "../estadoCard.js";
+import { criarSecaoEmbalagens } from "./embalagensProdutoView.js";
 import { criarSecaoEstoque } from "./estoqueProdutoView.js";
 import { criarSecaoFotos } from "./fotosProdutoView.js";
 import { criarSecao } from "./secaoEdicao.js";
@@ -45,7 +46,7 @@ export async function montarEdicaoProduto(container: HTMLElement, produtoId: str
 
   if (possui("CATALOGO_GERENCIAR")) {
     cabecalho.append(criarBotaoSituacao(produto, recarregar));
-    coluna.append(criarSecaoDados(produto, recarregar), criarSecaoFotos(produto, recarregar));
+    coluna.append(criarSecaoDados(produto, recarregar), criarSecaoEmbalagens(produto, recarregar), criarSecaoFotos(produto, recarregar));
   }
   coluna.append(criarSecaoEstoque(produto, recarregar));
 
