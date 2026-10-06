@@ -1,9 +1,9 @@
 # Contexto da conversa
 
-Resumo do que foi construído e combinado nas conversas com o Claude Code até 05/10/2026, para
+Resumo do que foi construído e combinado nas conversas com o Claude Code até 06/10/2026, para
 continuar o trabalho numa sessão nova (por exemplo, Claude Code na web) sem perder o fio.
 Leia junto com [CLAUDE.md](CLAUDE.md) (regras do código, obrigatórias), [DECISOES.md](DECISOES.md)
-(o porquê de cada escolha, D1–D36 e pendências A1–A3) e [PENDENCIAS.md](PENDENCIAS.md) (o que falta
+(o porquê de cada escolha, D1–D43 e pendências A1–A3) e [PENDENCIAS.md](PENDENCIAS.md) (o que falta
 testar/ligar).
 
 ## O projeto
@@ -38,7 +38,7 @@ testar/ligar).
 - **Vitrine pública** de produtos (era preparação para o site de vendas, descartado em 06/10).
 - Interface: tela cheia, barra lateral recolhível, busca em cada tabela, botões com borda,
   destrutivos em vermelho.
-- **Testes:** 235 testes do backend passando (05/10).
+- **Testes:** 262 testes do backend passando (06/10).
 
 ## Sessão de 03–04/10: máquina nova (Mac) e primeira execução de verdade
 
@@ -105,6 +105,30 @@ decisão correspondente no DECISOES.md:
 - **Decisão do Gustavo:** **venda por peso descartada por enquanto**. A balança imprime a etiqueta
   e o caixa só lê o código de barras.
 
+## Sessão de 06/10: "faça todos, menos o site"
+
+O Gustavo pediu para fazer tudo o que estava na fila, menos o site (descartado). Cada item tem a
+decisão no DECISOES.md (D37–D43); migrations até a V28; 262 testes do backend passando.
+
+- **Retirada de produtos** (D37): tela própria, lê o código de barras, quantidade e motivo da lista
+  ou escrito. A **validade** funciona assim, por decisão dele: retirar a quantidade com o motivo,
+  sem lote nem data de validade. A **troca** também é retirada: motivo "Troca com cliente" (o
+  produto novo sai do estoque). A vitrine pública `/api/loja/produtos` foi removida.
+- **Promoções** (D38): preço de oferta e "leve X pague Y" com período, aplicadas sozinhas na venda.
+  O carrinho mostra o selo e o preço certo; o recibo mostra "Promoções − R$ X".
+- **Preços e etiquetas** (D39): reajuste em lote (percentual ou preço único) com histórico de preços,
+  e etiquetas de gôndola para imprimir, com código de barras EAN-13 desenhado.
+- **Financeiro e ajustes** (D40):
+  - área "Financeiro" (entrou, saiu, saldo e a pagar, dia a dia, com CSV);
+  - coluna "Maquininha" no Painel → Caixa;
+  - Pedidos com Cliente, Canal e Produtos (a busca acha vendas pelo produto);
+  - "Cobranças" virou "Recebimentos".
+- **Embalagens** (D41): vender a unidade ou o fardo, com código de barras próprio opcional; o
+  estoque continua em unidades (1 fardo de 12 baixa 12).
+- **Tributação por produto** (D42): CST ou CSOSN, origem, ICMS, substituição tributária com CEST,
+  cesta básica e cClassTrib do IBS/CBS. A transmissão da NFC-e continua dependendo do certificado.
+- **Foto do produto pelo bot do WhatsApp** (D43): ainda não testada contra a W-API real.
+
 ## O que ainda não está ligado (depende do Gustavo)
 
 - `CLAUDE_API_KEY` / `CLAUDE_API_KEY_ATENDIMENTO` no `.env` (sem elas, bot e assistente não respondem).
@@ -114,29 +138,15 @@ decisão correspondente no DECISOES.md:
 - Certificado A1, CSC da NFC-e e regime tributário → transmissão fiscal real (adiada), TEF (adiado).
 - Cadastrar o custo dos produtos reais para o lucro ficar completo (os de demonstração já têm).
 
-## Próximos passos combinados (supermercado), em ordem sugerida
+## Próximos passos
 
-Feitos: abrir e fechar caixa, perdas e inventário, estoque mínimo e reposição, entrada por XML com
-contatos e contas a pagar, desconto com senha do gerente e pagamento dividido. Fila combinada em
-05/10:
+A fila combinada até 06/10 está toda feita (menos o site, descartado). O que resta depende do
+Gustavo (lista acima: chaves da Claude, W-API, Mercado Pago, certificado e regime tributário) ou
+de uma decisão nova dele. Ideias naturais para a próxima rodada:
 
-1. **Troca e devolução**: o produto simplesmente volta para o estoque (decisão do Gustavo).
-   **← próximo**
-2. **Promoções** (preço de oferta com período, "leve 3 pague 2").
-3. **Etiquetas de gôndola** e alteração de **preço em lote**.
-4. **Impostos por produto** (substituição tributária, cesta básica, IBS/CBS) e transmissão da
-   **NFC-e** (depende do certificado).
-
-Também em aberto: **validade e lote**, com aviso do que está perto de vencer. Falta ainda decidir se
-a diferença da maquininha no fechamento entra no Painel.
-
-Outras ideias que o Gustavo pediu e continuam na fila: histórico de vendas com busca por produto;
-renomear "Cobranças" para "Recebimentos"; área só de financeiro com exportação; bot enviando foto
-do produto no WhatsApp; embalagens unidade/fardo (A3, adiado em 04/10); coluna "Cliente" na
-lista de Pedidos (oferecida em 04/10, ainda sem resposta).
-
-**Site de vendas descartado (06/10):** o Gustavo decidiu não fazer mais o site. A vitrine pública
-(`/api/loja/produtos`, D18) foi feita como preparação para ele e continua no código por enquanto.
+- validar NCM × CEST × cClassTrib contra as tabelas oficiais;
+- gerar o XML da NFC-e quando o certificado chegar (usa a tributação do D42 e as embalagens do D41);
+- contar fardos em unidades nos relatórios de "mais vendidos".
 
 ## Como rodar e conferir
 
