@@ -3,7 +3,7 @@
 Resumo do que foi construído e combinado nas conversas com o Claude Code até 06/10/2026, para
 continuar o trabalho numa sessão nova (por exemplo, Claude Code na web) sem perder o fio.
 Leia junto com [CLAUDE.md](CLAUDE.md) (regras do código, obrigatórias), [DECISOES.md](DECISOES.md)
-(o porquê de cada escolha, D1–D43 e pendências A1–A3) e [PENDENCIAS.md](PENDENCIAS.md) (o que falta
+(o porquê de cada escolha, D1–D45 e pendências A1–A3) e [PENDENCIAS.md](PENDENCIAS.md) (o que falta
 testar/ligar).
 
 ## O projeto
@@ -128,6 +128,10 @@ decisão no DECISOES.md (D37–D43); migrations até a V28; 262 testes do backen
 - **Tributação por produto** (D42): CST ou CSOSN, origem, ICMS, substituição tributária com CEST,
   cesta básica e cClassTrib do IBS/CBS. A transmissão da NFC-e continua dependendo do certificado.
 - **Foto do produto pelo bot do WhatsApp** (D43): ainda não testada contra a W-API real.
+- **Depois, no mesmo dia:**
+  - o Financeiro virou **aba do Painel**;
+  - cada aba do Painel ganhou **permissão própria** (D44), escolhida por quem administra os perfis;
+  - o **"Novo pedido" saiu**, porque o Caixa faz a venda (D45).
 
 ## O que ainda não está ligado (depende do Gustavo)
 

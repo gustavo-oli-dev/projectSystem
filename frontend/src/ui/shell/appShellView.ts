@@ -11,7 +11,6 @@ import { montarFiscal } from "../fiscal/fiscalView.js";
 import { montarListaCobrancas } from "../cobrancas/cobrancasListView.js";
 import { montarConversas } from "../atendimento/conversasView.js";
 import { montarDetalhePedido } from "../pedidos/pedidoDetalheView.js";
-import { montarWizardPedido } from "../pedidoWizard/pedidoWizardView.js";
 import { montarEquipe } from "../equipe/equipeView.js";
 import { montarGerenciarProdutos } from "../produtos/gerenciarProdutosView.js";
 import { montarPdv } from "../pdv/pdvView.js";
@@ -103,7 +102,6 @@ const PERMISSOES_POR_ROTA: Record<Rota, readonly Permissao[]> = {
   fiscal: ["FISCAL_VER"],
   cobrancas: ["COBRANCAS_VER"],
   conversas: ["CONVERSAS_VER"],
-  "novo-pedido": ["PEDIDOS_GERENCIAR"],
   equipe: ["USUARIOS_GERENCIAR", "CARGOS_GERENCIAR"],
   "gerenciar-produtos": ["CATALOGO_GERENCIAR", "ESTOQUE_GERENCIAR"],
   pdv: ["PDV_VENDER", "PDV_CANCELAR"],
@@ -129,7 +127,6 @@ const MONTADORES: Record<Rota, Montador> = {
   fiscal: montarFiscal,
   cobrancas: montarListaCobrancas,
   conversas: montarConversas,
-  "novo-pedido": montarWizardPedido,
   equipe: montarEquipe,
   "gerenciar-produtos": montarGerenciarProdutos,
   pdv: montarPdv,
@@ -247,15 +244,6 @@ function criarTopbar(appShell: HTMLElement): HTMLElement {
 
   if (possui("ASSISTENTE_GESTOR_USAR")) {
     direita.append(criarBotaoAssistente());
-  }
-
-  if (possui("PEDIDOS_GERENCIAR")) {
-    const botaoNovoPedido = document.createElement("button");
-    botaoNovoPedido.type = "button";
-    botaoNovoPedido.className = "btn btn-primary btn-pequeno topbar__acao";
-    botaoNovoPedido.append(criarIcone("mais"), criarSpan("Novo pedido"));
-    botaoNovoPedido.addEventListener("click", () => navegarPara("novo-pedido"));
-    direita.append(botaoNovoPedido);
   }
 
   direita.append(criarAvatar());

@@ -8,7 +8,6 @@ export type Rota =
   | "fiscal"
   | "cobrancas"
   | "conversas"
-  | "novo-pedido"
   | "equipe"
   | "gerenciar-produtos"
   | "pdv"
@@ -38,7 +37,6 @@ const ROTAS_SIMPLES: readonly Rota[] = [
   "fiscal",
   "cobrancas",
   "conversas",
-  "novo-pedido",
   "equipe",
   "gerenciar-produtos",
   "pdv",
