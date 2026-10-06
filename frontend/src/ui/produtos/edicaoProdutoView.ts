@@ -14,6 +14,7 @@ import { cartaoEstado } from "../estadoCard.js";
 import { criarSecaoEmbalagens } from "./embalagensProdutoView.js";
 import { criarSecaoEstoque } from "./estoqueProdutoView.js";
 import { criarSecaoFotos } from "./fotosProdutoView.js";
+import { criarSecaoTributacao } from "./tributacaoProdutoView.js";
 import { criarSecao } from "./secaoEdicao.js";
 
 /**
@@ -46,7 +47,11 @@ export async function montarEdicaoProduto(container: HTMLElement, produtoId: str
 
   if (possui("CATALOGO_GERENCIAR")) {
     cabecalho.append(criarBotaoSituacao(produto, recarregar));
-    coluna.append(criarSecaoDados(produto, recarregar), criarSecaoEmbalagens(produto, recarregar), criarSecaoFotos(produto, recarregar));
+    coluna.append(criarSecaoDados(produto, recarregar), criarSecaoEmbalagens(produto, recarregar),
+      criarSecaoFotos(produto, recarregar));
+  }
+  if (possui("CATALOGO_GERENCIAR") || possui("FISCAL_GERENCIAR")) {
+    coluna.append(criarSecaoTributacao(produto, recarregar));
   }
   coluna.append(criarSecaoEstoque(produto, recarregar));
 

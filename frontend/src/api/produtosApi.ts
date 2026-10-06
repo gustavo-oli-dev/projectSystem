@@ -22,6 +22,31 @@ export interface Produto {
   custoUnitario: number | null;
   /** Formas de vender em quantidade (ex.: fardo com 12) — D41. */
   embalagens: Embalagem[];
+  /** Tributação na nota (D42); null = ainda não definida. */
+  tributacao: TributacaoProdutoResposta | null;
+}
+
+export interface TributacaoProduto {
+  /** Origem da mercadoria (0 = nacional ... 8). */
+  origem: number;
+  /** CST (2 dígitos, regime normal) ou CSOSN (3 dígitos, Simples Nacional). */
+  cstIcms: string;
+  aliquotaIcms: number | null;
+  substituicaoTributaria: boolean;
+  cest: string | null;
+  /** Alíquota zero de IBS/CBS (LC 214/2025, Anexo I). */
+  cestaBasica: boolean;
+  /** cClassTrib do IBS/CBS (6 dígitos). */
+  classificacaoTributaria: string | null;
+}
+
+export interface TributacaoProdutoResposta extends TributacaoProduto {
+  simplesNacional: boolean;
+}
+
+/** Define (ou troca) a tributação do produto. */
+export function definirTributacao(produtoId: string, tributacao: TributacaoProduto): Promise<Produto> {
+  return httpClient.put<Produto>(`/produtos/${produtoId}/tributacao`, tributacao);
 }
 
 /** Embalagem do produto: preço próprio; o estoque baixa "unidades" por embalagem vendida. */

@@ -4552,3 +4552,43 @@ form.formulario-produto > .formulario-produto__fotos {
     grid-template-columns: 1fr;
   }
 }
+
+/* Tributação do produto (D42). */
+.tributacao {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.tributacao__campos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 1rem;
+  width: 100%;
+}
+
+.tributacao__marcacoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.tributacao__marcacao {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+
+.tributacao__pendente {
+  color: var(--cor-erro);
+  font-weight: 600;
+}
+
+@media (max-width: 760px) {
+  .tributacao__campos {
+    grid-template-columns: 1fr;
+  }
+}

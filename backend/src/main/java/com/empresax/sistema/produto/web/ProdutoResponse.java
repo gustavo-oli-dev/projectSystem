@@ -2,6 +2,7 @@ package com.empresax.sistema.produto.web;
 
 import com.empresax.sistema.produto.Produto;
 import com.empresax.sistema.produto.embalagem.Embalagem;
+import com.empresax.sistema.produto.fiscal.TributacaoProduto;
 import com.empresax.sistema.shared.dinheiro.Dinheiro;
 
 import java.math.BigDecimal;
@@ -24,7 +25,9 @@ public record ProdutoResponse(
         /** Só preenchido para quem gerencia o catálogo ou vê o faturamento (custo é dado sensível). */
         BigDecimal custoUnitario,
         /** Formas de vender em quantidade (ex.: fardo com 12) — D41. */
-        List<EmbalagemResponse> embalagens
+        List<EmbalagemResponse> embalagens,
+        /** Tributação na nota (D42); null = ainda não definida. */
+        TributacaoResponse tributacao
 ) {
 
     public record EmbalagemResponse(UUID id, String nome, String codigoBarras, int unidades, BigDecimal preco) {
@@ -32,6 +35,18 @@ public record ProdutoResponse(
         static EmbalagemResponse de(Embalagem embalagem) {
             return new EmbalagemResponse(embalagem.id(), embalagem.nome(), embalagem.codigoBarras().orElse(null),
                     embalagem.unidades(), embalagem.preco().valor());
+        }
+    }
+
+    public record TributacaoResponse(
+            int origem, String cstIcms, BigDecimal aliquotaIcms, boolean substituicaoTributaria, String cest,
+            boolean cestaBasica, String classificacaoTributaria, boolean simplesNacional
+    ) {
+
+        static TributacaoResponse de(TributacaoProduto tributacao) {
+            return new TributacaoResponse(tributacao.origem(), tributacao.cstIcms(), tributacao.aliquotaIcms().orElse(null),
+                    tributacao.substituicaoTributaria(), tributacao.cest().orElse(null), tributacao.cestaBasica(),
+                    tributacao.classificacaoTributaria().orElse(null), tributacao.doSimplesNacional());
         }
     }
 
@@ -63,7 +78,8 @@ public record ProdutoResponse(
                 produto.estoqueMinimo().orElse(null),
                 fotos,
                 mostrarCusto ? produto.custoUnitario().map(Dinheiro::valor).orElse(null) : null,
-                embalagens.stream().map(EmbalagemResponse::de).toList()
+                embalagens.stream().map(EmbalagemResponse::de).toList(),
+                produto.tributacao().map(TributacaoResponse::de).orElse(null)
         );
     }
 

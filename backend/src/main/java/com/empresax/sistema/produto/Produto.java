@@ -2,7 +2,9 @@ package com.empresax.sistema.produto;
 
 import com.empresax.sistema.common.domain.DomainException;
 import com.empresax.sistema.shared.dinheiro.Dinheiro;
+import com.empresax.sistema.produto.fiscal.TributacaoProduto;
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -67,6 +69,10 @@ public class Produto {
     @Column
     private Integer estoqueMinimo;
 
+    /** Tributação na nota (D42). Vazio = ainda não definida (a nota não pode ser transmitida). */
+    @Embedded
+    private TributacaoProduto tributacao;
+
     protected Produto() {
         // exigido pelo JPA
     }
@@ -113,6 +119,17 @@ public class Produto {
             throw new DomainException("Preço unitário do produto é obrigatório");
         }
         return precoUnitario;
+    }
+
+    public void definirTributacao(TributacaoProduto novaTributacao) {
+        if (novaTributacao == null) {
+            throw new DomainException("Informe a tributação do produto");
+        }
+        this.tributacao = novaTributacao;
+    }
+
+    public Optional<TributacaoProduto> tributacao() {
+        return Optional.ofNullable(tributacao);
     }
 
     /** Preço em lote (D39): só o preço muda; nunca zero. */

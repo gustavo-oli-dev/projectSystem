@@ -6,6 +6,7 @@ import com.empresax.sistema.produto.Produto;
 import com.empresax.sistema.produto.ProdutoService;
 import com.empresax.sistema.produto.embalagem.Embalagem;
 import com.empresax.sistema.produto.embalagem.EmbalagemService;
+import com.empresax.sistema.produto.fiscal.TributacaoProduto;
 import com.empresax.sistema.produto.foto.FotoProdutoService;
 import com.empresax.sistema.shared.dinheiro.Dinheiro;
 import jakarta.validation.Valid;
@@ -145,6 +146,27 @@ public class ProdutoController {
     public ProdutoResponse removerEmbalagem(@PathVariable UUID id, @PathVariable UUID embalagemId) {
         embalagemService.remover(id, embalagemId);
         return comFotos(produtoService.buscarPorId(id));
+    }
+
+    public record TributacaoRequest(
+            @NotNull(message = "Informe a origem da mercadoria") @Min(value = 0, message = "Origem de 0 a 8")
+            @Max(value = 8, message = "Origem de 0 a 8") Integer origem,
+            @NotBlank(message = "Informe o CST ou o CSOSN") @Size(max = 3, message = "CST tem 2 dígitos e CSOSN tem 3") String cstIcms,
+            @DecimalMin(value = "0.00", message = "Alíquota não pode ser negativa") BigDecimal aliquotaIcms,
+            boolean substituicaoTributaria,
+            @Size(max = 7, message = "O CEST tem 7 dígitos") String cest,
+            boolean cestaBasica,
+            @Size(max = 6, message = "A classificação tributária tem 6 dígitos") String classificacaoTributaria
+    ) {
+    }
+
+    /** Tributação do produto na nota (D42): quem cuida do catálogo ou do fiscal. */
+    @PreAuthorize(RegraAcesso.CATALOGO_GERENCIAR + " or " + RegraAcesso.FISCAL_GERENCIAR)
+    @PutMapping("/{id}/tributacao")
+    public ProdutoResponse definirTributacao(@PathVariable UUID id, @Valid @RequestBody TributacaoRequest requisicao) {
+        TributacaoProduto tributacao = new TributacaoProduto(requisicao.origem(), requisicao.cstIcms(), requisicao.aliquotaIcms(),
+                requisicao.substituicaoTributaria(), requisicao.cest(), requisicao.cestaBasica(), requisicao.classificacaoTributaria());
+        return comFotos(produtoService.definirTributacao(id, tributacao));
     }
 
     private ProdutoResponse comFotos(Produto produto) {

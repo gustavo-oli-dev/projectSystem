@@ -3,6 +3,7 @@ package com.empresax.sistema.produto;
 import com.empresax.sistema.common.domain.DomainException;
 import com.empresax.sistema.common.domain.EntidadeNaoEncontradaException;
 import com.empresax.sistema.produto.embalagem.EmbalagemRepository;
+import com.empresax.sistema.produto.fiscal.TributacaoProduto;
 import com.empresax.sistema.produto.preco.AlteracaoPreco;
 import com.empresax.sistema.produto.preco.AlteracaoPrecoRepository;
 import com.empresax.sistema.shared.dinheiro.Dinheiro;
@@ -81,6 +82,14 @@ public class ProdutoService {
         return produto;
     }
 
+
+    /** Tributação do produto na nota (D42). */
+    @Transactional
+    public Produto definirTributacao(UUID id, TributacaoProduto tributacao) {
+        Produto produto = buscarPorId(id);
+        produto.definirTributacao(tributacao);
+        return produto;
+    }
     @Transactional
     public void desativar(UUID id) {
         buscarPorId(id).desativar();
