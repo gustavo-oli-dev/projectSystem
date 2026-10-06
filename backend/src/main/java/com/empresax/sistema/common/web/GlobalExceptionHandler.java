@@ -12,12 +12,15 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.Instant;
 
@@ -78,6 +81,24 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiErrorResponse> tratarParametroInvalido(MethodArgumentTypeMismatchException excecao) {
         return construirResposta(HttpStatus.BAD_REQUEST, "Parâmetro inválido: " + excecao.getName());
+    }
+
+    /** Parâmetro obrigatório faltando na URL é erro de quem chamou (400), não do servidor. */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiErrorResponse> tratarParametroAusente(MissingServletRequestParameterException excecao) {
+        return construirResposta(HttpStatus.BAD_REQUEST, "Parâmetro obrigatório não informado: " + excecao.getParameterName());
+    }
+
+    /** Endereço que não existe: 404, sem stack trace no log. */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiErrorResponse> tratarCaminhoInexistente(NoResourceFoundException excecao) {
+        return construirResposta(HttpStatus.NOT_FOUND, "Endereço não encontrado");
+    }
+
+    /** Método errado no endereço certo (ex.: GET onde só existe POST). */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiErrorResponse> tratarMetodoNaoSuportado(HttpRequestMethodNotSupportedException excecao) {
+        return construirResposta(HttpStatus.METHOD_NOT_ALLOWED, "Método não permitido neste endereço");
     }
 
     @ExceptionHandler(AccessDeniedException.class)

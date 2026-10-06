@@ -45,7 +45,9 @@ public record VendaBalcaoResponse(
         String operadorNome,
         Instant criadaEm,
         /** Cada forma usada, na ordem; uma só quando não foi dividido; vazio no Pix com QR na tela. */
-        List<ParteResponse> pagamentos
+        List<ParteResponse> pagamentos,
+        /** Nome do gerente que autorizou o desconto (D35); null = sem desconto. */
+        String descontoAutorizadoPor
 ) {
 
     private static final String FORMA_PIX_NA_TELA = "PIX_QR";
@@ -73,12 +75,19 @@ public record VendaBalcaoResponse(
 
     public static VendaBalcaoResponse de(VendaBalcao venda, Map<String, String> nomesPorEmail) {
         if (!venda.presencial()) {
-            return dePix(venda.pedido(), venda.cobrancaPix().orElseThrow());
+            return dePix(venda.pedido(), venda.cobrancaPix().orElseThrow(), autorizador(venda, nomesPorEmail));
         }
-        return dePresencial(venda.pedido(), venda.pagamentos(), nomesPorEmail.get(venda.operador().orElseThrow()));
+        return dePresencial(venda.pedido(), venda.pagamentos(), nomesPorEmail.get(venda.operador().orElseThrow()),
+                autorizador(venda, nomesPorEmail));
     }
 
-    private static VendaBalcaoResponse dePresencial(Pedido pedido, List<PagamentoPresencial> pagamentos, String operadorNome) {
+    private static String autorizador(VendaBalcao venda, Map<String, String> nomesPorEmail) {
+        return venda.pedido().descontoAutorizadoPor().map(email -> nomesPorEmail.getOrDefault(email, email)).orElse(null);
+    }
+
+    private static VendaBalcaoResponse dePresencial(
+            Pedido pedido, List<PagamentoPresencial> pagamentos, String operadorNome, String autorizadoPor
+    ) {
         PagamentoPresencial primeiro = pagamentos.getFirst();
         Optional<PagamentoPresencial> cartao = pagamentos.stream()
                 .filter(pagamento -> pagamento.forma() != FormaPagamentoPresencial.DINHEIRO).reduce((anterior, ultimo) -> ultimo);
@@ -95,10 +104,11 @@ public record VendaBalcaoResponse(
                 primeiro.operador(),
                 operadorNome,
                 primeiro.criadoEm(),
-                pagamentos.stream().map(ParteResponse::de).toList());
+                pagamentos.stream().map(ParteResponse::de).toList(),
+                autorizadoPor);
     }
 
-    private static VendaBalcaoResponse dePix(Pedido pedido, Cobranca cobranca) {
+    private static VendaBalcaoResponse dePix(Pedido pedido, Cobranca cobranca, String autorizadoPor) {
         return new VendaBalcaoResponse(
                 pedido.id(), pedido.status().name(), itens(pedido), pedido.valorTotal().valor(), pedido.descontoPromocao().valor(), pedido.desconto().valor(),
                 pedido.cpfNaNota().orElse(null),
@@ -107,7 +117,8 @@ public record VendaBalcaoResponse(
                 null,
                 null,
                 cobranca.criadoEm(),
-                List.of());
+                List.of(),
+                autorizadoPor);
     }
 
     /** Null quando nenhuma parte tem o valor (ex.: recebido só existe no dinheiro). */

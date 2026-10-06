@@ -72,6 +72,8 @@ export interface VendaBalcao {
   /** Nome para exibir; null em Pix na tela ou usuário removido. */
   operadorNome: string | null;
   criadaEm: string;
+  /** Nome do gerente que autorizou o desconto; null = sem desconto. */
+  descontoAutorizadoPor: string | null;
   /** Vazio no Pix com QR na tela. */
   pagamentos: ParteDoPagamento[];
 }

@@ -3,7 +3,7 @@
 Resumo do que foi construído e combinado nas conversas com o Claude Code até 06/10/2026, para
 continuar o trabalho numa sessão nova (por exemplo, Claude Code na web) sem perder o fio.
 Leia junto com [CLAUDE.md](CLAUDE.md) (regras do código, obrigatórias), [DECISOES.md](DECISOES.md)
-(o porquê de cada escolha, D1–D45 e pendências A1–A3) e [PENDENCIAS.md](PENDENCIAS.md) (o que falta
+(o porquê de cada escolha, D1–D47 e pendências A1–A3) e [PENDENCIAS.md](PENDENCIAS.md) (o que falta
 testar/ligar).
 
 ## O projeto
@@ -38,7 +38,7 @@ testar/ligar).
 - **Vitrine pública** de produtos (era preparação para o site de vendas, descartado em 06/10).
 - Interface: tela cheia, barra lateral recolhível, busca em cada tabela, botões com borda,
   destrutivos em vermelho.
-- **Testes:** 262 testes do backend passando (06/10).
+- **Testes:** 267 testes do backend passando (06/10), mais o roteiro de um dia de loja (D47, 51 conferências).
 
 ## Sessão de 03–04/10: máquina nova (Mac) e primeira execução de verdade
 

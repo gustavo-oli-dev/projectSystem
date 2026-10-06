@@ -110,7 +110,7 @@ marcar como feito.
 - [ ] **Regime tributário da empresa** (Simples/Presumido/Real) — ainda placeholder (pendência A1
       em DECISOES.md). Necessário antes de implementar o motor de cálculo de tributos sobre
       Produto/Servico.
-- [ ] **Erro do cliente vira 500** (`GlobalExceptionHandler`): caminho inexistente
+- [x] **Erro do cliente vira 500** — **corrigido em 06/10**: parâmetro faltando → 400, caminho inexistente → 404, método errado → 405. Era: caminho inexistente
       (`NoResourceFoundException`) e parâmetro obrigatório faltando
       (`MissingServletRequestParameterException`) caem no tratamento genérico e respondem
       **500 "Erro interno"** em vez de 404/400, com stack trace em nível ERROR no log. Não afeta o

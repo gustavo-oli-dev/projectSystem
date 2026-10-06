@@ -288,6 +288,14 @@ function criarCartaoPagamentoCaixa(venda: VendaBalcao): HTMLElement {
     ["Forma", ROTULO_FORMA[venda.formaPagamento]],
     ["Situação", ROTULO_SITUACAO_PAGAMENTO[venda.statusPagamento]],
   ];
+  // Promoção e desconto do gerente (com quem autorizou) ficam no histórico da venda.
+  if (venda.descontoPromocao > 0) {
+    linhas.push(["Promoções", `− ${formatarMoeda(venda.descontoPromocao)}`]);
+  }
+  if (venda.desconto > 0) {
+    linhas.push(["Desconto", `− ${formatarMoeda(venda.desconto)}`]);
+    linhas.push(["Autorizado por", venda.descontoAutorizadoPor ?? "—"]);
+  }
   if (venda.formaPagamento === "DIVIDIDO") {
     venda.pagamentos.forEach((parte) => linhas.push([descreverParte(parte), formatarMoeda(parte.valor)]));
     if (venda.troco !== null) {

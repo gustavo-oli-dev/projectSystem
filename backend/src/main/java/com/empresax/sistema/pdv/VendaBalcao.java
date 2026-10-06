@@ -3,8 +3,10 @@ package com.empresax.sistema.pdv;
 import com.empresax.sistema.cobranca.Cobranca;
 import com.empresax.sistema.pedido.Pedido;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Uma venda do caixa: o pedido (itens, estoque, nota) e como foi paga — ou pagamentos presenciais
@@ -50,6 +52,14 @@ public final class VendaBalcao {
     /** E-mail de quem registrou a venda no caixa. Pix com QR na tela não guarda o operador. */
     public Optional<String> operador() {
         return pagamentos.stream().findFirst().map(PagamentoPresencial::operador);
+    }
+
+    /** E-mails de quem aparece na venda (operador e gerente do desconto), para resolver os nomes de uma vez. */
+    public Set<String> pessoas() {
+        Set<String> emails = new HashSet<>();
+        operador().ifPresent(emails::add);
+        pedido.descontoAutorizadoPor().ifPresent(emails::add);
+        return emails;
     }
 
     public Optional<Cobranca> cobrancaPix() {

@@ -97,7 +97,7 @@ public class PdvController {
     public List<VendaBalcaoResponse> ultimas() {
         List<VendaBalcao> vendas = pdvService.ultimasVendas();
         Map<String, String> nomes = usuarioService.nomesPorEmail(
-                vendas.stream().flatMap(venda -> venda.operador().stream()).collect(Collectors.toSet()));
+                vendas.stream().flatMap(venda -> venda.pessoas().stream()).collect(Collectors.toSet()));
         return vendas.stream().map(venda -> VendaBalcaoResponse.de(venda, nomes)).toList();
     }
 
@@ -127,6 +127,6 @@ public class PdvController {
 
     /** Uma venda só: resolve o nome de quem vendeu (a venda guarda o e-mail). */
     private VendaBalcaoResponse responder(VendaBalcao venda) {
-        return VendaBalcaoResponse.de(venda, usuarioService.nomesPorEmail(venda.operador().stream().toList()));
+        return VendaBalcaoResponse.de(venda, usuarioService.nomesPorEmail(venda.pessoas()));
     }
 }
