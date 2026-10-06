@@ -127,6 +127,8 @@ export interface RelatorioCaixa {
     valorEsperado: number | null;
     valorContado: number | null;
     diferenca: number | null;
+    /** Relatório da maquininha − sistema nas formas conferidas; null = não conferido. */
+    diferencaMaquininha: number | null;
     resultado: ResultadoFechamento;
     vendasPorForma: Partial<Record<FormaVendaRelatorio, number>>;
     totalVendido: number;

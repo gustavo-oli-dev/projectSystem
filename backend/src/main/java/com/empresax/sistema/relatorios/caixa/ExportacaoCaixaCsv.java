@@ -17,7 +17,7 @@ public final class ExportacaoCaixaCsv {
     private static final List<String> CABECALHO = List.of(
             "Caixa", "Operador", "Aberto em", "Aberto por", "Fechado em", "Fechado por", "Fundo de troco (R$)",
             "Vendas em dinheiro (R$)", "Reposições (R$)", "Sangrias (R$)", "Esperado (R$)", "Contado (R$)",
-            "Diferença (R$)", "Resultado", "Crédito (R$)", "Débito (R$)",
+            "Diferença (R$)", "Resultado", "Diferença da maquininha (R$)", "Crédito (R$)", "Débito (R$)",
             "Pix na maquininha (R$)", "Pix por QR (R$)", "Total vendido (R$)", "Observação");
 
     private ExportacaoCaixaCsv() {
@@ -39,6 +39,7 @@ public final class ExportacaoCaixaCsv {
                 decimal(caixa.valorContado()),
                 caixa.diferenca().map(ExportacaoCsv::decimal).orElse(""),
                 rotulo(caixa.resultado()),
+                decimal(caixa.diferencaMaquininha()),
                 forma(caixa, "CARTAO_CREDITO"),
                 forma(caixa, "CARTAO_DEBITO"),
                 forma(caixa, "PIX"),

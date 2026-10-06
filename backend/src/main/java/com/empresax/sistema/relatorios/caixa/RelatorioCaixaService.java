@@ -32,7 +32,9 @@ public class RelatorioCaixaService {
             SELECT s.id, pc.numero AS ponto_numero, s.operador, s.aberta_por, s.fechada_por, s.aberta_em, s.fechada_em, s.fundo_inicial,
                    s.vendas_em_dinheiro, s.valor_esperado, s.valor_contado, s.observacao_fechamento,
                    COALESCE(SUM(m.valor) FILTER (WHERE m.tipo = 'SUPRIMENTO'), 0) AS reposicoes,
-                   COALESCE(SUM(m.valor) FILTER (WHERE m.tipo = 'SANGRIA'), 0) AS sangrias
+                   COALESCE(SUM(m.valor) FILTER (WHERE m.tipo = 'SANGRIA'), 0) AS sangrias,
+                   (SELECT SUM(c.valor_informado - c.valor_sistema) FROM conferencias_forma_caixa c
+                    WHERE c.sessao_caixa_id = s.id) AS diferenca_maquininha
             FROM sessoes_caixa s
             LEFT JOIN pontos_caixa pc ON pc.id = s.ponto_caixa_id
             LEFT JOIN movimentos_caixa m ON m.sessao_caixa_id = s.id
@@ -131,7 +133,7 @@ public class RelatorioCaixaService {
     private record LinhaCaixa(
             UUID id, Integer pontoNumero, String operador, String abertaPor, String fechadaPor, Instant abertaEm, Instant fechadaEm,
             BigDecimal fundoInicial, BigDecimal reposicoes, BigDecimal sangrias, BigDecimal vendasEmDinheiro,
-            BigDecimal valorEsperado, BigDecimal valorContado, String observacao
+            BigDecimal valorEsperado, BigDecimal valorContado, String observacao, BigDecimal diferencaMaquininha
     ) {
 
         static LinhaCaixa ler(ResultSet resultado) throws SQLException {
@@ -150,7 +152,8 @@ public class RelatorioCaixaService {
                     resultado.getBigDecimal("vendas_em_dinheiro"),
                     resultado.getBigDecimal("valor_esperado"),
                     resultado.getBigDecimal("valor_contado"),
-                    resultado.getString("observacao_fechamento"));
+                    resultado.getString("observacao_fechamento"),
+                    resultado.getBigDecimal("diferenca_maquininha"));
         }
 
         CaixaDoPeriodo comNomes(Map<String, String> nomes, Map<String, BigDecimal> vendasPorForma) {
@@ -159,7 +162,7 @@ public class RelatorioCaixaService {
                     id, pontoNome, operador, nomes.getOrDefault(operador, operador), nomes.getOrDefault(abertaPor, abertaPor),
                     fechadaPor == null ? null : nomes.getOrDefault(fechadaPor, fechadaPor),
                     abertaEm, fechadaEm, fundoInicial, reposicoes, sangrias, vendasEmDinheiro,
-                    valorEsperado, valorContado, observacao, vendasPorForma);
+                    valorEsperado, valorContado, observacao, diferencaMaquininha, vendasPorForma);
         }
     }
 }

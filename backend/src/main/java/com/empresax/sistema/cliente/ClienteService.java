@@ -5,8 +5,11 @@ import com.empresax.sistema.shared.documento.Documento;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class ClienteService {
@@ -26,6 +29,15 @@ public class ClienteService {
     @Transactional(readOnly = true)
     public List<Cliente> listarTodos() {
         return clienteRepository.findAll();
+    }
+
+    /** Nome de cada cliente, numa consulta só (listas de pedidos, sem N+1). */
+    @Transactional(readOnly = true)
+    public Map<UUID, String> nomesPorId(Collection<UUID> ids) {
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        return clienteRepository.findAllById(ids).stream().collect(Collectors.toMap(Cliente::id, Cliente::nome));
     }
 
     @Transactional(readOnly = true)

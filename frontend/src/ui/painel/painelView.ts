@@ -306,7 +306,7 @@ function montarAbaOperacao(): HTMLElement[] {
     blocos.push(blocoAssincrono("Pedidos por situação", carregarPedidosPorStatus));
   }
   if (possui("COBRANCAS_VER")) {
-    blocos.push(blocoAssincrono("Cobranças pendentes", carregarCobrancasPendentes));
+    blocos.push(blocoAssincrono("Recebimentos pendentes", carregarCobrancasPendentes));
   }
   return [linha(...blocos)];
 }
@@ -372,11 +372,11 @@ async function carregarPedidosPorStatus(): Promise<HTMLElement> {
 async function carregarCobrancasPendentes(): Promise<HTMLElement> {
   const pendentes = await consultarCobrancasPendentes();
   if (pendentes.length === 0) {
-    return cartaoEstado("Nenhuma cobrança pendente — tudo em dia.");
+    return cartaoEstado("Nenhum recebimento pendente — tudo em dia.");
   }
   const total = pendentes.reduce((soma, cobranca) => soma + cobranca.valor, 0);
   const resumo = document.createElement("p");
   resumo.className = "painel-operacional__resumo";
-  resumo.textContent = `${formatarInteiro(pendentes.length)} cobrança(s) · ${formatarMoeda(total)}`;
+  resumo.textContent = `${formatarInteiro(pendentes.length)} recebimento(s) · ${formatarMoeda(total)}`;
   return resumo;
 }

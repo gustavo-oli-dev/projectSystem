@@ -118,11 +118,11 @@ function renderizar(container: HTMLElement, dados: DadosPedido): void {
   const principal = document.createElement("div");
   principal.className = "detalhe-principal";
   principal.append(criarSecao("Itens", criarTabelaItens(pedido)));
-  // Venda de balcão é paga no caixa: "Cobranças" (online) só aparece se houver alguma (Pix com QR).
+  // Venda de balcão é paga no caixa: "Recebimentos" (online) só aparece se houver alguma (Pix com QR).
   const mostrarCobrancas = dados.cobrancas !== null
     && (pedido.canal !== "BALCAO" || dados.cobrancas.length > 0);
   if (mostrarCobrancas && dados.cobrancas !== null) {
-    principal.append(criarSecao("Cobranças", criarTabelaCobrancas(dados.cobrancas)));
+    principal.append(criarSecao("Recebimentos", criarTabelaCobrancas(dados.cobrancas)));
   }
   if (dados.documentos !== null) {
     principal.append(criarSecao("Documentos fiscais", criarTabelaDocumentos(dados.documentos)));
@@ -255,7 +255,7 @@ function criarTabelaItens(pedido: Pedido): HTMLElement {
 
 function criarTabelaCobrancas(cobrancas: Cobranca[]): HTMLElement {
   if (cobrancas.length === 0) {
-    return cartaoEstado("Nenhuma cobrança gerada para este pedido.");
+    return cartaoEstado("Nenhum recebimento para este pedido.");
   }
   const linhas = cobrancas.map((cobranca) =>
     criarLinha(
@@ -265,7 +265,7 @@ function criarTabelaCobrancas(cobrancas: Cobranca[]): HTMLElement {
       celula(formatarDataCurta(cobranca.criadoEm))
     )
   );
-  return criarTabela(["Meio", "Valor", "Status", "Criada em"], linhas, "cobrança(s)");
+  return criarTabela(["Meio", "Valor", "Status", "Criada em"], linhas, "recebimento(s)");
 }
 
 function criarTabelaDocumentos(documentos: DocumentoFiscal[]): HTMLElement {

@@ -21,6 +21,7 @@ import { montarInventario } from "../produtos/inventarioView.js";
 import { montarRetirada } from "../produtos/retiradaView.js";
 import { montarPromocoes } from "../produtos/promocoesView.js";
 import { montarPrecos } from "../produtos/precosView.js";
+import { montarFinanceiro } from "../financeiro/financeiroView.js";
 import { montarReposicao } from "../produtos/reposicaoView.js";
 import { montarEntradaNota } from "../compras/entradaNotaView.js";
 import { montarContasAPagar } from "../compras/contasPagarView.js";
@@ -72,6 +73,7 @@ const GRUPOS_NAV: GrupoNav[] = [
     titulo: "Compras",
     itens: [
       { rota: "entrada-nota", rotulo: "Entrada por nota", icone: "nota" },
+      { rota: "financeiro", rotulo: "Financeiro", icone: "financeiro" },
       { rota: "contas-a-pagar", rotulo: "Contas a pagar", icone: "contas" },
       { rota: "contatos", rotulo: "Contatos", icone: "contatos" },
     ],
@@ -80,7 +82,7 @@ const GRUPOS_NAV: GrupoNav[] = [
     titulo: "Operação",
     itens: [
       { rota: "fiscal", rotulo: "Fiscal · SEFAZ", icone: "fiscal" },
-      { rota: "cobrancas", rotulo: "Cobranças", icone: "cobrancas" },
+      { rota: "cobrancas", rotulo: "Recebimentos", icone: "cobrancas" },
       { rota: "conversas", rotulo: "Conversas", icone: "atendimento" },
     ],
   },
@@ -111,6 +113,7 @@ const PERMISSOES_POR_ROTA: Record<Rota, readonly Permissao[]> = {
   retirada: ["ESTOQUE_GERENCIAR"],
   promocoes: ["PROMOCOES_GERENCIAR", "CATALOGO_VER"],
   precos: ["CATALOGO_VER"],
+  financeiro: ["FINANCEIRO_VER"],
   reposicao: ["CATALOGO_VER"],
   "entrada-nota": ["ESTOQUE_GERENCIAR"],
   "contas-a-pagar": ["CONTAS_PAGAR_GERENCIAR"],
@@ -137,6 +140,7 @@ const MONTADORES: Record<Rota, Montador> = {
   retirada: montarRetirada,
   promocoes: montarPromocoes,
   precos: montarPrecos,
+  financeiro: montarFinanceiro,
   reposicao: montarReposicao,
   "entrada-nota": montarEntradaNota,
   "contas-a-pagar": montarContasAPagar,

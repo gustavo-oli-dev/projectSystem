@@ -15,23 +15,23 @@ const ROTULO_MEIO: Record<string, string> = { PIX: "Pix", BOLETO: "Boleto" };
 
 export async function montarListaCobrancas(container: HTMLElement): Promise<void> {
   const titulo = document.createElement("h1");
-  titulo.textContent = "Cobranças";
+  titulo.textContent = "Recebimentos";
 
   const areaLista = document.createElement("div");
   container.replaceChildren(titulo, areaLista);
-  areaLista.append(elementoCarregando("Carregando cobranças..."));
+  areaLista.append(elementoCarregando("Carregando recebimentos..."));
 
   try {
     const cobrancas = await listarCobrancas();
     areaLista.replaceChildren(renderizar(cobrancas));
   } catch {
-    areaLista.replaceChildren(cartaoEstado("Não foi possível carregar as cobranças.", "erro"));
+    areaLista.replaceChildren(cartaoEstado("Não foi possível carregar os recebimentos.", "erro"));
   }
 }
 
 function renderizar(cobrancas: Cobranca[]): HTMLElement {
   if (cobrancas.length === 0) {
-    return cartaoEstado("Nenhuma cobrança gerada ainda.");
+    return cartaoEstado("Nenhum recebimento ainda.");
   }
 
   const linhas = cobrancas.map((cobranca) =>
@@ -44,5 +44,5 @@ function renderizar(cobrancas: Cobranca[]): HTMLElement {
     )
   );
 
-  return criarTabela(["Pedido", "Meio", "Valor", "Status", "Criada em"], linhas, "cobrança(s)");
+  return criarTabela(["Pedido", "Meio", "Valor", "Status", "Criada em"], linhas, "recebimento(s)");
 }

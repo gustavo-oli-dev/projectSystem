@@ -30,6 +30,8 @@ public record CaixaDoPeriodo(
         BigDecimal valorEsperado,
         BigDecimal valorContado,
         String observacao,
+        /** Relatório da maquininha − sistema, somado nas formas conferidas no fechamento (D40). Nulo = não conferido. */
+        BigDecimal diferencaMaquininha,
         /** Forma (DINHEIRO, CARTAO_CREDITO, CARTAO_DEBITO, PIX, PIX_QR) → valor vendido. */
         Map<String, BigDecimal> vendasPorForma
 ) {

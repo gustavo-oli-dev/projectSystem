@@ -38,8 +38,10 @@ function renderizar(pedidos: Pedido[], pedidoEmDestaque: string | null): HTMLEle
   const linhas = pedidos.map((pedido) => {
     const linha = criarLinha(
       celula(pedido.id.slice(0, 8)),
+      celula(descreverCliente(pedido)),
+      celula(ROTULO_CANAL[pedido.canal]),
+      celulaProdutos(pedido),
       celulaSelo(ROTULOS_STATUS[pedido.status] ?? pedido.status, pedido.status.toLowerCase()),
-      celula(String(pedido.itens.length)),
       celula(formatarMoeda(pedido.valorTotal)),
       celula(formatarDataCurta(pedido.criadoEm))
     );
@@ -58,7 +60,7 @@ function renderizar(pedidos: Pedido[], pedidoEmDestaque: string | null): HTMLEle
     return linha;
   });
 
-  return criarTabela(["Pedido", "Status", "Itens", "Total", "Criado em"], linhas, "pedido(s)");
+  return criarTabela(["Pedido", "Cliente", "Canal", "Produtos", "Status", "Total", "Criado em"], linhas, "pedido(s)");
 }
 
 /** Leva a linha destacada para o meio da tela e põe o foco nela (Enter abre de novo). */
@@ -69,4 +71,29 @@ function rolarAteDestaque(area: HTMLElement): void {
   }
   destacada.scrollIntoView({ block: "center" });
   destacada.focus({ preventScroll: true });
+}
+
+const ROTULO_CANAL: Record<Pedido["canal"], string> = {
+  PAINEL: "Painel",
+  BALCAO: "Caixa",
+};
+
+/** Venda de balcão sem cliente: mostra o CPF na nota, se houver. */
+function descreverCliente(pedido: Pedido): string {
+  if (pedido.clienteNome !== null) {
+    return pedido.clienteNome;
+  }
+  return pedido.cpfNaNota === null ? "Consumidor" : `CPF ${pedido.cpfNaNota}`;
+}
+
+/**
+ * Todos os produtos do pedido numa linha só (cortada com reticências na tela). O texto inteiro fica
+ * na célula, então a busca da tabela acha a venda pelo nome de qualquer produto.
+ */
+function celulaProdutos(pedido: Pedido): HTMLTableCellElement {
+  const texto = pedido.itens.map((item) => `${item.quantidade}× ${item.descricao}`).join(", ");
+  const elemento = celula(texto);
+  elemento.className = "celula-produtos";
+  elemento.title = texto;
+  return elemento;
 }

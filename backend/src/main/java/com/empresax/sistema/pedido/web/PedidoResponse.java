@@ -9,10 +9,11 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-/** clienteId e cpfNaNota vêm nulos na venda de balcão sem consumidor identificado. */
+/** clienteId, clienteNome e cpfNaNota vêm nulos na venda de balcão sem consumidor identificado. */
 public record PedidoResponse(
         UUID id,
         UUID clienteId,
+        String clienteNome,
         CanalVenda canal,
         String cpfNaNota,
         StatusPedido status,
@@ -21,10 +22,11 @@ public record PedidoResponse(
         Instant criadoEm
 ) {
 
-    public static PedidoResponse de(Pedido pedido) {
+    public static PedidoResponse de(Pedido pedido, String clienteNome) {
         return new PedidoResponse(
                 pedido.id(),
                 pedido.clienteId().orElse(null),
+                clienteNome,
                 pedido.canal(),
                 pedido.cpfNaNota().orElse(null),
                 pedido.status(),

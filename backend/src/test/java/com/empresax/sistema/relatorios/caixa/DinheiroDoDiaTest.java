@@ -62,11 +62,11 @@ class DinheiroDoDiaTest {
                 .add(new BigDecimal(reposicoes)).subtract(new BigDecimal(sangrias));
         return new CaixaDoPeriodo(UUID.randomUUID(), caixa, "ana@x.com", "Ana", "Gerente", "Gerente", ABERTURA, FECHAMENTO,
                 new BigDecimal(inicial), new BigDecimal(reposicoes), new BigDecimal(sangrias), new BigDecimal(vendidoEmDinheiro),
-                esperado, new BigDecimal(contado), null, Map.of("DINHEIRO", new BigDecimal(vendidoEmDinheiro)));
+                esperado, new BigDecimal(contado), null, null, Map.of("DINHEIRO", new BigDecimal(vendidoEmDinheiro)));
     }
 
     private static CaixaDoPeriodo aberto() {
         return new CaixaDoPeriodo(UUID.randomUUID(), "Caixa 03", "bia@x.com", "Bia", "Gerente", null, ABERTURA, null,
-                new BigDecimal("50"), BigDecimal.ZERO, BigDecimal.ZERO, null, null, null, null, Map.of());
+                new BigDecimal("50"), BigDecimal.ZERO, BigDecimal.ZERO, null, null, null, null, null, Map.of());
     }
 }

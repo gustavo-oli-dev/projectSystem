@@ -96,16 +96,16 @@ class RelatorioCaixaTest {
     ) {
         return new CaixaDoPeriodo(UUID.randomUUID(), "Caixa 01", email, nome, "Gerente", "Gerente", ABERTURA, FECHAMENTO,
                 new BigDecimal("90.00"), new BigDecimal(reposicoes), new BigDecimal(sangrias), new BigDecimal("10.00"),
-                new BigDecimal(esperado), new BigDecimal(contado), null, Map.of());
+                new BigDecimal(esperado), new BigDecimal(contado), null, null, Map.of());
     }
 
     private static CaixaDoPeriodo vendas(String caixa, String operador, Instant abertura, Map<String, BigDecimal> porForma) {
         return new CaixaDoPeriodo(UUID.randomUUID(), caixa, operador + "@x.com", operador, "Gerente", null, abertura, null,
-                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, null, null, null, null, porForma);
+                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, null, null, null, null, null, porForma);
     }
 
     private static CaixaDoPeriodo aberto(String email, String nome) {
         return new CaixaDoPeriodo(UUID.randomUUID(), "Caixa 02", email, nome, "Gerente", null, ABERTURA, null,
-                new BigDecimal("90.00"), BigDecimal.ZERO, BigDecimal.ZERO, null, null, null, null, Map.of());
+                new BigDecimal("90.00"), BigDecimal.ZERO, BigDecimal.ZERO, null, null, null, null, null, Map.of());
     }
 }

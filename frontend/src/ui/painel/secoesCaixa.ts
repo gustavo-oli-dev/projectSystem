@@ -122,7 +122,7 @@ function criarSecaoResumoDoDia(relatorio: RelatorioCaixa): HTMLElement {
 
 function criarSecaoCaixas(relatorio: RelatorioCaixa): HTMLElement {
   const tabela = criarTabela(
-    ["Caixa", "Operador", "Abertura", "Fechamento", "Fundo", "Vendas em dinheiro", "Reposições", "Sangrias", "Esperado", "Contado", "Resultado"],
+    ["Caixa", "Operador", "Abertura", "Fechamento", "Fundo", "Vendas em dinheiro", "Reposições", "Sangrias", "Esperado", "Contado", "Gaveta", "Maquininha"],
     relatorio.caixas.map((caixa) => criarLinha(
       celula(caixa.pontoNome),
       celula(caixa.operadorNome),
@@ -134,7 +134,8 @@ function criarSecaoCaixas(relatorio: RelatorioCaixa): HTMLElement {
       celula(formatarMoeda(caixa.sangrias)),
       celula(valorOuTraco(caixa.valorEsperado)),
       celula(valorOuTraco(caixa.valorContado)),
-      celulaResultado(caixa.resultado, caixa.diferenca)
+      celulaResultado(caixa.resultado, caixa.diferenca),
+      celulaMaquininha(caixa.diferencaMaquininha)
     )),
     "caixa(s)"
   );
@@ -151,6 +152,19 @@ function celulaResultado(resultado: ResultadoFechamento, diferenca: number | nul
   return resultado === "SOBROU"
     ? celulaSelo(`Sobrando ${formatarMoeda(diferenca)}`, "pendente")
     : celulaSelo(`Devendo ${formatarMoeda(-diferenca)}`, "rejeitado");
+}
+
+/** Relatório da maquininha comparado com o sistema no fechamento (D40): certo, a mais ou a menos. */
+function celulaMaquininha(diferenca: number | null): HTMLTableCellElement {
+  if (diferenca === null) {
+    return celula("—");
+  }
+  if (diferenca === 0) {
+    return celulaSelo("Certo", "concluido");
+  }
+  return diferenca > 0
+    ? celulaSelo(`A mais ${formatarMoeda(diferenca)}`, "pendente")
+    : celulaSelo(`A menos ${formatarMoeda(-diferenca)}`, "rejeitado");
 }
 
 /** Saldo com sinal explícito: "+ R$ 5,00" sobrou, "− R$ 10,00" faltou. */

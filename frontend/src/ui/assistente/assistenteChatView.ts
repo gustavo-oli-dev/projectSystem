@@ -8,7 +8,7 @@ const TAMANHO_MAXIMO_PERGUNTA = 1000;
 const SUGESTOES: readonly string[] = [
   "Como está o faturamento deste mês?",
   "Quantos pedidos estão aguardando emissão?",
-  "Quais cobranças estão pendentes?",
+  "Quais recebimentos estão pendentes?",
 ];
 
 /**

@@ -25,6 +25,8 @@ export type CanalVenda = "PAINEL" | "BALCAO";
 export interface Pedido {
   id: string;
   clienteId: string | null;
+  /** Null na venda de balcão sem cliente identificado. */
+  clienteNome: string | null;
   canal: CanalVenda;
   cpfNaNota: string | null;
   status: string;

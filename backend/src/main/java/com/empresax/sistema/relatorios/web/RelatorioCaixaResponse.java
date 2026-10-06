@@ -37,6 +37,8 @@ public record RelatorioCaixaResponse(
             BigDecimal valorEsperado,
             BigDecimal valorContado,
             BigDecimal diferenca,
+            /** Maquininha − sistema nas formas conferidas; nulo = não conferido (D40). */
+            BigDecimal diferencaMaquininha,
             ResultadoFechamento resultado,
             Map<String, BigDecimal> vendasPorForma,
             BigDecimal totalVendido
@@ -47,7 +49,8 @@ public record RelatorioCaixaResponse(
                     caixa.id(), caixa.pontoNome(), caixa.operadorNome(), caixa.abertaPorNome(), caixa.fechadaPorNome(),
                     caixa.abertaEm(), caixa.fechadaEm(), caixa.fundoInicial(), caixa.reposicoes(), caixa.sangrias(),
                     caixa.vendasEmDinheiro(), caixa.valorEsperado(), caixa.valorContado(),
-                    caixa.diferenca().orElse(null), caixa.resultado(), caixa.vendasPorForma(), caixa.totalVendido());
+                    caixa.diferenca().orElse(null), caixa.diferencaMaquininha(), caixa.resultado(), caixa.vendasPorForma(),
+                    caixa.totalVendido());
         }
     }
 
