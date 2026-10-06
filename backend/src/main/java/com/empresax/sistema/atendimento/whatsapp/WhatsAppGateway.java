@@ -11,4 +11,11 @@ public interface WhatsAppGateway {
      * @return o id externo da mensagem enviada, para correlacionar com confirmações futuras
      */
     String enviarTexto(String telefoneDestino, String texto);
+
+    /**
+     * Envia uma imagem com legenda (ex.: foto do produto que o cliente pediu) — D43.
+     *
+     * @return o id externo da mensagem enviada
+     */
+    String enviarImagem(String telefoneDestino, byte[] imagem, String tipoMime, String legenda);
 }

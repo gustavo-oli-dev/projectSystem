@@ -8,6 +8,10 @@ marcar como feito.
       cadastrar no painel da W-API a URL `https://SEU-ENDERECO/api/webhooks/wapi?token=<WAPI_WEBHOOK_TOKEN>`.
       A W-API é hospedada: ela precisa alcançar o backend por um endereço **público** — em
       desenvolvimento, isso exige um túnel (ex.: Cloudflare Tunnel/ngrok) apontando pra porta 8081.
+- [ ] **Foto do produto pelo bot (D43) — testar contra a W-API real**: o envio usa
+      `POST /v1/message/send-image` com `{phone, image, caption}` e a imagem em base64 (data URI).
+      Conferir na primeira conversa real se a W-API aceita o data URI; se exigir URL pública, servir a
+      foto pelo endereço público do túnel (`/api/produtos/{id}/fotos/{fotoId}` já é público, só leitura).
 - [ ] **Formato do payload do webhook da W-API**: não está na OpenAPI oficial. O parser
       (`InterpretadorWebhookWApi`) usa o formato usual (`sender.id`, `msgContent.conversation`,
       `fromMe`, `isGroup`). Conferir com a primeira mensagem real — o payload bruto fica em

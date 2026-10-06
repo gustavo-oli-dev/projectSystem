@@ -27,6 +27,8 @@ import java.util.UUID;
 public class RespostaBotService {
 
     private static final int LIMITE_MENSAGENS_DE_CONTEXTO = 12;
+    /** Como a foto enviada aparece no histórico da conversa (o texto do painel). */
+    private static final String PREFIXO_FOTO = "[Foto] ";
 
     private static final String PROMPT_SISTEMA = """
             Você é o assistente virtual da Empresa X atendendo clientes pelo WhatsApp.
@@ -84,16 +86,22 @@ public class RespostaBotService {
         turnos.forEach(turno -> mensagens.add(conversaComFerramentas.mensagemDeTexto(turno.papel(), turno.texto())));
 
         PedidoDeTransferencia transferencia = new PedidoDeTransferencia();
+        FotosParaEnviar fotos = new FotosParaEnviar();
         ConversaComFerramentas.Resultado resultado = conversaComFerramentas.conduzir(
                 claudeAtendimento,
                 PROMPT_SISTEMA,
                 FerramentasAtendimento.DEFINICAO,
                 mensagens,
-                ferramentas.executorPara(conversa, transferencia));
+                ferramentas.executorPara(conversa, transferencia, fotos));
 
         if (!resultado.resposta().isBlank()) {
             String idExterno = whatsAppGateway.enviarTexto(conversa.telefoneWhatsapp(), resultado.resposta());
             mensagemService.registrarRespostaDoBot(conversaId, resultado.resposta(), idExterno);
+        }
+        // Fotos depois do texto: o cliente lê a resposta e em seguida vê o produto (D43).
+        for (FotosParaEnviar.Foto foto : fotos.fotos()) {
+            String idExterno = whatsAppGateway.enviarImagem(conversa.telefoneWhatsapp(), foto.conteudo(), foto.tipoMime(), foto.legenda());
+            mensagemService.registrarRespostaDoBot(conversaId, PREFIXO_FOTO + foto.legenda(), idExterno);
         }
         transferencia.motivo().ifPresent(conversa::transferirParaAtendente);
     }

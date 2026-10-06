@@ -10,6 +10,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Map;
 
 /**
@@ -48,6 +49,29 @@ public class WApiWhatsAppGateway implements WhatsAppGateway {
         String corpo = escreverJson(Map.of("phone", telefoneDestino, "message", texto));
         HttpRequest requisicao = HttpRequest.newBuilder()
                 .uri(URI.create(urlBase + "/v1/message/send-text?instanceId="
+                        + URLEncoder.encode(instanceId, StandardCharsets.UTF_8)))
+                .header("Authorization", "Bearer " + token)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(corpo))
+                .build();
+
+        return enviarELer(requisicao).path("messageId").asText(null);
+    }
+
+    /**
+     * POST /v1/message/send-image (mesma autenticação): {phone, image, caption}. A imagem vai em
+     * base64 (data URI) porque as fotos ficam no nosso banco e não há endereço público para a W-API
+     * buscar. Formato conferido na documentação, mas ainda não testado contra a API real (D43).
+     */
+    @Override
+    public String enviarImagem(String telefoneDestino, byte[] imagem, String tipoMime, String legenda) {
+        if (instanceId.isBlank() || token.isBlank()) {
+            throw new IntegracaoWhatsAppException(nomeCanal + ": instância ou token da W-API não configurados");
+        }
+        String dataUri = "data:" + tipoMime + ";base64," + Base64.getEncoder().encodeToString(imagem);
+        String corpo = escreverJson(Map.of("phone", telefoneDestino, "image", dataUri, "caption", legenda));
+        HttpRequest requisicao = HttpRequest.newBuilder()
+                .uri(URI.create(urlBase + "/v1/message/send-image?instanceId="
                         + URLEncoder.encode(instanceId, StandardCharsets.UTF_8)))
                 .header("Authorization", "Bearer " + token)
                 .header("Content-Type", "application/json")
