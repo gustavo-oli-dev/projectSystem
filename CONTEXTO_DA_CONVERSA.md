@@ -35,7 +35,7 @@ testar/ligar).
   pedidos por situação; dias da semana, horário de pico, mais vendidos; exportação CSV para Excel.
 - **WhatsApp (W-API):** bot de atendimento ao cliente e assistente do dono num **segundo número
   separado** (com verificação do número), para evitar vazamento de dados. Duas IAs Claude isoladas.
-- **Vitrine pública** de produtos (preparação para o site de vendas).
+- **Vitrine pública** de produtos (era preparação para o site de vendas, descartado em 06/10).
 - Interface: tela cheia, barra lateral recolhível, busca em cada tabela, botões com borda,
   destrutivos em vermelho.
 - **Testes:** 235 testes do backend passando (05/10).
@@ -132,9 +132,11 @@ a diferença da maquininha no fechamento entra no Painel.
 
 Outras ideias que o Gustavo pediu e continuam na fila: histórico de vendas com busca por produto;
 renomear "Cobranças" para "Recebimentos"; área só de financeiro com exportação; bot enviando foto
-do produto no WhatsApp; site de vendas com pagamento automático (confirmar sozinho ao pagar e
-reembolsar se faltar estoque); embalagens unidade/fardo (A3, adiado em 04/10); coluna "Cliente" na
+do produto no WhatsApp; embalagens unidade/fardo (A3, adiado em 04/10); coluna "Cliente" na
 lista de Pedidos (oferecida em 04/10, ainda sem resposta).
+
+**Site de vendas descartado (06/10):** o Gustavo decidiu não fazer mais o site. A vitrine pública
+(`/api/loja/produtos`, D18) foi feita como preparação para ele e continua no código por enquanto.
 
 ## Como rodar e conferir
 

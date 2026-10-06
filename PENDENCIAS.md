@@ -34,7 +34,7 @@ marcar como feito.
 - [ ] **Mercado Pago — reembolso e cancelamento (D18)**: `POST /v1/payments/{id}/refunds` e
       `PUT /v1/payments/{id}` com status cancelled seguem a documentação, mas não foram testados
       contra a API real (falta token de teste).
-- [ ] **Site de vendas — pagamento automático**: quando o pagamento for aprovado, confirmar o pedido
+- [x] ~~**Site de vendas — pagamento automático**~~ (descartado em 06/10: não haverá site): quando o pagamento for aprovado, confirmar o pedido
       sozinho (baixa no estoque) e, se o estoque tiver acabado nesse meio-tempo, reembolsar
       automaticamente. Hoje o painel exige confirmar antes de cobrar.
 - [ ] **Reembolso depois da nota emitida** (pedido CONCLUIDO): exige nota de devolução/cancelamento
