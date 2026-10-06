@@ -19,6 +19,7 @@ import { montarConferenciaCaixas } from "../caixa/conferenciaCaixasView.js";
 import { montarGestaoCaixa } from "../caixa/gestaoCaixaView.js";
 import { montarInventario } from "../produtos/inventarioView.js";
 import { montarRetirada } from "../produtos/retiradaView.js";
+import { montarPromocoes } from "../produtos/promocoesView.js";
 import { montarReposicao } from "../produtos/reposicaoView.js";
 import { montarEntradaNota } from "../compras/entradaNotaView.js";
 import { montarContasAPagar } from "../compras/contasPagarView.js";
@@ -60,6 +61,7 @@ const GRUPOS_NAV: GrupoNav[] = [
       { rota: "gerenciar-produtos", rotulo: "Gerenciar produtos", icone: "gerenciar" },
       { rota: "inventario", rotulo: "Inventário", icone: "inventario" },
       { rota: "retirada", rotulo: "Retirada de produtos", icone: "retirada" },
+      { rota: "promocoes", rotulo: "Promoções", icone: "promocoes" },
       { rota: "reposicao", rotulo: "Reposição", icone: "reposicao" },
       { rota: "servicos", rotulo: "Serviços", icone: "servicos" },
     ],
@@ -105,6 +107,7 @@ const PERMISSOES_POR_ROTA: Record<Rota, readonly Permissao[]> = {
   "gestao-caixa": ["CAIXA_GERENCIAR"],
   inventario: ["ESTOQUE_GERENCIAR"],
   retirada: ["ESTOQUE_GERENCIAR"],
+  promocoes: ["PROMOCOES_GERENCIAR", "CATALOGO_VER"],
   reposicao: ["CATALOGO_VER"],
   "entrada-nota": ["ESTOQUE_GERENCIAR"],
   "contas-a-pagar": ["CONTAS_PAGAR_GERENCIAR"],
@@ -129,6 +132,7 @@ const MONTADORES: Record<Rota, Montador> = {
   "gestao-caixa": montarGestaoCaixa,
   inventario: montarInventario,
   retirada: montarRetirada,
+  promocoes: montarPromocoes,
   reposicao: montarReposicao,
   "entrada-nota": montarEntradaNota,
   "contas-a-pagar": montarContasAPagar,

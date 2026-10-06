@@ -1,5 +1,14 @@
 import { registrarItemCancelado } from "../../api/pdvApi.js";
-import { alterarQuantidade, itensDoCarrinho, totalDoCarrinho, type ItemCarrinho } from "../../state/caixaState.js";
+import {
+  alterarQuantidade,
+  descontoPromocaoDoItem,
+  itensDoCarrinho,
+  subtotalDoItem,
+  totalDoCarrinho,
+  type ItemCarrinho,
+} from "../../state/caixaState.js";
+import { promocaoDoProduto } from "../../state/promocoesDoDia.js";
+import { descreverPromocao } from "../produtos/descricaoPromocao.js";
 import { pedirAutorizacao } from "./autorizacaoView.js";
 import { formatarMoeda } from "../formatarMoeda.js";
 import { criarImagemPrincipal } from "../produtos/imagemProduto.js";
@@ -37,6 +46,14 @@ function criarLinha(item: ItemCarrinho): HTMLLIElement {
   const nome = document.createElement("span");
   nome.className = "carrinho__nome";
   nome.textContent = item.produto.nome;
+  const promocao = promocaoDoProduto(item.produto.id);
+  if (promocao !== null) {
+    // Selo da promoção (D38); some o desconto quando ainda não dá direito (ex.: leve 3 e levou 2).
+    const selo = document.createElement("span");
+    selo.className = "carrinho__promocao";
+    selo.textContent = descreverPromocao(promocao);
+    nome.append(selo);
+  }
 
   const preco = document.createElement("span");
   preco.className = "carrinho__unitario";
@@ -44,7 +61,14 @@ function criarLinha(item: ItemCarrinho): HTMLLIElement {
 
   const subtotal = document.createElement("span");
   subtotal.className = "carrinho__subtotal";
-  subtotal.textContent = formatarMoeda(item.produto.precoUnitario * item.quantidade);
+  subtotal.textContent = formatarMoeda(subtotalDoItem(item));
+  const descontoPromocao = descontoPromocaoDoItem(item);
+  if (descontoPromocao > 0) {
+    const economia = document.createElement("span");
+    economia.className = "carrinho__economia";
+    economia.textContent = `− ${formatarMoeda(descontoPromocao)}`;
+    subtotal.append(economia);
+  }
 
   const remover = document.createElement("button");
   remover.type = "button";

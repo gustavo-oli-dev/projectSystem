@@ -7,6 +7,7 @@ import {
 } from "../../api/pdvApi.js";
 import { buscarCaixaAberto, type CaixaAberto } from "../../api/caixaApi.js";
 import { listarProdutos, type Produto } from "../../api/produtosApi.js";
+import { listarPromocoesValendoHoje } from "../../api/promocoesApi.js";
 import { navegarPara } from "../../router.js";
 import {
   adicionarAoCarrinho,
@@ -18,6 +19,7 @@ import {
   totalAPagar,
   totalDoCarrinho,
 } from "../../state/caixaState.js";
+import { definirPromocoesDoDia } from "../../state/promocoesDoDia.js";
 import { possui } from "../../state/sessaoState.js";
 import { criarCampoTexto, criarMensagemErro, mostrarErro, textoOuNulo } from "../camposFormulario.js";
 import { elementoCarregando } from "../estadoCarregamento.js";
@@ -62,7 +64,11 @@ export async function montarPdv(container: HTMLElement): Promise<void> {
 
   areaVenda.replaceChildren(elementoCarregando("Carregando o caixa..."));
   try {
-    const [produtos, caixa] = await Promise.all([listarProdutos(), buscarCaixaAberto()]);
+    // Sem as promoções o caixa ainda vende (o servidor aplica ao vender); só a tela não as mostra antes.
+    const [produtos, caixa, promocoes] = await Promise.all([
+      listarProdutos(), buscarCaixaAberto(), listarPromocoesValendoHoje().catch(() => []),
+    ]);
+    definirPromocoesDoDia(promocoes);
     iniciarCaixa(areaVenda, produtos, caixa, () => void carregarUltimasVendas(areaUltimas));
   } catch {
     areaVenda.replaceChildren(cartaoEstado("Não foi possível carregar o caixa.", "erro"));
@@ -247,6 +253,9 @@ function criarRecibo(venda: VendaBalcao, novaVenda: () => void): HTMLElement {
   ];
   if (venda.desconto > 0) {
     linhas.splice(1, 0, ["Desconto", `− ${formatarMoeda(venda.desconto)}`]);
+  }
+  if (venda.descontoPromocao > 0) {
+    linhas.splice(1, 0, ["Promoções", `− ${formatarMoeda(venda.descontoPromocao)}`]);
   }
   const dividido = venda.pagamentos.length > 1;
   if (dividido) {

@@ -1,4 +1,5 @@
 import type { Produto } from "../api/produtosApi.js";
+import { descontoDaPromocao } from "./promocoesDoDia.js";
 
 /** Carrinho da venda em andamento no caixa. Vive só na tela; nada vai ao servidor até finalizar. */
 export interface ItemCarrinho {
@@ -52,8 +53,18 @@ export function limparCarrinho(): void {
   notificar();
 }
 
+/** Desconto da promoção do dia nesta linha do carrinho (zero sem promoção). */
+export function descontoPromocaoDoItem(item: ItemCarrinho): number {
+  return descontoDaPromocao(item.produto.id, item.produto.precoUnitario, item.quantidade);
+}
+
+export function subtotalDoItem(item: ItemCarrinho): number {
+  return item.produto.precoUnitario * item.quantidade - descontoPromocaoDoItem(item);
+}
+
+/** Soma dos itens já com as promoções do dia (antes do desconto do gerente). */
 export function totalDoCarrinho(): number {
-  return itens.reduce((soma, item) => soma + item.produto.precoUnitario * item.quantidade, 0);
+  return itens.reduce((soma, item) => soma + subtotalDoItem(item), 0);
 }
 
 /**

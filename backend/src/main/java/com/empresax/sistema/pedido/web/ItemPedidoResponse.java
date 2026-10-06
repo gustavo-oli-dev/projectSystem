@@ -12,6 +12,8 @@ public record ItemPedidoResponse(
         String descricao,
         BigDecimal precoUnitario,
         int quantidade,
+        /** Quanto este item ganhou na promoção do produto (zero = sem promoção). */
+        BigDecimal descontoPromocao,
         BigDecimal subtotal
 ) {
 
@@ -22,6 +24,7 @@ public record ItemPedidoResponse(
                 item.descricao(),
                 item.precoUnitario().valor(),
                 item.quantidade(),
+                item.descontoPromocao().valor(),
                 item.subtotal().valor()
         );
     }

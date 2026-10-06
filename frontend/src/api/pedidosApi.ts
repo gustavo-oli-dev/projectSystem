@@ -14,6 +14,8 @@ export interface ItemPedidoResponse {
   descricao: string;
   precoUnitario: number;
   quantidade: number;
+  /** Quanto o item ganhou na promoção do produto (zero = sem promoção). */
+  descontoPromocao: number;
   subtotal: number;
 }
 

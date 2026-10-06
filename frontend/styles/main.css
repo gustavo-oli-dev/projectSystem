@@ -4362,3 +4362,39 @@ form.formulario-produto > .formulario-produto__fotos {
     grid-template-columns: 1fr;
   }
 }
+
+/* Promoções (D38). */
+.promocoes__formulario {
+  max-width: 44rem;
+}
+
+.promocoes__linha {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.carrinho__promocao {
+  display: block;
+  width: fit-content;
+  margin-top: 0.25rem;
+  padding: 0.0625rem 0.5rem;
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--cor-texto-suave);
+}
+
+.carrinho__economia {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--cor-texto-suave);
+}
+
+@media (max-width: 760px) {
+  .promocoes__linha {
+    grid-template-columns: 1fr;
+  }
+}

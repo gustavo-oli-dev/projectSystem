@@ -28,6 +28,8 @@ public record VendaBalcaoResponse(
         String status,
         List<ItemPedidoResponse> itens,
         BigDecimal total,
+        /** Desconto das promoções dos produtos (zero = nenhuma); o total já vem com ele. */
+        BigDecimal descontoPromocao,
         /** Desconto autorizado por um gerente (zero = sem desconto); o total já vem com ele. */
         BigDecimal desconto,
         String cpfNaNota,
@@ -81,7 +83,7 @@ public record VendaBalcaoResponse(
         Optional<PagamentoPresencial> cartao = pagamentos.stream()
                 .filter(pagamento -> pagamento.forma() != FormaPagamentoPresencial.DINHEIRO).reduce((anterior, ultimo) -> ultimo);
         return new VendaBalcaoResponse(
-                pedido.id(), pedido.status().name(), itens(pedido), pedido.valorTotal().valor(), pedido.desconto().valor(),
+                pedido.id(), pedido.status().name(), itens(pedido), pedido.valorTotal().valor(), pedido.descontoPromocao().valor(), pedido.desconto().valor(),
                 pedido.cpfNaNota().orElse(null),
                 pagamentos.size() > 1 ? FORMA_DIVIDIDO : primeiro.forma().name(),
                 cartao.flatMap(PagamentoPresencial::bandeira).map(Enum::name).orElse(null),
@@ -98,7 +100,7 @@ public record VendaBalcaoResponse(
 
     private static VendaBalcaoResponse dePix(Pedido pedido, Cobranca cobranca) {
         return new VendaBalcaoResponse(
-                pedido.id(), pedido.status().name(), itens(pedido), pedido.valorTotal().valor(), pedido.desconto().valor(),
+                pedido.id(), pedido.status().name(), itens(pedido), pedido.valorTotal().valor(), pedido.descontoPromocao().valor(), pedido.desconto().valor(),
                 pedido.cpfNaNota().orElse(null),
                 FORMA_PIX_NA_TELA, null, null, false, null, null,
                 statusDoPix(cobranca.status()),

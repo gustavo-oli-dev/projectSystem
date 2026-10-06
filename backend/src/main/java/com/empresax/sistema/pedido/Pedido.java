@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 
 /**
  * Agregado raiz do pedido de venda (RF05). Um pedido com item de produto e item de serviço gera
@@ -180,8 +181,23 @@ public class Pedido {
                 .reduce(Dinheiro.zero(), Dinheiro::somar);
     }
 
+    /** Desconto autorizado pelo gerente (D35). A promoção fica à parte, em descontoPromocao(). */
     public Dinheiro desconto() {
-        return valorBruto().subtrair(valorTotal());
+        return somar(ItemPedido::descontoDoGerente);
+    }
+
+    /** Quanto a venda ganhou nas promoções dos produtos (D38). */
+    public Dinheiro descontoPromocao() {
+        return somar(ItemPedido::descontoPromocao);
+    }
+
+    /** Soma dos itens com a promoção, antes do desconto do gerente. */
+    public Dinheiro valorComPromocao() {
+        return somar(ItemPedido::valorComPromocao);
+    }
+
+    private Dinheiro somar(Function<ItemPedido, Dinheiro> valorDoItem) {
+        return itens.stream().map(valorDoItem).reduce(Dinheiro.zero(), Dinheiro::somar);
     }
 
     public Optional<String> descontoAutorizadoPor() {
@@ -198,7 +214,8 @@ public class Pedido {
         if (autorizadoPor == null || autorizadoPor.isBlank()) {
             throw new DomainException("Desconto precisa da autorização de um gerente");
         }
-        BigDecimal bruto = valorBruto().valor();
+        // Rateado sobre o valor já com promoção: o desconto do gerente vem depois dela.
+        BigDecimal bruto = valorComPromocao().valor();
         if (total == null || total.valor().signum() == 0) {
             throw new DomainException("O desconto precisa ser maior que zero");
         }
@@ -208,13 +225,13 @@ public class Pedido {
         BigDecimal[] partes = new BigDecimal[itens.size()];
         BigDecimal distribuido = BigDecimal.ZERO;
         for (int indice = 0; indice < itens.size(); indice++) {
-            partes[indice] = total.valor().multiply(itens.get(indice).valorBruto().valor())
+            partes[indice] = total.valor().multiply(itens.get(indice).valorComPromocao().valor())
                     .divide(bruto, CASAS_DO_REAL, RoundingMode.DOWN);
             distribuido = distribuido.add(partes[indice]);
         }
         BigDecimal sobra = total.valor().subtract(distribuido);
         for (int indice = 0; indice < itens.size() && sobra.signum() > 0; indice++) {
-            BigDecimal espaco = itens.get(indice).valorBruto().valor().subtract(partes[indice]);
+            BigDecimal espaco = itens.get(indice).valorComPromocao().valor().subtract(partes[indice]);
             BigDecimal acrescimo = espaco.min(sobra);
             partes[indice] = partes[indice].add(acrescimo);
             sobra = sobra.subtract(acrescimo);

@@ -22,6 +22,7 @@ public enum Permissao {
     CLIENTES_GERENCIAR("Clientes", "Cadastrar e editar clientes"),
     CATALOGO_VER("Catálogo", "Ver produtos e serviços"),
     CATALOGO_GERENCIAR("Catálogo", "Cadastrar e editar produtos, preços, fotos e serviços"),
+    PROMOCOES_GERENCIAR("Catálogo", "Criar e encerrar promoções (preço de oferta e leve X pague Y)"),
     ESTOQUE_GERENCIAR("Catálogo", "Dar entrada de mercadoria no estoque (também pelo XML da nota), perdas e inventário"),
     CONTATOS_GERENCIAR("Contatos", "Cadastrar e editar fornecedores, transportadoras e outros contatos"),
     CONTAS_PAGAR_GERENCIAR("Contas a pagar", "Ver, lançar e dar baixa nas contas a pagar"),

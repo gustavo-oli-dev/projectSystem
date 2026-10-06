@@ -32,9 +32,16 @@ public class ItemPedido {
     @Column(nullable = false)
     private int quantidade;
 
-    /** Parte do desconto da venda que cabe a este item (rateio). Zero = sem desconto. */
+    /**
+     * Desconto total do item: promoção + a parte do desconto do gerente (rateio). Zero = sem desconto.
+     * Os relatórios e a NFC-e usam este total.
+     */
     @Column(nullable = false)
     private Dinheiro desconto = Dinheiro.zero();
+
+    /** Quanto do desconto veio da promoção do produto (D38). */
+    @Column(nullable = false)
+    private Dinheiro descontoPromocao = Dinheiro.zero();
 
     /** Custo unitário no momento da venda (snapshot), para o lucro não mudar se o custo mudar depois. */
     @Column
@@ -105,16 +112,43 @@ public class ItemPedido {
         return valorBruto().subtrair(desconto);
     }
 
-    /** Recebe a sua parte do desconto da venda (nunca maior que o valor do item). */
-    void receberDesconto(Dinheiro parte) {
-        if (parte == null || valorBruto().menorQue(parte)) {
-            throw new DomainException("Desconto maior que o valor do item \"" + descricao + "\"");
-        }
-        this.desconto = parte;
+    /** Valor do item com a promoção, antes do desconto do gerente. */
+    public Dinheiro valorComPromocao() {
+        return valorBruto().subtrair(descontoPromocao);
     }
 
+    /** Desconto da promoção do produto (D38). Vem antes de qualquer desconto do gerente. */
+    public void receberPromocao(Dinheiro descontoDaPromocao) {
+        if (descontoDaPromocao == null || !descontoDaPromocao.menorQue(valorBruto())) {
+            throw new DomainException("Promoção maior que o valor do item \"" + descricao + "\"");
+        }
+        if (!desconto.equals(descontoPromocao)) {
+            throw new DomainException("A promoção entra antes do desconto do gerente");
+        }
+        this.descontoPromocao = descontoDaPromocao;
+        this.desconto = descontoDaPromocao;
+    }
+
+    /** Recebe a sua parte do desconto do gerente (nunca maior que o valor com a promoção). */
+    void receberDesconto(Dinheiro parte) {
+        if (parte == null || valorComPromocao().menorQue(parte)) {
+            throw new DomainException("Desconto maior que o valor do item \"" + descricao + "\"");
+        }
+        this.desconto = descontoPromocao.somar(parte);
+    }
+
+    /** Desconto total (promoção + gerente). */
     public Dinheiro desconto() {
         return desconto;
+    }
+
+    public Dinheiro descontoPromocao() {
+        return descontoPromocao;
+    }
+
+    /** Só a parte do desconto autorizada pelo gerente. */
+    public Dinheiro descontoDoGerente() {
+        return desconto.subtrair(descontoPromocao);
     }
 
     public TipoItem tipo() {

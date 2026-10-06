@@ -54,6 +54,8 @@ export interface VendaBalcao {
   status: string;
   itens: ItemPedidoResponse[];
   total: number;
+  /** Desconto das promoções dos produtos (zero = nenhuma); o total já vem com ele. */
+  descontoPromocao: number;
   /** Desconto autorizado (zero = sem desconto); o total já vem com ele. */
   desconto: number;
   cpfNaNota: string | null;
