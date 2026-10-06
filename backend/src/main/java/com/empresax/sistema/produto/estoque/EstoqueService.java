@@ -38,6 +38,21 @@ public class EstoqueService {
         return produto;
     }
 
+    /**
+     * Entrada pelo leitor (D46): vários produtos de uma vez, numa transação — ou tudo entra, ou nada.
+     * Sempre na mesma ordem de produto, para duas entradas ao mesmo tempo não travarem uma à outra.
+     */
+    @Transactional
+    public List<Produto> darEntradaEmLote(Map<UUID, Integer> quantidades, String responsavel) {
+        if (quantidades == null || quantidades.isEmpty()) {
+            throw new DomainException("Leia ao menos um produto");
+        }
+        return quantidades.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(entrada -> darEntrada(entrada.getKey(), entrada.getValue(), responsavel))
+                .toList();
+    }
+
     @Transactional(propagation = Propagation.MANDATORY)
     public void baixarPorVenda(UUID produtoId, int quantidade, UUID pedidoId, String responsavel) {
         Produto produto = travar(produtoId);

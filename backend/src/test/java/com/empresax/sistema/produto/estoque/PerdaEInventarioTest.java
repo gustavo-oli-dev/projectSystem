@@ -112,6 +112,22 @@ class PerdaEInventarioTest {
         assertThatThrownBy(() -> estoqueService.aplicarInventario(Map.of(), ESTOQUISTA)).hasMessageContaining("ao menos um");
     }
 
+    @Test
+    void entradaEmLoteSomaCadaProdutoLidoERegistraUmaMovimentacaoPorProduto() {
+        UUID arroz = produtoComEstoque(10);
+        UUID feijao = produtoComEstoque(1);
+
+        List<Produto> atualizados = estoqueService.darEntradaEmLote(Map.of(arroz, 12, feijao, 6), ESTOQUISTA);
+
+        assertThat(atualizados).extracting(Produto::quantidadeEmEstoque).containsExactlyInAnyOrder(22, 7);
+        verify(movimentacaoRepository, times(2)).save(any());
+    }
+
+    @Test
+    void entradaEmLoteVaziaEhRecusada() {
+        assertThatThrownBy(() -> estoqueService.darEntradaEmLote(Map.of(), ESTOQUISTA)).hasMessageContaining("ao menos um produto");
+    }
+
     private UUID produtoComEstoque(int quantidade) {
         UUID id = UUID.randomUUID();
         Produto produto = new Produto("Arroz " + id, null, "10063021", "un", PRECO);

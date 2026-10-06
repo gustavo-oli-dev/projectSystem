@@ -17,6 +17,7 @@ import { montarPdv } from "../pdv/pdvView.js";
 import { montarConferenciaCaixas } from "../caixa/conferenciaCaixasView.js";
 import { montarGestaoCaixa } from "../caixa/gestaoCaixaView.js";
 import { montarInventario } from "../produtos/inventarioView.js";
+import { montarEntradaLeitor } from "../produtos/entradaLeitorView.js";
 import { montarRetirada } from "../produtos/retiradaView.js";
 import { montarPromocoes } from "../produtos/promocoesView.js";
 import { montarPrecos } from "../produtos/precosView.js";
@@ -71,6 +72,7 @@ const GRUPOS_NAV: GrupoNav[] = [
     titulo: "Compras",
     itens: [
       { rota: "entrada-nota", rotulo: "Entrada por nota", icone: "nota" },
+      { rota: "entrada-leitor", rotulo: "Entrada pelo leitor", icone: "leitor" },
       { rota: "contas-a-pagar", rotulo: "Contas a pagar", icone: "contas" },
       { rota: "contatos", rotulo: "Contatos", icone: "contatos" },
     ],
@@ -108,6 +110,7 @@ const PERMISSOES_POR_ROTA: Record<Rota, readonly Permissao[]> = {
   caixas: ["CAIXA_CONFERIR"],
   "gestao-caixa": ["CAIXA_GERENCIAR"],
   inventario: ["ESTOQUE_GERENCIAR"],
+  "entrada-leitor": ["ESTOQUE_GERENCIAR"],
   retirada: ["ESTOQUE_GERENCIAR"],
   promocoes: ["PROMOCOES_GERENCIAR", "CATALOGO_VER"],
   precos: ["CATALOGO_VER"],
@@ -133,6 +136,7 @@ const MONTADORES: Record<Rota, Montador> = {
   caixas: montarConferenciaCaixas,
   "gestao-caixa": montarGestaoCaixa,
   inventario: montarInventario,
+  "entrada-leitor": montarEntradaLeitor,
   retirada: montarRetirada,
   promocoes: montarPromocoes,
   precos: montarPrecos,

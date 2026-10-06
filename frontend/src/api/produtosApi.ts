@@ -215,3 +215,10 @@ export function reajustarPrecos(produtoIds: readonly string[], modo: ModoReajust
 export function listarPrecosAlterados(dias: number): Promise<string[]> {
   return httpClient.get<string[]>(`/produtos/precos-alterados?dias=${dias}`);
 }
+
+/** Entrada pelo leitor (D46): vários produtos de uma vez — ou tudo entra, ou nada. */
+export function darEntradaEmLote(
+  itens: ReadonlyArray<{ produtoId: string; quantidade: number }>
+): Promise<Array<{ produtoId: string; produto: string; quantidadeEmEstoque: number }>> {
+  return httpClient.post<Array<{ produtoId: string; produto: string; quantidadeEmEstoque: number }>>("/estoque/entradas", { itens });
+}
