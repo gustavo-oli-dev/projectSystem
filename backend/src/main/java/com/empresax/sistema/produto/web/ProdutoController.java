@@ -12,7 +12,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -84,10 +86,13 @@ public class ProdutoController {
 
     @PreAuthorize(RegraAcesso.CATALOGO_GERENCIAR)
     @PutMapping("/{id}")
-    public ProdutoResponse atualizar(@PathVariable UUID id, @Valid @RequestBody AtualizarProdutoRequest requisicao) {
+    public ProdutoResponse atualizar(
+            @PathVariable UUID id, @Valid @RequestBody AtualizarProdutoRequest requisicao, @AuthenticationPrincipal UserDetails usuario
+    ) {
         Produto produto = produtoService.atualizar(
                 id, requisicao.nome(), requisicao.descricao(), new Dinheiro(requisicao.precoUnitario()),
-                requisicao.codigoBarras(), dinheiroOuNulo(requisicao.custoUnitario()), requisicao.estoqueMinimo());
+                requisicao.codigoBarras(), dinheiroOuNulo(requisicao.custoUnitario()), requisicao.estoqueMinimo(),
+                usuario.getUsername());
         return comFotos(produto);
     }
 

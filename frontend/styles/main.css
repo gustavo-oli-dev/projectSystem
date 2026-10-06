@@ -473,6 +473,7 @@ form p[role="alert"] {
   flex-direction: row;
   align-items: center;
   justify-content: flex-end;
+  gap: 0.75rem;
 }
 
 /* =========================================================================
@@ -4396,5 +4397,110 @@ form.formulario-produto > .formulario-produto__fotos {
 @media (max-width: 760px) {
   .promocoes__linha {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Preços e etiquetas (D39). */
+.precos {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.precos__barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.precos__resumo {
+  margin: 0 auto 0 0;
+  font-weight: 600;
+}
+
+.precos__campos {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 1rem;
+}
+
+.precos__resultado {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 760px) {
+  .precos__campos {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Folha de etiquetas: só existe na impressão. */
+.etiquetas-impressao {
+  display: none;
+}
+
+@media print {
+  body > *:not(.etiquetas-impressao) {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  .etiquetas-impressao {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4mm;
+  }
+
+  .etiqueta {
+    display: flex;
+    flex-direction: column;
+    gap: 1mm;
+    padding: 3mm;
+    border: 0.3mm solid #000;
+    break-inside: avoid;
+    color: #000;
+  }
+
+  .etiqueta p {
+    margin: 0;
+  }
+
+  .etiqueta__nome {
+    font-size: 11pt;
+    font-weight: 700;
+  }
+
+  .etiqueta__promocao {
+    font-size: 9pt;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .etiqueta__preco {
+    font-size: 24pt;
+    font-weight: 800;
+  }
+
+  .etiqueta__unidade {
+    font-size: 9pt;
+    font-weight: 400;
+  }
+
+  .etiqueta__barras {
+    width: 38mm;
+    height: 10mm;
+  }
+
+  .etiqueta__codigo,
+  .etiqueta__data {
+    font-size: 7pt;
   }
 }

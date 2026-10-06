@@ -118,6 +118,15 @@ public class Produto {
         return precoUnitario;
     }
 
+    /** Preço em lote (D39): só o preço muda; nunca zero. */
+    public void alterarPreco(Dinheiro novoPreco) {
+        Dinheiro precoValidado = validarPreco(novoPreco);
+        if (precoValidado.valor().signum() == 0) {
+            throw new DomainException("O preço de \"" + nome + "\" ficaria zerado");
+        }
+        this.precoUnitario = precoValidado;
+    }
+
     public void atualizar(String nome, String descricao, Dinheiro precoUnitario, String codigoBarras) {
         String nomeValidado = validarNome(nome);
         Dinheiro precoValidado = validarPreco(precoUnitario);

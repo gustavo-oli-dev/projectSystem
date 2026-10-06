@@ -17,6 +17,7 @@ export type Rota =
   | "inventario"
   | "retirada"
   | "promocoes"
+  | "precos"
   | "reposicao"
   | "entrada-nota"
   | "contas-a-pagar"
@@ -46,6 +47,7 @@ const ROTAS_SIMPLES: readonly Rota[] = [
   "inventario",
   "retirada",
   "promocoes",
+  "precos",
   "reposicao",
   "entrada-nota",
   "contas-a-pagar",

@@ -2,6 +2,8 @@ package com.empresax.sistema.produto;
 
 import com.empresax.sistema.common.domain.DomainException;
 import com.empresax.sistema.common.domain.EntidadeNaoEncontradaException;
+import com.empresax.sistema.produto.preco.AlteracaoPreco;
+import com.empresax.sistema.produto.preco.AlteracaoPrecoRepository;
 import com.empresax.sistema.shared.dinheiro.Dinheiro;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,9 +16,11 @@ import java.util.UUID;
 public class ProdutoService {
 
     private final ProdutoRepository produtoRepository;
+    private final AlteracaoPrecoRepository alteracaoPrecoRepository;
 
-    public ProdutoService(ProdutoRepository produtoRepository) {
+    public ProdutoService(ProdutoRepository produtoRepository, AlteracaoPrecoRepository alteracaoPrecoRepository) {
         this.produtoRepository = produtoRepository;
+        this.alteracaoPrecoRepository = alteracaoPrecoRepository;
     }
 
     @Transactional
@@ -57,10 +61,14 @@ public class ProdutoService {
     @Transactional
     public Produto atualizar(
             UUID id, String nome, String descricao, Dinheiro precoUnitario, String codigoBarras, Dinheiro custoUnitario,
-            Integer estoqueMinimo
+            Integer estoqueMinimo, String quem
     ) {
         Produto produto = buscarPorId(id);
+        Dinheiro precoAnterior = produto.precoUnitario();
         produto.atualizar(nome, descricao, precoUnitario, codigoBarras);
+        if (!produto.precoUnitario().equals(precoAnterior)) {
+            alteracaoPrecoRepository.save(new AlteracaoPreco(id, precoAnterior, produto.precoUnitario(), quem));
+        }
         produto.definirCusto(custoUnitario);
         produto.definirEstoqueMinimo(estoqueMinimo);
         garantirCodigoBarrasLivre(produto, id);

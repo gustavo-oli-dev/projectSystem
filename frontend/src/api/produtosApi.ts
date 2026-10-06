@@ -144,3 +144,23 @@ export function listarReposicao(): Promise<SugestaoReposicao[]> {
 export function baixarListaDeCompra(): Promise<Blob> {
   return httpClient.arquivo("/estoque/reposicao/lista-de-compra.csv");
 }
+
+/** Preço em lote (D39): +5 = 5% mais caro; PRECO_UNICO = todos passam a custar o valor. */
+export type ModoReajuste = "PERCENTUAL" | "PRECO_UNICO";
+
+export interface PrecoAlterado {
+  produtoId: string;
+  produto: string;
+  precoAnterior: number;
+  precoNovo: number;
+}
+
+/** Devolve só os produtos cujo preço mudou de verdade. */
+export function reajustarPrecos(produtoIds: readonly string[], modo: ModoReajuste, valor: number): Promise<PrecoAlterado[]> {
+  return httpClient.post<PrecoAlterado[]>("/produtos/reajuste-precos", { produtoIds, modo, valor });
+}
+
+/** Ids dos produtos que mudaram de preço nos últimos dias (para reimprimir as etiquetas). */
+export function listarPrecosAlterados(dias: number): Promise<string[]> {
+  return httpClient.get<string[]>(`/produtos/precos-alterados?dias=${dias}`);
+}
