@@ -4513,23 +4513,6 @@ form.formulario-produto > .formulario-produto__fotos {
   white-space: nowrap;
 }
 
-/* Financeiro (D40). */
-.financeiro {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.financeiro__acoes {
-  display: flex;
-  align-items: flex-end;
-  gap: 0.75rem;
-}
-
-.financeiro__periodo {
-  min-width: 12rem;
-}
-
 /* Embalagens do produto (D41). */
 .embalagens__formulario {
   display: flex;

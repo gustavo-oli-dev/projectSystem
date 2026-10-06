@@ -19,7 +19,9 @@ import { criarGraficoRosca, type CorFatia, type Fatia } from "../graficos/grafic
 import { situacaoEstoque } from "../produtos/situacaoEstoque.js";
 import { criarIndicadores } from "./indicadoresView.js";
 import { ATALHOS, periodoDoAtalho, type AtalhoPeriodo } from "./periodoPainel.js";
+import { baixarLancamentos, gerarFluxoDeCaixa } from "../../api/financeiroApi.js";
 import { montarAbaDinheiroDoDia } from "./abaDinheiroDoDia.js";
+import { montarAbaFinanceiro } from "./abaFinanceiro.js";
 import { montarAbaCaixa } from "./secoesCaixa.js";
 import { montarSecaoPerdas } from "./secoesPerdas.js";
 import {
@@ -32,7 +34,7 @@ import {
   criarSecaoMaisVendidos,
 } from "./secoesRelatorio.js";
 
-type AbaPainel = "vendas" | "produtos" | "horarios" | "caixa" | "dinheiro-do-dia" | "operacao";
+type AbaPainel = "vendas" | "produtos" | "horarios" | "caixa" | "dinheiro-do-dia" | "financeiro" | "operacao";
 
 interface DefinicaoAba {
   aba: AbaPainel;
@@ -51,6 +53,7 @@ const ABAS: readonly DefinicaoAba[] = [
     aba: "dinheiro-do-dia", rotulo: "Dinheiro do dia",
     visivel: () => possuiAlguma(["FATURAMENTO_VER", "CAIXA_CONFERIR"]), usaPeriodo: false,
   },
+  { aba: "financeiro", rotulo: "Financeiro", visivel: () => possui("FINANCEIRO_VER"), usaPeriodo: true },
   {
     aba: "operacao", rotulo: "Operação agora",
     visivel: () => possuiAlguma(["CATALOGO_VER", "PEDIDOS_VER", "COBRANCAS_VER"]), usaPeriodo: false,
@@ -67,7 +70,8 @@ const STATUS_PEDIDO: Record<string, { rotulo: string; cor: CorFatia }> = {
 const COR_STATUS_DESCONHECIDO: CorFatia = 5;
 
 /**
- * Painel = central de relatórios, em abas (D28): Vendas, Produtos, Horários, Caixa e Operação.
+ * Painel = central de relatórios, em abas (D28): Vendas, Produtos, Horários, Caixa, Dinheiro do dia,
+ * Financeiro e Operação.
  * Um filtro de período só, no topo, vale para todas as abas que dependem de período. A aba aberta
  * fica no endereço (#/painel/caixa) para dar para voltar direto nela.
  */
@@ -174,6 +178,9 @@ async function montarConteudoDaAba(
         () => baixarCsvCaixa(periodo), `fechamentos-de-caixa_${periodo.inicio}_a_${periodo.fim}.csv`));
     case "dinheiro-do-dia":
       return montarAbaDinheiroDoDia();
+    case "financeiro":
+      return montarAbaFinanceiro(await gerarFluxoDeCaixa(periodo), criarBotaoExportar(
+        () => baixarLancamentos(periodo), `financeiro_${periodo.inicio}_a_${periodo.fim}.csv`));
     case "operacao":
       return montarAbaOperacao();
   }

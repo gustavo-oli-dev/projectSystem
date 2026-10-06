@@ -21,7 +21,6 @@ import { montarInventario } from "../produtos/inventarioView.js";
 import { montarRetirada } from "../produtos/retiradaView.js";
 import { montarPromocoes } from "../produtos/promocoesView.js";
 import { montarPrecos } from "../produtos/precosView.js";
-import { montarFinanceiro } from "../financeiro/financeiroView.js";
 import { montarReposicao } from "../produtos/reposicaoView.js";
 import { montarEntradaNota } from "../compras/entradaNotaView.js";
 import { montarContasAPagar } from "../compras/contasPagarView.js";
@@ -73,7 +72,6 @@ const GRUPOS_NAV: GrupoNav[] = [
     titulo: "Compras",
     itens: [
       { rota: "entrada-nota", rotulo: "Entrada por nota", icone: "nota" },
-      { rota: "financeiro", rotulo: "Financeiro", icone: "financeiro" },
       { rota: "contas-a-pagar", rotulo: "Contas a pagar", icone: "contas" },
       { rota: "contatos", rotulo: "Contatos", icone: "contatos" },
     ],
@@ -94,7 +92,7 @@ const GRUPOS_NAV: GrupoNav[] = [
 
 /** Basta uma das permissões listadas para entrar na rota. */
 const PERMISSOES_POR_ROTA: Record<Rota, readonly Permissao[]> = {
-  painel: ["PAINEL_VER"],
+  painel: ["PAINEL_VER", "FINANCEIRO_VER"],
   pedidos: ["PEDIDOS_VER"],
   "pedido-detalhe": ["PEDIDOS_VER"],
   clientes: ["CLIENTES_VER"],
@@ -113,7 +111,6 @@ const PERMISSOES_POR_ROTA: Record<Rota, readonly Permissao[]> = {
   retirada: ["ESTOQUE_GERENCIAR"],
   promocoes: ["PROMOCOES_GERENCIAR", "CATALOGO_VER"],
   precos: ["CATALOGO_VER"],
-  financeiro: ["FINANCEIRO_VER"],
   reposicao: ["CATALOGO_VER"],
   "entrada-nota": ["ESTOQUE_GERENCIAR"],
   "contas-a-pagar": ["CONTAS_PAGAR_GERENCIAR"],
@@ -140,7 +137,6 @@ const MONTADORES: Record<Rota, Montador> = {
   retirada: montarRetirada,
   promocoes: montarPromocoes,
   precos: montarPrecos,
-  financeiro: montarFinanceiro,
   reposicao: montarReposicao,
   "entrada-nota": montarEntradaNota,
   "contas-a-pagar": montarContasAPagar,
