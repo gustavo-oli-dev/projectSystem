@@ -41,9 +41,8 @@ public class SecurityConfig {
             "/api/webhooks/wapi-assistente"
     };
 
-    private static final String[] VITRINE_PUBLICA = {
-            "/api/produtos/*/fotos/*",
-            "/api/loja/produtos"
+    private static final String[] FOTOS_PUBLICAS = {
+            "/api/produtos/*/fotos/*"
     };
 
     @Bean
@@ -70,9 +69,9 @@ public class SecurityConfig {
                 .sessionManagement(sessao -> sessao.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(requisicoes -> requisicoes
                         .requestMatchers(ENDPOINTS_PUBLICOS).permitAll()
-                        // Vitrine pública, só leitura (GET): fotos dos produtos e catálogo da loja
-                        // para o futuro site de vendas. Mesmo caminho com outro método exige login.
-                        .requestMatchers(HttpMethod.GET, VITRINE_PUBLICA).permitAll()
+                        // Fotos dos produtos, só leitura (GET): a tag <img> do painel não manda o token.
+                        // Mesmo caminho com outro método exige login.
+                        .requestMatchers(HttpMethod.GET, FOTOS_PUBLICAS).permitAll()
                         .anyRequest().authenticated())
                 // Sem login válido (token ausente/expirado, funcionário desativado) → 401, para o
                 // painel voltar ao login. Logado sem a permissão → 403 (GlobalExceptionHandler).

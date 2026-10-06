@@ -60,11 +60,21 @@ class PerdaEInventarioTest {
     }
 
     @Test
+    void trocaComClienteTiraDoEstoqueSemPrecisarEscreverMotivo() {
+        UUID id = produtoComEstoque(5);
+
+        Produto produto = estoqueService.registrarPerda(id, 1, MotivoPerda.TROCA, null, ESTOQUISTA);
+
+        assertThat(produto.quantidadeEmEstoque()).isEqualTo(4);
+        assertThat(movimentacaoSalva().motivo()).contains(MotivoPerda.TROCA);
+    }
+
+    @Test
     void motivoOutroExigeObservacao() {
         UUID id = produtoComEstoque(5);
 
         assertThatThrownBy(() -> estoqueService.registrarPerda(id, 1, MotivoPerda.OUTRO, "  ", ESTOQUISTA))
-                .hasMessageContaining("observação");
+                .hasMessageContaining("Escreva o motivo");
     }
 
     @Test

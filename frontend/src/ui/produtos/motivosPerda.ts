@@ -4,6 +4,7 @@ export const ROTULO_MOTIVO_PERDA: Record<MotivoPerda, string> = {
   VENCIDO: "Vencido",
   AVARIADO: "Avariado ou quebrado",
   FURTO: "Furto ou extravio",
+  TROCA: "Troca com cliente",
   USO_INTERNO: "Uso interno",
   OUTRO: "Outro",
 };

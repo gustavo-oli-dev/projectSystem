@@ -44,7 +44,7 @@ export interface AlteracaoProduto {
 
 export type TipoMovimentacao = "ENTRADA" | "VENDA" | "DEVOLUCAO" | "PERDA" | "INVENTARIO_SOBRA" | "INVENTARIO_FALTA";
 /** Por que o produto saiu do estoque sem ser vendido. */
-export type MotivoPerda = "VENCIDO" | "AVARIADO" | "FURTO" | "USO_INTERNO" | "OUTRO";
+export type MotivoPerda = "VENCIDO" | "AVARIADO" | "FURTO" | "TROCA" | "USO_INTERNO" | "OUTRO";
 
 export interface MovimentacaoEstoque {
   id: string;

@@ -36,11 +36,6 @@ public class ProdutoService {
     }
 
     @Transactional(readOnly = true)
-    public List<Produto> listarAtivos() {
-        return produtoRepository.findByAtivoTrue();
-    }
-
-    @Transactional(readOnly = true)
     public Produto buscarPorId(UUID id) {
         return produtoRepository.findById(id)
                 .orElseThrow(() -> new EntidadeNaoEncontradaException("Produto não encontrado: " + id));

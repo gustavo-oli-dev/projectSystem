@@ -129,7 +129,7 @@ public class MovimentacaoEstoque {
         }
         String observacaoLimpa = observacao == null || observacao.isBlank() ? null : observacao.trim();
         if (motivo.exigeObservacao() && observacaoLimpa == null) {
-            throw new DomainException("Explique o motivo da perda na observação");
+            throw new DomainException("Escreva o motivo da retirada");
         }
         if (observacaoLimpa != null && observacaoLimpa.length() > TAMANHO_MAXIMO_OBSERVACAO) {
             throw new DomainException("Observação muito longa (máximo de " + TAMANHO_MAXIMO_OBSERVACAO + " caracteres)");
