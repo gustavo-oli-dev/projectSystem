@@ -1,6 +1,17 @@
 import { limparToken } from "../state/authState.js";
 
-const BASE_URL = "/api";
+declare global {
+  interface Window {
+    /**
+     * Endereço do backend quando ele não está na mesma origem do frontend (ex.: backend no
+     * Render, frontend no Netlify). Definido por runtime-config.js, carregado antes deste módulo;
+     * vazio/ausente = mesma origem (caminho relativo), caso do proxy nginx local.
+     */
+    __API_BASE_URL__?: string;
+  }
+}
+
+const BASE_URL = (typeof window !== "undefined" && window.__API_BASE_URL__) || "/api";
 const STATUS_NAO_AUTORIZADO = 401;
 
 export class ErroHttp extends Error {

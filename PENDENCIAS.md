@@ -132,3 +132,9 @@ marcar como feito.
       débito e Pix, mas o "Resultado dos fechamentos" e os totais de faltas/sobras do Painel ainda
       consideram só o dinheiro. Decidir com o usuário se a diferença da maquininha entra no
       resultado ou aparece separada.
+- [ ] **Deploy (D48) — confirmar antes de depender dele além de teste**: o plano `free` do Postgres
+      gerenciado do Render expira depois de um tempo (confira o prazo atual no painel do Render —
+      muda com frequência) e apaga os dados; o plano `free` do serviço web "dorme" sem tráfego e
+      demora uns 30–60s para acordar. Trocar os planos em `render.yaml` por pagos antes de usar o
+      deploy com dados que importam. MinIO (anexos de WhatsApp) não entra no deploy — sem plano
+      gerenciado gratuito equivalente no Render (ver DEPLOY.md).

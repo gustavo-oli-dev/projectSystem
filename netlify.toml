@@ -1,0 +1,10 @@
+# Deploy do frontend no Netlify (D48). O backend fica no Render (ver render.yaml) — o frontend
+# chama a API por uma URL absoluta, montada em build por scripts/gerar-config-runtime.mjs a partir
+# da variável de ambiente API_BASE_URL (configurada no painel do Netlify, ver DEPLOY.md).
+[build]
+  base = "frontend"
+  command = "npm run build && node scripts/gerar-config-runtime.mjs"
+  publish = "."
+
+[build.environment]
+  NODE_VERSION = "22"

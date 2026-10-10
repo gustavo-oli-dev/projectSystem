@@ -62,6 +62,8 @@ services:
       FISCAL_CERTIFICADO_A1_CAMINHO: ${FISCAL_CERTIFICADO_A1_CAMINHO:-}
       FISCAL_REGIME_TRIBUTARIO: ${FISCAL_REGIME_TRIBUTARIO:-}
       FOCUS_NFE_TOKEN: ${FOCUS_NFE_TOKEN:-}
+      # Vazio localmente: o nginx do frontend faz proxy de /api, então é tudo mesma origem.
+      CORS_ORIGENS_PERMITIDAS: ${CORS_ORIGENS_PERMITIDAS:-}
     depends_on:
       - postgres
     ports:

@@ -25,10 +25,11 @@ seguranca:
 
 pagamento:
   mercadopago:
-    token-acesso: ${MERCADOPAGO_ACCESS_TOKEN}
+    # Vazio = integração desligada (ProvedorPagamento só falha quando algo tenta cobrar de verdade).
+    token-acesso: ${MERCADOPAGO_ACCESS_TOKEN:}
     # ID da maquininha Point vinculada à conta (lista em GET /point/integration-api/devices). Vazio = sem maquininha integrada.
     point-dispositivo: ${MERCADOPAGO_POINT_DISPOSITIVO:}
-    segredo-webhook: ${MERCADOPAGO_WEBHOOK_SEGREDO}
+    segredo-webhook: ${MERCADOPAGO_WEBHOOK_SEGREDO:}
 
 whatsapp:
   wapi:
@@ -38,10 +39,11 @@ whatsapp:
     webhook-token: ${WAPI_WEBHOOK_TOKEN:}
 
 armazenamento:
+  # Vazio = sem MinIO de pé; MinioArmazenamentoObjetos é não-fatal ao iniciar (ver a classe).
   minio:
     endpoint: ${MINIO_ENDPOINT:http://minio:9000}
-    access-key: ${MINIO_ROOT_USER}
-    secret-key: ${MINIO_ROOT_PASSWORD}
+    access-key: ${MINIO_ROOT_USER:}
+    secret-key: ${MINIO_ROOT_PASSWORD:}
     bucket: anexos-whatsapp
 
 fiscal:
@@ -57,7 +59,8 @@ acesso-inicial:
   senha: ${ACESSO_INICIAL_SENHA:}
 
 assistente:
-  telefone-dono: ${DONO_WHATSAPP_TELEFONE}
+  # Vazio = nenhum número reconhecido como o dono (o assistente por WhatsApp fica sem uso até configurar).
+  telefone-dono: ${DONO_WHATSAPP_TELEFONE:}
   # Número interno, separado do de clientes (D17): outra instância da W-API, outro webhook.
   whatsapp:
     instance-id: ${WAPI_ASSISTENTE_INSTANCE_ID:}
@@ -74,8 +77,16 @@ atendimento:
     chave-api: ${CLAUDE_API_KEY_ATENDIMENTO:}
     modelo: ${CLAUDE_MODELO_ATENDIMENTO:claude-haiku-4-5-20251001}
 
+# Origens externas liberadas por CORS (ver SecurityConfig) — ex.: o frontend no Netlify quando o
+# backend está em outro domínio (Render). Vazio = CORS fechado (ok para o proxy nginx local, que é
+# mesma origem).
+cors:
+  origens-permitidas: ${CORS_ORIGENS_PERMITIDAS:}
+
 server:
-  port: 8080
+  # Hosts de deploy (ex.: Render) escolhem a porta e a publicam em $PORT; localmente/Docker Compose
+  # ninguém define essa variável, então cai no 8080 de sempre.
+  port: ${PORT:8080}
 
 springdoc:
   swagger-ui:

@@ -1,10 +1,10 @@
 # Contexto da conversa
 
-Resumo do que foi construído e combinado nas conversas com o Claude Code até 06/10/2026, para
+Resumo do que foi construído e combinado nas conversas com o Claude Code até 10/10/2026, para
 continuar o trabalho numa sessão nova (por exemplo, Claude Code na web) sem perder o fio.
 Leia junto com [CLAUDE.md](CLAUDE.md) (regras do código, obrigatórias), [DECISOES.md](DECISOES.md)
-(o porquê de cada escolha, D1–D47 e pendências A1–A3) e [PENDENCIAS.md](PENDENCIAS.md) (o que falta
-testar/ligar).
+(o porquê de cada escolha, D1–D48 e pendências A1–A3), [PENDENCIAS.md](PENDENCIAS.md) (o que falta
+testar/ligar) e [DEPLOY.md](DEPLOY.md) (passo a passo do deploy em Render + Netlify).
 
 ## O projeto
 
@@ -132,6 +132,34 @@ decisão no DECISOES.md (D37–D43); migrations até a V28; 262 testes do backen
   - o Financeiro virou **aba do Painel**;
   - cada aba do Painel ganhou **permissão própria** (D44), escolhida por quem administra os perfis;
   - o **"Novo pedido" saiu**, porque o Caixa faz a venda (D45).
+
+## Sessão de 10/10: deploy em Render (backend) + Netlify (frontend)
+
+Decisão D48. Passo a passo completo em [DEPLOY.md](DEPLOY.md) — leia aquele arquivo antes de
+tentar publicar, este resumo é só o essencial.
+
+- `render.yaml` e `netlify.toml` na raiz do repositório: cada plataforma lê o arquivo sozinha
+  ("New Blueprint" no Render, "Import an existing project" no Netlify) e já propõe os serviços
+  certos, sem precisar configurar nada manualmente além das variáveis marcadas como secretas.
+- Backend e frontend passaram a poder ficar em **domínios diferentes**: o frontend chama a API por
+  URL absoluta quando `window.__API_BASE_URL__` está definido (arquivo `runtime-config.js`, gerado
+  no build do Netlify a partir da variável `API_BASE_URL`); localmente esse arquivo fica vazio e
+  tudo continua como antes (`/api` relativo, proxy do nginx).
+- O backend ganhou CORS configurável (`CORS_ORIGENS_PERMITIDAS`) e um health check público
+  (`GET /api/saude`) para o Render saber que o serviço está de pé.
+- **Achado durante a validação, antes de qualquer deploy real:** ligar o filtro de CORS do Spring
+  Security mesmo com a lista de origens vazia quebrava o login **local** — o navegador manda o
+  cabeçalho `Origin` em todo POST (inclusive mesma origem), e atravessando o proxy do nginx local
+  esse `Origin` não batia com o que o backend via, então a própria aplicação local passou a
+  receber 403 no login. Corrigido: o filtro de CORS só liga quando há de fato uma origem
+  configurada. Testado dos dois lados depois (origem permitida passa com os cabeçalhos certos,
+  origem não permitida recebe 403; e o fluxo local inteiro com o navegador real, de novo).
+- Quatro variáveis que travavam o boot inteiro sem nenhum valor (nem vazio) — Mercado Pago, MinIO,
+  telefone do dono — ganharam padrão vazio, como as outras integrações opcionais já tinham.
+- **Ainda não publicado de verdade**: faltam as contas no Render e no Netlify (são do Gustavo) e
+  seguir o DEPLOY.md passo a passo. MinIO fica de fora deste deploy (sem plano gratuito
+  equivalente no Render); o resto das integrações (Mercado Pago, W-API, Claude, fiscal) sobe
+  desligado até as chaves serem preenchidas, igual já era em local/Docker.
 
 ## O que ainda não está ligado (depende do Gustavo)
 

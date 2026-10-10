@@ -1,0 +1,90 @@
+# Blueprint do Render (D48 — deploy): banco Postgres + backend, um deploy só a partir deste
+# arquivo ("New +" → "Blueprint" no painel do Render, apontando para este repositório).
+#
+# O frontend NÃO entra aqui — vai para o Netlify (ver netlify.toml na raiz e DEPLOY.md). CORS é
+# quem liga os dois (SecurityConfig, variável CORS_ORIGENS_PERMITIDAS abaixo).
+#
+# Nenhum segredo fica neste arquivo: "sync: false" faz o Render pedir o valor no painel na hora de
+# criar o serviço, e nada disso é commitado. JWT_SEGREDO é gerado pelo próprio Render.
+databases:
+  - name: projectsystem-db
+    databaseName: sistema_vendas
+    user: sistema_vendas
+    plan: free
+
+services:
+  - type: web
+    name: projectsystem-backend
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /api/saude
+    envVars:
+      - key: DB_HOST
+        fromDatabase:
+          name: projectsystem-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: projectsystem-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: projectsystem-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: projectsystem-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: projectsystem-db
+          property: password
+      - key: JWT_SEGREDO
+        generateValue: true
+      - key: JWT_EXPIRACAO_MINUTOS
+        value: "60"
+      # Primeiro acesso irrestrito (dono/programador) — ver CLAUDE.md "Segredos": preenchido só no
+      # painel do Render, nunca aqui.
+      - key: ACESSO_INICIAL_NOME
+        value: "Dono"
+      - key: ACESSO_INICIAL_EMAIL
+        sync: false
+      - key: ACESSO_INICIAL_SENHA
+        sync: false
+      # URL do site no Netlify, depois que ele existir (ver DEPLOY.md) — sem isso o navegador
+      # bloqueia as chamadas por CORS. Pode ter mais de uma, separadas por vírgula.
+      - key: CORS_ORIGENS_PERMITIDAS
+        sync: false
+      # Integrações opcionais (D12, D18, D43...): o sistema sobe sem elas, só ficam inativas.
+      # Preencha no painel quando for ligar cada uma.
+      - key: MERCADOPAGO_ACCESS_TOKEN
+        sync: false
+      - key: MERCADOPAGO_WEBHOOK_SEGREDO
+        sync: false
+      - key: MERCADOPAGO_POINT_DISPOSITIVO
+        sync: false
+      - key: WAPI_INSTANCE_ID
+        sync: false
+      - key: WAPI_TOKEN
+        sync: false
+      - key: WAPI_WEBHOOK_TOKEN
+        sync: false
+      - key: WAPI_ASSISTENTE_INSTANCE_ID
+        sync: false
+      - key: WAPI_ASSISTENTE_TOKEN
+        sync: false
+      - key: WAPI_ASSISTENTE_WEBHOOK_TOKEN
+        sync: false
+      - key: DONO_WHATSAPP_TELEFONE
+        sync: false
+      - key: CLAUDE_API_KEY
+        sync: false
+      - key: CLAUDE_API_KEY_ATENDIMENTO
+        sync: false
+      - key: FISCAL_REGIME_TRIBUTARIO
+        sync: false
+      - key: FOCUS_NFE_TOKEN
+        sync: false
