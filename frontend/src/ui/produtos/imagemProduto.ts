@@ -1,3 +1,4 @@
+import { urlDoBackend } from "../../api/httpClient.js";
 import type { Produto } from "../../api/produtosApi.js";
 import { situacaoEstoque } from "./situacaoEstoque.js";
 
@@ -25,7 +26,7 @@ function criarFotoOuQuadro(produto: Produto, classe: string): HTMLElement {
   }
   const imagem = document.createElement("img");
   imagem.className = classe;
-  imagem.src = primeiraFoto.url;
+  imagem.src = urlDoBackend(primeiraFoto.url);
   imagem.alt = produto.nome;
   imagem.loading = "lazy";
   return imagem;

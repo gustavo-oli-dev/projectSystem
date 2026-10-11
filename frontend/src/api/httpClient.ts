@@ -11,7 +11,13 @@ declare global {
   }
 }
 
-const BASE_URL = (typeof window !== "undefined" && window.__API_BASE_URL__) || "/api";
+const ORIGEM_BACKEND = ((typeof window !== "undefined" && window.__API_BASE_URL__) || "").replace(/\/+$/, "");
+const BASE_URL = `${ORIGEM_BACKEND}/api`;
+
+/** Endereços que o backend devolve relativos (ex.: foto de produto) precisam apontar para ele. */
+export function urlDoBackend(caminho: string): string {
+  return `${ORIGEM_BACKEND}${caminho}`;
+}
 const STATUS_NAO_AUTORIZADO = 401;
 
 export class ErroHttp extends Error {

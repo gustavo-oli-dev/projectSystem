@@ -20,7 +20,9 @@ leem direto do GitHub.
    sozinho e propõe dois recursos: o banco `projectsystem-db` e o serviço `projectsystem-backend`.
 3. Antes de confirmar, o Render pede as variáveis marcadas `sync: false` no `render.yaml`. Pelo
    menos preencha:
-   - `ACESSO_INICIAL_EMAIL` e `ACESSO_INICIAL_SENHA` — o primeiro login (irrestrito).
+   - `ACESSO_INICIAL_EMAIL` e `ACESSO_INICIAL_SENHA` — o primeiro login (irrestrito). O usuário
+     é criado **uma vez só**, no primeiro boot: trocar a senha aqui depois não muda a senha de
+     quem já existe (e trocar o e-mail cria um segundo usuário).
    - Deixe `CORS_ORIGENS_PERMITIDAS` em branco por enquanto (volta nisso no Passo 4).
    - As demais (Mercado Pago, W-API, Claude, fiscal) podem ficar em branco: o sistema sobe sem
      elas, essas integrações é que ficam desligadas até você preencher (mesmo comportamento de

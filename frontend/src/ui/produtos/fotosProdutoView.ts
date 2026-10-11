@@ -1,3 +1,4 @@
+import { urlDoBackend } from "../../api/httpClient.js";
 import { enviarFoto, removerFoto, type FotoProduto, type Produto } from "../../api/produtosApi.js";
 import { criarMensagemErro, mostrarErro } from "../camposFormulario.js";
 import { criarSecao } from "./secaoEdicao.js";
@@ -38,7 +39,7 @@ function criarMiniatura(
   produto: Produto, foto: FotoProduto, capa: boolean, erro: HTMLElement, recarregar: () => Promise<void>
 ): HTMLElement {
   const imagem = document.createElement("img");
-  imagem.src = foto.url;
+  imagem.src = urlDoBackend(foto.url);
   imagem.alt = `${produto.nome} — foto`;
   imagem.loading = "lazy";
 
