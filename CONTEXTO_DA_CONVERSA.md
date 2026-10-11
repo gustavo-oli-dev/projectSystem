@@ -3,7 +3,7 @@
 Resumo do que foi construído e combinado nas conversas com o Claude Code até 10/10/2026, para
 continuar o trabalho numa sessão nova (por exemplo, Claude Code na web) sem perder o fio.
 Leia junto com [CLAUDE.md](CLAUDE.md) (regras do código, obrigatórias), [DECISOES.md](DECISOES.md)
-(o porquê de cada escolha, D1–D49 e pendências A1–A3), [PENDENCIAS.md](PENDENCIAS.md) (o que falta
+(o porquê de cada escolha, D1–D50 e pendências A1–A3), [PENDENCIAS.md](PENDENCIAS.md) (o que falta
 testar/ligar) e [DEPLOY.md](DEPLOY.md) (passo a passo do deploy em Render + Netlify).
 
 ## O projeto
@@ -156,10 +156,13 @@ tentar publicar, este resumo é só o essencial.
   origem não permitida recebe 403; e o fluxo local inteiro com o navegador real, de novo).
 - Quatro variáveis que travavam o boot inteiro sem nenhum valor (nem vazio) — Mercado Pago, MinIO,
   telefone do dono — ganharam padrão vazio, como as outras integrações opcionais já tinham.
-- **Ainda não publicado de verdade**: faltam as contas no Render e no Netlify (são do Gustavo) e
-  seguir o DEPLOY.md passo a passo. MinIO fica de fora deste deploy (sem plano gratuito
-  equivalente no Render); o resto das integrações (Mercado Pago, W-API, Claude, fiscal) sobe
-  desligado até as chaves serem preenchidas, igual já era em local/Docker.
+- **Publicado de verdade em 10/10**: backend no Render, frontend no Netlify. No caminho, dois
+  defeitos achados só no deploy real (não reproduziam em local): D49 (MinIO derrubava o boot com
+  credencial vazia) e **D50** (login falhava quando o e-mail digitado tinha letra maiúscula ou
+  espaço diferente do salvo — a busca não normalizava, embora o cadastro sempre normalizasse).
+  MinIO fica de fora deste deploy (sem plano gratuito equivalente no Render); o resto das
+  integrações (Mercado Pago, W-API, Claude, fiscal) sobe desligado até as chaves serem
+  preenchidas, igual já era em local/Docker.
 
 ## O que ainda não está ligado (depende do Gustavo)
 

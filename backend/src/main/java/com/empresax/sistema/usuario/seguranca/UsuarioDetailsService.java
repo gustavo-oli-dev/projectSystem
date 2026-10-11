@@ -27,7 +27,9 @@ public class UsuarioDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) {
-        Usuario usuario = usuarioRepository.findComPermissoesByEmail(email)
+        // E-mail é guardado em minúsculas (Usuario.validarEmail); sem normalizar aqui, digitar com
+        // maiúscula ou espaço faz o login falhar mesmo com a senha certa.
+        Usuario usuario = usuarioRepository.findComPermissoesByEmail(Usuario.normalizarEmail(email))
                 .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado: " + email));
 
         List<SimpleGrantedAuthority> autoridades = usuario.permissoes().stream()

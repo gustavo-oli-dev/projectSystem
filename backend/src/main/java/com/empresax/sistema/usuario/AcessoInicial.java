@@ -45,7 +45,7 @@ public class AcessoInicial implements ApplicationRunner {
         if (email.isBlank() || senha.isBlank()) {
             return;
         }
-        if (usuarioRepository.findByEmail(email.toLowerCase().trim()).isPresent()) {
+        if (usuarioRepository.findByEmail(Usuario.normalizarEmail(email)).isPresent()) {
             return;
         }
         usuarioRepository.save(Usuario.comAcessoIrrestrito(nome, email, passwordEncoder.encode(senha)));

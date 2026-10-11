@@ -29,6 +29,25 @@ class UsuarioTest {
     }
 
     @Test
+    void emailEhSempreGuardadoEmMinusculasESemEspaco() {
+        Usuario usuario = Usuario.comCargo("Maria Silva", "  Maria@EmpresaX.com  ", "hash", ATENDIMENTO);
+
+        assertThat(usuario.email()).isEqualTo("maria@empresax.com");
+    }
+
+    /**
+     * Regressão achada no primeiro deploy (D48/D50): o login buscava o usuário com o e-mail como
+     * foi digitado, sem normalizar — "Admin@X.com" não achava o "admin@x.com" salvo, mesmo com a
+     * senha certa. normalizarEmail() é o que o login (e os outros lugares que buscam por e-mail)
+     * precisam aplicar antes de consultar o banco.
+     */
+    @Test
+    void normalizarEmailDeixaIgualAoQueEhGuardadoNoCadastro() {
+        assertThat(Usuario.normalizarEmail("  Admin@EmpresaX.com  ")).isEqualTo("admin@empresax.com");
+        assertThat(Usuario.normalizarEmail(null)).isEmpty();
+    }
+
+    @Test
     void rejeitaEmailInvalido() {
         assertThatThrownBy(() -> Usuario.comCargo("Maria Silva", "email-invalido", "hash", ATENDIMENTO))
                 .isInstanceOf(DomainException.class);

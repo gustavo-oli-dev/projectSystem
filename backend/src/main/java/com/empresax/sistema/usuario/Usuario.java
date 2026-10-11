@@ -90,10 +90,21 @@ public class Usuario {
     }
 
     private static String validarEmail(String email) {
-        if (email == null || !EMAIL_VALIDO.matcher(email).matches()) {
+        String emailNormalizado = normalizarEmail(email);
+        if (!EMAIL_VALIDO.matcher(emailNormalizado).matches()) {
             throw new DomainException("E-mail do usuário é inválido");
         }
-        return email.toLowerCase().trim();
+        return emailNormalizado;
+    }
+
+    /**
+     * E-mail é sempre guardado em minúsculas e sem espaço nas pontas (ver validarEmail); quem
+     * procura um usuário por e-mail — login, autorização no caixa, acesso inicial — precisa
+     * normalizar a busca do mesmo jeito, senão "Fulano@X.com" com login e "fulano@x.com" salvo não
+     * se encontram.
+     */
+    public static String normalizarEmail(String email) {
+        return email == null ? "" : email.toLowerCase().trim();
     }
 
     private static String validarSenha(String senhaCriptografada) {

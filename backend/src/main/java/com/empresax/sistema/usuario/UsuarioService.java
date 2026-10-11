@@ -37,7 +37,7 @@ public class UsuarioService {
 
     @Transactional(readOnly = true)
     public Usuario buscarComPermissoes(String email) {
-        return usuarioRepository.findComPermissoesByEmail(email)
+        return usuarioRepository.findComPermissoesByEmail(Usuario.normalizarEmail(email))
                 .orElseThrow(() -> new EntidadeNaoEncontradaException("Usuário não encontrado: " + email));
     }
 
@@ -47,7 +47,7 @@ public class UsuarioService {
      */
     @Transactional(readOnly = true)
     public Usuario conferirCredenciais(String email, String senha) {
-        return usuarioRepository.findComPermissoesByEmail(email == null ? "" : email.trim())
+        return usuarioRepository.findComPermissoesByEmail(Usuario.normalizarEmail(email))
                 .filter(Usuario::ativo)
                 .filter(usuario -> senha != null && passwordEncoder.matches(senha, usuario.senhaCriptografada()))
                 .orElseThrow(() -> new DomainException("E-mail ou senha de quem autoriza estão incorretos"));
