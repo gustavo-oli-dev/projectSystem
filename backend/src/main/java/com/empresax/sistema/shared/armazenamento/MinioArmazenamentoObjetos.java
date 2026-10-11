@@ -35,17 +35,28 @@ public class MinioArmazenamentoObjetos implements ArmazenamentoObjetos {
     private final MinioClient cliente;
     private final String bucket;
 
+    /** Só para quando MINIO_ROOT_USER/PASSWORD não foram preenchidos (ver o construtor abaixo). */
+    private static final String CREDENCIAL_PLACEHOLDER = "minio-nao-configurado";
+
     public MinioArmazenamentoObjetos(
             @Value("${armazenamento.minio.endpoint}") String endpoint,
             @Value("${armazenamento.minio.access-key}") String accessKey,
             @Value("${armazenamento.minio.secret-key}") String secretKey,
             @Value("${armazenamento.minio.bucket}") String bucket
     ) {
+        // O SDK do MinIO recusa credencial vazia já aqui (IllegalArgumentException), antes de
+        // qualquer tentativa de conexão — e `${VAR:padrão}` do Spring só vale quando a variável
+        // não existe, não quando ela existe vazia (é assim que um host de deploy grava um campo
+        // deixado em branco no formulário). Sem este guard, a aplicação inteira não sobe.
         this.cliente = MinioClient.builder()
                 .endpoint(endpoint)
-                .credentials(accessKey, secretKey)
+                .credentials(naoVazio(accessKey), naoVazio(secretKey))
                 .build();
         this.bucket = bucket;
+    }
+
+    private static String naoVazio(String valor) {
+        return valor == null || valor.isBlank() ? CREDENCIAL_PLACEHOLDER : valor;
     }
 
     @PostConstruct

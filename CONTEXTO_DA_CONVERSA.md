@@ -3,7 +3,7 @@
 Resumo do que foi construído e combinado nas conversas com o Claude Code até 10/10/2026, para
 continuar o trabalho numa sessão nova (por exemplo, Claude Code na web) sem perder o fio.
 Leia junto com [CLAUDE.md](CLAUDE.md) (regras do código, obrigatórias), [DECISOES.md](DECISOES.md)
-(o porquê de cada escolha, D1–D48 e pendências A1–A3), [PENDENCIAS.md](PENDENCIAS.md) (o que falta
+(o porquê de cada escolha, D1–D49 e pendências A1–A3), [PENDENCIAS.md](PENDENCIAS.md) (o que falta
 testar/ligar) e [DEPLOY.md](DEPLOY.md) (passo a passo do deploy em Render + Netlify).
 
 ## O projeto
