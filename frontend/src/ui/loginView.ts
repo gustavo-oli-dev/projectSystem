@@ -53,6 +53,8 @@ async function tratarEnvio(
 ): Promise<void> {
   mensagemErro.textContent = "";
   botaoEnviar.disabled = true;
+  const textoOriginal = botaoEnviar.textContent;
+  botaoEnviar.textContent = "Entrando...";
 
   try {
     const token = await autenticar({ email: campoEmail.value, senha: campoSenha.value });
@@ -61,6 +63,7 @@ async function tratarEnvio(
     mensagemErro.textContent = mensagemParaErro(erro);
   } finally {
     botaoEnviar.disabled = false;
+    botaoEnviar.textContent = textoOriginal;
   }
 }
 
