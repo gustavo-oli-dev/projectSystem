@@ -6,6 +6,11 @@ import { cartaoEstado } from "../estadoCard.js";
 import { formatarMoeda } from "../formatarMoeda.js";
 import { celula, celulaSelo, criarLinha, criarTabela, formatarDataCurta } from "../tabela.js";
 
+/** Quantos pedidos a tela traz por vez (o mesmo passo do "Ver pedidos mais antigos"). */
+const PEDIDOS_POR_VEZ = 50;
+/** Teto do backend: acima disso, o histórico fica nos relatórios do Painel. */
+const LIMITE_MAXIMO = 1000;
+
 const ROTULOS_STATUS: Record<string, string> = {
   ABERTO: "Aberto",
   AGUARDANDO_EMISSAO: "Aguardando emissão",
@@ -19,15 +24,45 @@ export async function montarListaPedidos(container: HTMLElement): Promise<void> 
 
   const areaLista = document.createElement("div");
   container.replaceChildren(titulo, areaLista);
-  areaLista.append(elementoCarregando("Carregando pedidos..."));
+  await carregar(areaLista, PEDIDOS_POR_VEZ, consumirPedidoEmDestaque());
+}
 
+async function carregar(areaLista: HTMLElement, limite: number, pedidoEmDestaque: string | null): Promise<void> {
+  areaLista.replaceChildren(elementoCarregando("Carregando pedidos..."));
   try {
-    const pedidos = await listarPedidos();
-    areaLista.replaceChildren(renderizar(pedidos, consumirPedidoEmDestaque()));
+    const pedidos = await listarPedidos(limite);
+    areaLista.replaceChildren(renderizar(pedidos, pedidoEmDestaque), criarRodapeLista(areaLista, pedidos.length, limite));
     rolarAteDestaque(areaLista);
   } catch {
     areaLista.replaceChildren(cartaoEstado("Não foi possível carregar os pedidos.", "erro"));
   }
+}
+
+/** Avisa que só os mais recentes estão na tela e oferece trazer mais. */
+function criarRodapeLista(areaLista: HTMLElement, quantidade: number, limite: number): HTMLElement {
+  const rodape = document.createElement("div");
+  rodape.className = "rodape-lista";
+  if (quantidade < limite) {
+    return rodape;
+  }
+
+  const aviso = document.createElement("p");
+  aviso.className = "rodape-lista__aviso";
+  rodape.append(aviso);
+
+  if (limite >= LIMITE_MAXIMO) {
+    aviso.textContent = `Mostrando os ${quantidade} pedidos mais recentes. Para vendas mais antigas, use os relatórios do Painel.`;
+    return rodape;
+  }
+
+  aviso.textContent = `Mostrando os ${quantidade} pedidos mais recentes.`;
+  const verMais = document.createElement("button");
+  verMais.type = "button";
+  verMais.className = "btn btn-ghost";
+  verMais.textContent = "Ver pedidos mais antigos";
+  verMais.addEventListener("click", () => void carregar(areaLista, Math.min(limite + PEDIDOS_POR_VEZ, LIMITE_MAXIMO), null));
+  rodape.append(verMais);
+  return rodape;
 }
 
 function renderizar(pedidos: Pedido[], pedidoEmDestaque: string | null): HTMLElement {

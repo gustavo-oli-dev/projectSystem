@@ -21,6 +21,8 @@
         <java.version>21</java.version>
         <springdoc.version>2.6.0</springdoc.version>
         <jjwt.version>0.12.6</jjwt.version>
+        <!-- A 1.19.x que o Spring Boot 3.3 traz usa a API 1.32 do Docker, recusada pelo Docker Engine 29+. -->
+        <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
 
     <dependencies>

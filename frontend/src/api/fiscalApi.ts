@@ -1,4 +1,5 @@
 import { httpClient } from "./httpClient.js";
+import type { Pedido } from "./pedidosApi.js";
 
 export type TipoDocumentoFiscal = "NFE" | "NFSE" | "NFCE";
 
@@ -20,6 +21,11 @@ export interface DocumentoFiscal {
   atualizadoEm: string;
 }
 
+export interface QuantidadeDocumentos {
+  status: StatusDocumentoFiscal;
+  quantidade: number;
+}
+
 export interface ConfiguracaoFiscal {
   ambiente: string;
   certificadoA1Configurado: boolean;
@@ -28,8 +34,18 @@ export interface ConfiguracaoFiscal {
   emissaoHabilitada: boolean;
 }
 
-export function listarDocumentosFiscais(): Promise<DocumentoFiscal[]> {
-  return httpClient.get<DocumentoFiscal[]>("/documentos-fiscais");
+/** Os mais recentes primeiro; o total por status vem de contarDocumentosFiscais. */
+export function listarDocumentosFiscais(limite: number): Promise<DocumentoFiscal[]> {
+  return httpClient.get<DocumentoFiscal[]>(`/documentos-fiscais?limite=${limite}`);
+}
+
+export function contarDocumentosFiscais(): Promise<QuantidadeDocumentos[]> {
+  return httpClient.get<QuantidadeDocumentos[]>("/documentos-fiscais/resumo");
+}
+
+/** Pedidos confirmados que ainda não tiveram os documentos gerados. */
+export function listarPedidosAguardandoDocumentos(limite: number): Promise<Pedido[]> {
+  return httpClient.get<Pedido[]>(`/fiscal/pedidos-aguardando?limite=${limite}`);
 }
 
 export function listarDocumentosDoPedido(pedidoId: string): Promise<DocumentoFiscal[]> {

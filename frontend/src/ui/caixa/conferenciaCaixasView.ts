@@ -20,6 +20,9 @@ const DATA_HORA = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeSty
  * Conferência de caixa (gerente/financeiro): lista dos caixas com a diferença de cada um e o
  * fundo de troco padrão com que todo caixa abre.
  */
+/** Cerca de um mês de caixas por vez. */
+const CAIXAS_POR_VEZ = 30;
+
 export function montarConferenciaCaixas(container: HTMLElement): void {
   const titulo = document.createElement("h1");
   titulo.textContent = "Conferência de caixa";
@@ -104,14 +107,35 @@ async function carregarLista(area: HTMLElement): Promise<void> {
       area.replaceChildren(cartaoEstado("Nenhum caixa foi aberto ainda."));
       return;
     }
-    area.replaceChildren(criarTabela(
-      ["Caixa", "Operador", "Abertura", "Fechamento", "Fundo", "Vendas em dinheiro", "Esperado", "Contado", "Resultado", ""],
-      caixas.map((caixa) => criarLinhaCaixa(caixa, () => void mostrarDetalhe(area, caixa.id))),
-      "caixa(s)"
-    ));
+    mostrarCaixas(area, caixas, CAIXAS_POR_VEZ);
   } catch {
     area.replaceChildren(cartaoEstado("Não foi possível carregar os caixas.", "erro"));
   }
+}
+
+/** Mostra os mais recentes primeiro; o restante (já carregado) aparece pelo botão. */
+function mostrarCaixas(area: HTMLElement, caixas: readonly ResumoCaixa[], quantidade: number): void {
+  const tabela = criarTabela(
+    ["Caixa", "Operador", "Abertura", "Fechamento", "Fundo", "Vendas em dinheiro", "Esperado", "Contado", "Resultado", ""],
+    caixas.slice(0, quantidade).map((caixa) => criarLinhaCaixa(caixa, () => void mostrarDetalhe(area, caixa.id))),
+    "caixa(s)"
+  );
+  if (quantidade >= caixas.length) {
+    area.replaceChildren(tabela);
+    return;
+  }
+  const aviso = document.createElement("p");
+  aviso.className = "rodape-lista__aviso";
+  aviso.textContent = `Mostrando os ${quantidade} caixas mais recentes de ${caixas.length}.`;
+  const verMais = document.createElement("button");
+  verMais.type = "button";
+  verMais.className = "btn btn-ghost";
+  verMais.textContent = "Ver caixas mais antigos";
+  verMais.addEventListener("click", () => mostrarCaixas(area, caixas, quantidade + CAIXAS_POR_VEZ));
+  const rodape = document.createElement("div");
+  rodape.className = "rodape-lista";
+  rodape.append(aviso, verMais);
+  area.replaceChildren(tabela, rodape);
 }
 
 function criarLinhaCaixa(caixa: ResumoCaixa, aoAbrir: () => void): HTMLTableRowElement {

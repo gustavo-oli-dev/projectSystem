@@ -43,8 +43,9 @@ export function confirmarPedido(id: string): Promise<Pedido> {
   return httpClient.post<Pedido>(`/pedidos/${id}/confirmar`, undefined);
 }
 
-export function listarPedidos(): Promise<Pedido[]> {
-  return httpClient.get<Pedido[]>("/pedidos");
+/** Os mais recentes primeiro, até o limite pedido (o backend aceita até 1000). */
+export function listarPedidos(limite: number): Promise<Pedido[]> {
+  return httpClient.get<Pedido[]>(`/pedidos?limite=${limite}`);
 }
 
 export function buscarPedido(id: string): Promise<Pedido> {

@@ -2,7 +2,7 @@ package com.empresax.sistema.atendimento.bot;
 
 import com.empresax.sistema.atendimento.conversa.Conversa;
 import com.empresax.sistema.ia.ConversaComFerramentas;
-import com.empresax.sistema.pedido.PedidoRepository;
+import com.empresax.sistema.pedido.PedidoService;
 import com.empresax.sistema.produto.Produto;
 import com.empresax.sistema.produto.ProdutoRepository;
 import com.empresax.sistema.produto.foto.FotoProduto;
@@ -65,20 +65,23 @@ public class FerramentasAtendimento {
             "CANCELADO", "cancelado"
     );
 
-    private final PedidoRepository pedidoRepository;
+    /** Quantos pedidos recentes o bot informa ao cliente. */
+    private static final int PEDIDOS_RECENTES_DO_CLIENTE = 10;
+
+    private final PedidoService pedidoService;
     private final ProdutoRepository produtoRepository;
     private final ServicoRepository servicoRepository;
     private final ConversaComFerramentas conversaComFerramentas;
     private final FotoProdutoService fotoProdutoService;
 
     public FerramentasAtendimento(
-            PedidoRepository pedidoRepository,
+            PedidoService pedidoService,
             ProdutoRepository produtoRepository,
             ServicoRepository servicoRepository,
             ConversaComFerramentas conversaComFerramentas,
             FotoProdutoService fotoProdutoService
     ) {
-        this.pedidoRepository = pedidoRepository;
+        this.pedidoService = pedidoService;
         this.produtoRepository = produtoRepository;
         this.servicoRepository = servicoRepository;
         this.conversaComFerramentas = conversaComFerramentas;
@@ -102,7 +105,7 @@ public class FerramentasAtendimento {
             return conversaComFerramentas.paraJson(Map.of(
                     "erro", "Cliente não identificado por este número. Ofereça transferir para um atendente."));
         }
-        List<Map<String, String>> pedidos = pedidoRepository.findTop10ByClienteIdOrderByCriadoEmDesc(conversa.clienteId())
+        List<Map<String, String>> pedidos = pedidoService.listarUltimosDoCliente(conversa.clienteId(), PEDIDOS_RECENTES_DO_CLIENTE)
                 .stream()
                 .map(pedido -> Map.of(
                         "codigo", pedido.id().toString().substring(0, 8),

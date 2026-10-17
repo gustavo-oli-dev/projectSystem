@@ -10,12 +10,16 @@ import com.empresax.sistema.venda.CancelamentoVendaService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
@@ -25,8 +29,12 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
+@Validated
 @RequestMapping("/api/pedidos")
 public class PedidoController {
+
+    private static final String LIMITE_PADRAO = "200";
+    private static final int LIMITE_MAXIMO = 1000;
 
     private final PedidoService pedidoService;
     private final CancelamentoVendaService cancelamentoVendaService;
@@ -51,10 +59,15 @@ public class PedidoController {
         return ResponseEntity.created(URI.create("/api/pedidos/" + pedido.id())).body(resposta);
     }
 
+    /** Os mais recentes primeiro; a tela pede um limite maior quando a pessoa quer ver os mais antigos. */
     @PreAuthorize(RegraAcesso.PEDIDOS_VER)
     @GetMapping
-    public List<PedidoResponse> listar() {
-        List<Pedido> pedidos = pedidoService.listarTodos();
+    public List<PedidoResponse> listar(
+            @RequestParam(defaultValue = LIMITE_PADRAO)
+            @Min(value = 1, message = "O limite deve ser de pelo menos 1 pedido")
+            @Max(value = LIMITE_MAXIMO, message = "O limite máximo é de 1000 pedidos por vez") int limite
+    ) {
+        List<Pedido> pedidos = pedidoService.listarMaisRecentes(limite);
         Map<UUID, String> nomes = clienteService.nomesPorId(pedidos.stream()
                 .flatMap(pedido -> pedido.clienteId().stream()).collect(Collectors.toSet()));
         return pedidos.stream()

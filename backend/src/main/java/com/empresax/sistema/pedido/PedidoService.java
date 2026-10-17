@@ -14,9 +14,11 @@ import com.empresax.sistema.servico.Servico;
 import com.empresax.sistema.servico.ServicoService;
 import com.empresax.sistema.shared.dinheiro.Dinheiro;
 import com.empresax.sistema.shared.documento.Cpf;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -24,6 +26,9 @@ import java.util.UUID;
 
 @Service
 public class PedidoService {
+
+    /** Quantas vendas o caixa mostra em "Últimas vendas". */
+    private static final int ULTIMAS_DO_BALCAO = 50;
 
     private final PedidoRepository pedidoRepository;
     private final ClienteService clienteService;
@@ -148,13 +153,27 @@ public class PedidoService {
     }
 
     @Transactional(readOnly = true)
-    public List<Pedido> listarTodos() {
-        return pedidoRepository.findAllByOrderByCriadoEmDesc();
+    public List<Pedido> listarMaisRecentes(int limite) {
+        return buscarComItens(pedidoRepository.findIdsMaisRecentes(PageRequest.of(0, limite)));
     }
 
     @Transactional(readOnly = true)
     public List<Pedido> listarUltimasDoBalcao() {
-        return pedidoRepository.findTop50ByCanalOrderByCriadoEmDesc(CanalVenda.BALCAO);
+        return buscarComItens(pedidoRepository.findIdsMaisRecentesDoCanal(CanalVenda.BALCAO, PageRequest.of(0, ULTIMAS_DO_BALCAO)));
+    }
+
+    @Transactional(readOnly = true)
+    public List<Pedido> listarUltimosDoCliente(UUID clienteId, int limite) {
+        return buscarComItens(pedidoRepository.findIdsMaisRecentesDoCliente(clienteId, PageRequest.of(0, limite)));
+    }
+
+    /** Pedidos com itens, do mais recente para o mais antigo. */
+    @Transactional(readOnly = true)
+    public List<Pedido> buscarComItens(Collection<UUID> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        return pedidoRepository.findComItensByIdInOrderByCriadoEmDesc(ids);
     }
 
     @Transactional(readOnly = true)

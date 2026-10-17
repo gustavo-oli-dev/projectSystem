@@ -1,13 +1,16 @@
 import {
   consultarConfiguracaoFiscal,
+  contarDocumentosFiscais,
   gerarDocumentosFiscais,
   listarDocumentosFiscais,
+  listarPedidosAguardandoDocumentos,
   ROTULO_TIPO_DOCUMENTO,
   type ConfiguracaoFiscal,
   type DocumentoFiscal,
+  type QuantidadeDocumentos,
   type StatusDocumentoFiscal,
 } from "../../api/fiscalApi.js";
-import { listarPedidos, type Pedido } from "../../api/pedidosApi.js";
+import type { Pedido } from "../../api/pedidosApi.js";
 import { possui } from "../../state/sessaoState.js";
 import { elementoCarregando } from "../estadoCarregamento.js";
 import { cartaoEstado } from "../estadoCard.js";
@@ -28,6 +31,8 @@ const ROTULO_STATUS: Record<StatusDocumentoFiscal, string> = {
   CANCELADO: "Cancelado",
 };
 const STATUS_EXIBIDOS: readonly StatusDocumentoFiscal[] = ["PENDENTE", "AUTORIZADO", "REJEITADO", "CANCELADO"];
+/** As listas mostram só os mais recentes; os totais por status contam todos. */
+const ITENS_POR_LISTA = 50;
 
 export async function montarFiscal(container: HTMLElement): Promise<void> {
   const titulo = document.createElement("h1");
@@ -47,12 +52,13 @@ async function carregar(conteudo: HTMLElement): Promise<void> {
   conteudo.replaceChildren(elementoCarregando("Carregando dados fiscais..."));
 
   try {
-    const [configuracao, documentos, pedidos] = await Promise.all([
+    const [configuracao, contagens, documentos, pedidosAguardando] = await Promise.all([
       consultarConfiguracaoFiscal(),
-      listarDocumentosFiscais(),
-      possui("PEDIDOS_VER") ? listarPedidos() : Promise.resolve<Pedido[]>([]),
+      contarDocumentosFiscais(),
+      listarDocumentosFiscais(ITENS_POR_LISTA),
+      listarPedidosAguardandoDocumentos(ITENS_POR_LISTA),
     ]);
-    renderizar(conteudo, configuracao, documentos, pedidos);
+    renderizar(conteudo, configuracao, contagens, documentos, pedidosAguardando);
   } catch {
     conteudo.replaceChildren(cartaoEstado("Não foi possível carregar os dados fiscais.", "erro"));
   }
@@ -61,19 +67,15 @@ async function carregar(conteudo: HTMLElement): Promise<void> {
 function renderizar(
   conteudo: HTMLElement,
   configuracao: ConfiguracaoFiscal,
+  contagens: QuantidadeDocumentos[],
   documentos: DocumentoFiscal[],
-  pedidos: Pedido[]
+  pedidosAguardando: Pedido[]
 ): void {
-  const pedidosComDocumento = new Set(documentos.map((documento) => documento.pedidoId));
-  const pedidosAguardando = pedidos.filter(
-    (pedido) => pedido.status === "AGUARDANDO_EMISSAO" && !pedidosComDocumento.has(pedido.id)
-  );
-
   conteudo.replaceChildren(
     criarPainelConfiguracao(configuracao),
-    criarGradeStatus(documentos),
+    criarGradeStatus(contagens),
     criarSecao("Pedidos aguardando geração de documentos", criarTabelaAguardando(pedidosAguardando, conteudo)),
-    criarSecao("Documentos fiscais", criarTabelaDocumentos(documentos))
+    criarSecao("Documentos fiscais mais recentes", criarTabelaDocumentos(documentos))
   );
 }
 
@@ -128,12 +130,12 @@ function criarRequisito(rotulo: string, atendido: boolean): HTMLLIElement {
   return item;
 }
 
-function criarGradeStatus(documentos: DocumentoFiscal[]): HTMLElement {
+function criarGradeStatus(contagens: QuantidadeDocumentos[]): HTMLElement {
   const grade = document.createElement("div");
   grade.className = "grade-widgets grade-widgets--compacta";
 
   for (const status of STATUS_EXIBIDOS) {
-    const quantidade = documentos.filter((documento) => documento.status === status).length;
+    const quantidade = contagens.find((contagem) => contagem.status === status)?.quantidade ?? 0;
 
     const card = document.createElement("div");
     card.className = "widget widget--compacto";
@@ -144,7 +146,7 @@ function criarGradeStatus(documentos: DocumentoFiscal[]): HTMLElement {
 
     const valor = document.createElement("p");
     valor.className = "widget__valor";
-    valor.textContent = String(quantidade);
+    valor.textContent = quantidade.toLocaleString("pt-BR");
 
     card.append(rotulo, valor);
     grade.append(card);

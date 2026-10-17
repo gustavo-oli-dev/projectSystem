@@ -4,6 +4,8 @@ import com.empresax.sistema.common.domain.AcessoNegadoException;
 import com.empresax.sistema.common.domain.DomainException;
 import com.empresax.sistema.common.domain.EntidadeNaoEncontradaException;
 import com.empresax.sistema.common.domain.IntegracaoExternaException;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -54,6 +56,16 @@ public class GlobalExceptionHandler {
                 .map(FieldError::getDefaultMessage)
                 .reduce((primeira, segunda) -> primeira + "; " + segunda)
                 .orElse("Dados inválidos");
+        return construirResposta(HttpStatus.BAD_REQUEST, mensagens);
+    }
+
+    /** Parâmetro de URL fora da regra (@Min, @Max, @Size num @RequestParam): erro de quem chamou. */
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiErrorResponse> tratarParametroForaDaRegra(ConstraintViolationException excecao) {
+        String mensagens = excecao.getConstraintViolations().stream()
+                .map(ConstraintViolation::getMessage)
+                .reduce((primeira, segunda) -> primeira + "; " + segunda)
+                .orElse("Parâmetro inválido");
         return construirResposta(HttpStatus.BAD_REQUEST, mensagens);
     }
 

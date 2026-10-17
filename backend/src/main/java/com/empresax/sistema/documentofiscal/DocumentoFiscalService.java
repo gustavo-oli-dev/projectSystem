@@ -4,6 +4,7 @@ import com.empresax.sistema.common.domain.DomainException;
 import com.empresax.sistema.pedido.Pedido;
 import com.empresax.sistema.pedido.PedidoService;
 import com.empresax.sistema.pedido.StatusPedido;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,8 +29,20 @@ public class DocumentoFiscalService {
     }
 
     @Transactional(readOnly = true)
-    public List<DocumentoFiscal> listarTodos() {
-        return documentoFiscalRepository.findAll();
+    public List<DocumentoFiscal> listarMaisRecentes(int limite) {
+        return documentoFiscalRepository.findByOrderByAtualizadoEmDesc(PageRequest.of(0, limite));
+    }
+
+    @Transactional(readOnly = true)
+    public List<QuantidadePorStatus> contarPorStatus() {
+        return documentoFiscalRepository.contarPorStatus();
+    }
+
+    /** Pedidos confirmados que ainda não tiveram os documentos fiscais gerados, mais recentes primeiro. */
+    @Transactional(readOnly = true)
+    public List<Pedido> listarPedidosSemDocumento(int limite) {
+        return pedidoService.buscarComItens(documentoFiscalRepository.findIdsDePedidosSemDocumento(
+                StatusPedido.AGUARDANDO_EMISSAO, PageRequest.of(0, limite)));
     }
 
     @Transactional(readOnly = true)

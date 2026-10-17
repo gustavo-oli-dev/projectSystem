@@ -2443,6 +2443,22 @@ form.formulario-produto > .formulario-produto__fotos {
   }
 }
 
+/* Fim de lista longa: aviso de quantos itens estão na tela e botão para trazer mais. */
+.rodape-lista {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.rodape-lista__aviso {
+  margin: 0;
+  color: var(--cor-texto-suave);
+  font-size: 0.875rem;
+}
+
 /* Tabela larga rola dentro do próprio cartão, nunca empurra a página para o lado. */
 .bloco-tabela__rolagem {
   overflow-x: auto;
@@ -4873,9 +4889,10 @@ form.formulario-produto > .formulario-produto__fotos {
     padding: 1rem;
   }
 
+  /* Valor em reais numa linha só: a fonte acompanha a largura da tela. */
   .indicador__valor {
-    font-size: 1.5rem;
-    overflow-wrap: anywhere;
+    font-size: clamp(1.125rem, 5vw, 1.5rem);
+    white-space: nowrap;
   }
 
   .indicador__variacao,
