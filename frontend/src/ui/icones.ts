@@ -94,6 +94,8 @@ function formasPara(nome: string): SVGElement[] {
       return [retangulo(2, 6, 20, 12, 2), circulo(12, 12, 3), linha(5, 9, 7, 9), linha(17, 15, 19, 15)];
     case "menu":
       return [retangulo(3, 4, 18, 16, 2.5), linha(9, 4, 9, 20)];
+    case "menu-celular":
+      return [linha(4, 7, 20, 7), linha(4, 12, 20, 12), linha(4, 17, 20, 17)];
     case "fechar":
       return [linha(6, 6, 18, 18), linha(18, 6, 6, 18)];
     default:

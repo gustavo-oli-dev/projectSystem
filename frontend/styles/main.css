@@ -1916,32 +1916,6 @@ form p[role="alert"] {
 }
 
 @media (max-width: 768px) {
-  .app-shell {
-    flex-direction: column;
-  }
-
-  .sidebar {
-    width: 100%;
-    height: auto;
-    position: static;
-    padding: 0.75rem;
-  }
-
-  .sidebar__nav {
-    flex-direction: row;
-    overflow-x: auto;
-  }
-
-  .sidebar__grupo,
-  .sidebar__rodape,
-  .sidebar__link span {
-    display: none;
-  }
-
-  .sidebar__link {
-    width: auto;
-  }
-
   .topbar {
     padding: 0 1rem;
   }
@@ -2175,16 +2149,6 @@ form p[role="alert"] {
   font-weight: 700;
 }
 
-@media (max-width: 1024px) {
-  .pdv {
-    grid-template-columns: 1fr;
-  }
-
-  .pdv__pagamento {
-    position: static;
-  }
-}
-
 /* Cadastro de produto: dados à esquerda, fotos à direita (ocupa a largura útil da tela). */
 .formulario-produto {
   max-width: none;
@@ -2406,38 +2370,41 @@ form.formulario-produto > .formulario-produto__fotos {
   background: var(--cor-superficie-suave);
 }
 
-.app-shell--recolhida .sidebar {
-  width: 4.25rem;
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
-}
+/* Recolher só existe no desktop; no celular a barra vira gaveta (ver "Celular" no fim do arquivo). */
+@media (min-width: 769px) {
+  .app-shell--recolhida .sidebar {
+    width: 4.25rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
 
-.app-shell--recolhida .sidebar__marca span:not(.sidebar__logo),
-.app-shell--recolhida .sidebar__grupo,
-.app-shell--recolhida .sidebar__link span,
-.app-shell--recolhida .sidebar__usuario {
-  display: none;
-}
+  .app-shell--recolhida .sidebar__marca span:not(.sidebar__logo),
+  .app-shell--recolhida .sidebar__grupo,
+  .app-shell--recolhida .sidebar__link span,
+  .app-shell--recolhida .sidebar__usuario {
+    display: none;
+  }
 
-.app-shell--recolhida .sidebar__marca {
-  justify-content: center;
-  padding-left: 0;
-  padding-right: 0;
-}
+  .app-shell--recolhida .sidebar__marca {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
 
-.app-shell--recolhida .sidebar__link {
-  justify-content: center;
-  padding: 0.625rem 0;
-}
+  .app-shell--recolhida .sidebar__link {
+    justify-content: center;
+    padding: 0.625rem 0;
+  }
 
-.app-shell--recolhida .sidebar__nav {
-  gap: 0.25rem;
-}
+  .app-shell--recolhida .sidebar__nav {
+    gap: 0.25rem;
+  }
 
-.app-shell--recolhida .sidebar__rodape {
-  padding-left: 0;
-  padding-right: 0;
-  text-align: center;
+  .app-shell--recolhida .sidebar__rodape {
+    padding-left: 0;
+    padding-right: 0;
+    text-align: center;
+  }
 }
 
 /* Gaveta do assistente fechada não ocupa espaço (evita rolagem lateral fantasma). */
@@ -2883,10 +2850,19 @@ form.formulario-produto > .formulario-produto__fotos {
   border-radius: 0;
 }
 
+/* Tela estreita: itens em cima, pagamento embaixo. Precisa vir depois do "layout final" acima. */
 @media (max-width: 1024px) {
+  .pdv {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .pdv,
   .pdv__pagamento {
     min-height: 0;
+  }
+
+  .pdv__pagamento {
+    position: static;
   }
 }
 
@@ -4603,5 +4579,257 @@ form.formulario-produto > .formulario-produto__fotos {
 @media (max-width: 760px) {
   .entrada-leitor__campos {
     grid-template-columns: 1fr;
+  }
+}
+
+/* =========================================================================
+   Celular: menu em gaveta, listas em cartões, alvos de toque e campos sem zoom
+   ========================================================================= */
+.menu-celular__fundo,
+.botao-recolher__icone-celular {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .botao-recolher__icone-desktop {
+    display: none;
+  }
+
+  .botao-recolher__icone-celular {
+    display: block;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 30;
+    width: min(18rem, 85vw);
+    height: 100dvh;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform 0.2s ease, visibility 0.2s;
+  }
+
+  .app-shell--menu-aberto .sidebar {
+    transform: none;
+    visibility: visible;
+  }
+
+  .menu-celular__fundo {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    background: rgba(18, 26, 44, 0.55);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s;
+  }
+
+  .app-shell--menu-aberto .menu-celular__fundo {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  body:has(.app-shell--menu-aberto) {
+    overflow: hidden;
+  }
+
+  .sidebar__link {
+    min-height: 2.75rem;
+  }
+
+  .botao-sair {
+    width: 100%;
+    min-height: 2.75rem;
+    text-align: left;
+  }
+
+  .topbar {
+    height: 3.5rem;
+  }
+
+  .botao-recolher {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  /* Abaixo de 16px o Safari do iPhone dá zoom ao tocar no campo; !important vence as regras
+     específicas de cada tela, que reduzem a fonte dos campos no desktop. */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+    min-height: 2.75rem;
+    max-width: 100%;
+  }
+
+  /* Aparência nativa do WebKit ignora altura/padding e deixa o texto da opção vazar da caixa. */
+  select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 2.25rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%234f5869' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.875rem center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-height: 0;
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .campo-formulario {
+    min-width: 0;
+  }
+
+  .btn,
+  .btn-pequeno,
+  .filtro-periodo__atalho,
+  .abas__item,
+  form button[type="submit"] {
+    min-height: 2.75rem;
+  }
+
+  /* Rótulo longo quebra dentro do botão em vez de empurrar a tela para o lado. */
+  .btn {
+    white-space: normal;
+    text-align: center;
+  }
+
+  .caixa-painel {
+    padding: 1.25rem;
+  }
+
+  .caixa-painel__acoes {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .abas {
+    gap: 1.25rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .abas::-webkit-scrollbar {
+    display: none;
+  }
+
+  .abas__item {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .filtro-periodo__datas {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .filtro-periodo__datas input {
+    flex: 1 1 8rem;
+  }
+
+  .precos__campos,
+  .retirada__campos,
+  .embalagens__campos,
+  .tributacao__campos,
+  .entrada-leitor__campos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .wizard-card {
+    padding: 1.5rem 1.25rem;
+  }
+}
+
+/* Lista vira cartões: cada linha é um bloco e cada célula mostra o nome da coluna (data-rotulo,
+   preenchido por criarTabela). */
+@media (max-width: 640px) {
+  .bloco-tabela__rolagem {
+    overflow-x: visible;
+  }
+
+  .tabela,
+  .tabela tbody,
+  .tabela tr,
+  .tabela td {
+    display: block;
+    width: 100%;
+  }
+
+  .tabela thead {
+    display: none;
+  }
+
+  .tabela tr[hidden] {
+    display: none;
+  }
+
+  .tabela tbody tr {
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--cor-borda);
+  }
+
+  .tabela tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .tabela td,
+  .tabela tbody tr:last-child td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.3125rem 0;
+    border-bottom: none;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  .tabela td[data-rotulo]::before {
+    content: attr(data-rotulo);
+    flex-shrink: 0;
+    max-width: 45%;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--cor-texto-suave);
+  }
+
+  /* Primeira coluna (nome do item) é o título do cartão. */
+  .tabela td[data-rotulo]:first-child {
+    justify-content: flex-start;
+    text-align: left;
+    font-size: 0.9375rem;
+    font-weight: 600;
+  }
+
+  .tabela td[data-rotulo]:first-child::before {
+    display: none;
+  }
+
+  .tabela td:not([data-rotulo]) {
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .barra-tabela {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .barra-tabela__busca {
+    width: 100%;
   }
 }

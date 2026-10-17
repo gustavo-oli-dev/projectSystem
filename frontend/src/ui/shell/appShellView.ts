@@ -28,6 +28,7 @@ import { montarContatos } from "../compras/contatosView.js";
 import { criarBotaoAssistente } from "../assistente/assistenteChatView.js";
 import { limparToken } from "../../state/authState.js";
 import { barraLateralRecolhida, lembrarBarraLateralRecolhida } from "./barraLateral.js";
+import { criarFundoMenuCelular, definirMenuCelularAberto, ehTelaCelular, menuCelularAberto } from "./menuCelular.js";
 import { possui, possuiAlguma, sessaoAtual } from "../../state/sessaoState.js";
 
 interface ItemNav {
@@ -120,6 +121,11 @@ const PERMISSOES_POR_ROTA: Record<Rota, readonly Permissao[]> = {
   contatos: ["CONTATOS_GERENCIAR"],
 };
 
+const ROTULOS_BOTAO_MENU = {
+  celular: { aberto: "Fechar menu", fechado: "Abrir menu" },
+  desktop: { aberto: "Ocultar barra lateral", fechado: "Mostrar barra lateral" },
+} as const;
+
 const MONTADORES: Record<Rota, Montador> = {
   painel: montarPainel,
   pedidos: montarListaPedidos,
@@ -157,14 +163,27 @@ export function montarShell(raiz: HTMLElement): void {
   appShell.className = "app-shell";
   appShell.classList.toggle("app-shell--recolhida", barraLateralRecolhida());
 
+  const botaoMenu = criarBotaoMenu(appShell);
+  const fecharMenuCelular = (): void => {
+    definirMenuCelularAberto(appShell, false);
+    atualizarRotuloBotaoMenu(botaoMenu, appShell);
+  };
+
   const areaPrincipal = document.createElement("div");
   areaPrincipal.className = "area-principal";
-  areaPrincipal.append(criarTopbar(appShell), conteudo);
-  appShell.append(sidebar, areaPrincipal);
+  areaPrincipal.append(criarTopbar(botaoMenu), conteudo);
+  appShell.append(sidebar, criarFundoMenuCelular(fecharMenuCelular), areaPrincipal);
+  appShell.addEventListener("keydown", (evento) => {
+    if (evento.key === "Escape" && menuCelularAberto(appShell)) {
+      fecharMenuCelular();
+      botaoMenu.focus();
+    }
+  });
 
   raiz.replaceChildren(appShell);
 
   function renderizarRota(): void {
+    fecharMenuCelular();
     const destino = destinoAtual();
     atualizarLinkAtivo(links, destino.rota === "pedido-detalhe" ? "pedidos" : destino.rota);
     renderizarConteudo(conteudo, destino);
@@ -238,10 +257,10 @@ function criarIdentificacaoUsuario(): HTMLElement {
   return bloco;
 }
 
-function criarTopbar(appShell: HTMLElement): HTMLElement {
+function criarTopbar(botaoMenu: HTMLButtonElement): HTMLElement {
   const esquerda = document.createElement("div");
   esquerda.className = "topbar__esquerda";
-  esquerda.append(criarBotaoRecolher(appShell));
+  esquerda.append(botaoMenu);
 
   const direita = document.createElement("div");
   direita.className = "topbar__direita";
@@ -258,27 +277,42 @@ function criarTopbar(appShell: HTMLElement): HTMLElement {
   return topbar;
 }
 
-/** Recolhe a barra lateral para só os ícones (mais espaço para o conteúdo). */
-function criarBotaoRecolher(appShell: HTMLElement): HTMLButtonElement {
+/** Desktop: recolhe a barra lateral para só os ícones. Celular: abre/fecha a gaveta do menu. */
+function criarBotaoMenu(appShell: HTMLElement): HTMLButtonElement {
+  const iconeDesktop = criarIcone("menu");
+  iconeDesktop.classList.add("botao-recolher__icone-desktop");
+  const iconeCelular = criarIcone("menu-celular");
+  iconeCelular.classList.add("botao-recolher__icone-celular");
+
   const botao = document.createElement("button");
   botao.type = "button";
   botao.className = "botao-recolher";
-  botao.append(criarIcone("menu"));
-
-  const atualizarRotulo = (): void => {
-    const recolhida = appShell.classList.contains("app-shell--recolhida");
-    const rotulo = recolhida ? "Mostrar barra lateral" : "Ocultar barra lateral";
-    botao.title = rotulo;
-    botao.setAttribute("aria-label", rotulo);
-    botao.setAttribute("aria-expanded", String(!recolhida));
-  };
+  botao.append(iconeDesktop, iconeCelular);
   botao.addEventListener("click", () => {
-    const recolhida = appShell.classList.toggle("app-shell--recolhida");
-    lembrarBarraLateralRecolhida(recolhida);
-    atualizarRotulo();
+    alternarMenu(appShell);
+    atualizarRotuloBotaoMenu(botao, appShell);
   });
-  atualizarRotulo();
+  atualizarRotuloBotaoMenu(botao, appShell);
   return botao;
+}
+
+function alternarMenu(appShell: HTMLElement): void {
+  if (ehTelaCelular()) {
+    definirMenuCelularAberto(appShell, !menuCelularAberto(appShell));
+    return;
+  }
+  const recolhida = appShell.classList.toggle("app-shell--recolhida");
+  lembrarBarraLateralRecolhida(recolhida);
+}
+
+function atualizarRotuloBotaoMenu(botao: HTMLButtonElement, appShell: HTMLElement): void {
+  const celular = ehTelaCelular();
+  const aberto = celular ? menuCelularAberto(appShell) : !appShell.classList.contains("app-shell--recolhida");
+  const rotulos = celular ? ROTULOS_BOTAO_MENU.celular : ROTULOS_BOTAO_MENU.desktop;
+  const rotulo = aberto ? rotulos.aberto : rotulos.fechado;
+  botao.title = rotulo;
+  botao.setAttribute("aria-label", rotulo);
+  botao.setAttribute("aria-expanded", String(aberto));
 }
 
 function criarAvatar(): HTMLElement {

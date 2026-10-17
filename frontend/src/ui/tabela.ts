@@ -31,6 +31,10 @@ export function criarTabela(
   const cabecalho = document.createElement("thead");
   cabecalho.append(linhaCabecalho);
 
+  for (const linha of linhas) {
+    rotularCelulas(linha, colunas);
+  }
+
   const corpo = document.createElement("tbody");
   corpo.append(...linhas);
 
@@ -60,6 +64,16 @@ export function criarTabela(
   bloco.className = "bloco-tabela";
   bloco.append(barra, rolagem, nadaEncontrado);
   return bloco;
+}
+
+/** No celular a linha vira cartão e cada célula mostra o nome da coluna (CSS lê data-rotulo). */
+function rotularCelulas(linha: HTMLTableRowElement, colunas: readonly string[]): void {
+  for (const [indice, celulaDaLinha] of Array.from(linha.cells).entries()) {
+    const rotulo = colunas[indice];
+    if (rotulo !== undefined && rotulo !== "") {
+      celulaDaLinha.dataset["rotulo"] = rotulo;
+    }
+  }
 }
 
 function criarBusca(linhas: HTMLTableRowElement[], aoFiltrar: (visiveis: number) => void): HTMLElement {
