@@ -254,9 +254,16 @@ function criarFiltroPeriodo(aoMudar: (periodo: Periodo) => void): HTMLElement {
   datas.className = "filtro-periodo__datas";
   datas.append(inicio, separador, fim, aplicar);
 
+  // Datas exatas são para quem precisa (gerente); o atalho resolve o dia a dia.
+  const resumoPersonalizar = document.createElement("summary");
+  resumoPersonalizar.textContent = "Escolher datas";
+  const personalizar = document.createElement("details");
+  personalizar.className = "filtro-periodo__personalizar";
+  personalizar.append(resumoPersonalizar, datas);
+
   const filtro = document.createElement("div");
   filtro.className = "filtro-periodo";
-  filtro.append(grupoAtalhos, datas);
+  filtro.append(grupoAtalhos, personalizar);
   return filtro;
 }
 

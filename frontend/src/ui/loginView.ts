@@ -8,6 +8,10 @@ interface Campo {
 }
 
 export function montarTelaLogin(elementoRaiz: HTMLElement): void {
+  const marca = document.createElement("p");
+  marca.className = "login__marca";
+  marca.textContent = "Empresa X";
+
   const titulo = document.createElement("h2");
   titulo.textContent = "Entrar";
 
@@ -32,7 +36,7 @@ export function montarTelaLogin(elementoRaiz: HTMLElement): void {
 
   const cartao = document.createElement("div");
   cartao.className = "wizard-card";
-  cartao.append(titulo, formulario);
+  cartao.append(marca, titulo, formulario);
 
   const container = document.createElement("div");
   container.className = "wizard-container";
