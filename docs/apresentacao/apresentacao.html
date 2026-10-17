@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Empresa X — Sistema de Gestão do Mercado</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@600;700&display=swap">
+<style>
+  :root {
+    --verde: #0f7a45;
+    --verde-escuro: #0d3b27;
+    --verde-suave: #e2f2e9;
+    --amarelo: #ffd21f;
+    --texto: #15211b;
+    --texto-suave: #4a5a52;
+    --fundo: #f2f5f3;
+    --borda: #dde4e0;
+  }
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Barlow", sans-serif; color: var(--texto); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .pagina { width: 210mm; height: 297mm; padding: 18mm 18mm 16mm; position: relative; overflow: hidden; page-break-after: always; background: #fff; }
+  .pagina:last-child { page-break-after: auto; }
+  h1, h2, .titulo { font-family: "Barlow Semi Condensed", sans-serif; font-weight: 700; margin: 0; line-height: 1.05; }
+  h2 { font-size: 34pt; margin-bottom: 6mm; }
+  .chamada { font-size: 15pt; color: var(--texto-suave); margin: 0 0 9mm; line-height: 1.35; max-width: 150mm; }
+  .etiqueta { display: inline-block; background: var(--amarelo); color: var(--texto); font-family: "Barlow Semi Condensed", sans-serif; font-weight: 700; font-size: 11pt; letter-spacing: .06em; text-transform: uppercase; padding: 1.5mm 3mm; border-radius: 1.5mm; margin-bottom: 6mm; }
+  .numero { position: absolute; bottom: 9mm; right: 18mm; font-size: 9pt; color: var(--texto-suave); }
+  .marca-rodape { position: absolute; bottom: 9mm; left: 18mm; font-family: "Barlow Semi Condensed", sans-serif; font-weight: 700; font-size: 10pt; color: var(--verde); }
+
+  /* Capa */
+  .capa { background: var(--verde-escuro); color: #fff; padding: 22mm 18mm; }
+  .capa .logo { width: 16mm; height: 16mm; border-radius: 3mm; background: var(--amarelo); color: var(--texto); display: flex; align-items: center; justify-content: center; font-family: "Barlow Semi Condensed", sans-serif; font-weight: 700; font-size: 26pt; margin-bottom: 14mm; }
+  .capa h1 { font-size: 60pt; margin-bottom: 5mm; }
+  .capa .subtitulo { font-size: 18pt; line-height: 1.35; color: #cfe3d8; max-width: 150mm; margin: 0 0 12mm; }
+  .capa .print-capa { width: 174mm; border-radius: 3mm; box-shadow: 0 6mm 16mm rgba(0,0,0,.35); display: block; }
+  .capa .rodape-capa { position: absolute; bottom: 14mm; left: 18mm; right: 18mm; display: flex; justify-content: space-between; font-size: 11pt; color: #a9c7b7; }
+
+  /* Visão geral */
+  .grade-funcoes { display: grid; grid-template-columns: 1fr 1fr; gap: 7mm; }
+  .funcao { background: var(--fundo); border-radius: 3mm; padding: 10mm 8mm 9mm; border-left: 2mm solid var(--verde); }
+  .funcao .titulo { font-size: 19pt; margin-bottom: 2mm; }
+  .funcao p { margin: 0; font-size: 13.5pt; line-height: 1.4; color: var(--texto-suave); }
+  .nota { margin-top: 10mm; font-size: 10pt; color: var(--texto-suave); }
+
+  /* Páginas de função: texto + celular */
+  .lado-a-lado { display: grid; grid-template-columns: 1fr 80mm; gap: 10mm; align-items: start; }
+  .pontos { list-style: none; padding: 0; margin: 0; }
+  .pontos li { position: relative; padding-left: 9mm; margin-bottom: 5.5mm; font-size: 13pt; line-height: 1.4; }
+  .pontos li::before { content: ""; position: absolute; left: 0; top: 1.6mm; width: 4.5mm; height: 4.5mm; border-radius: 1mm; background: var(--amarelo); }
+  .pontos strong { display: block; font-family: "Barlow Semi Condensed", sans-serif; font-size: 14.5pt; }
+  .celular { width: 80mm; border: 2.6mm solid var(--texto); border-radius: 9mm; overflow: hidden; box-shadow: 0 4mm 12mm rgba(13,59,39,.22); background: #fff; }
+  .celular img { display: block; width: 100%; }
+  .print-largo { width: 174mm; border-radius: 2.5mm; border: 0.4mm solid var(--borda); box-shadow: 0 3mm 10mm rgba(13,59,39,.15); display: block; margin-bottom: 9mm; }
+  .dois-celulares .celular { width: 72mm; }
+  .dois-celulares { display: flex; gap: 12mm; justify-content: center; margin-top: 4mm; }
+  .legenda { text-align: center; font-size: 10.5pt; color: var(--texto-suave); margin-top: 3mm; }
+  .destaque { background: var(--verde-suave); border-radius: 3mm; padding: 6mm 7mm; font-size: 12.5pt; line-height: 1.45; margin-top: 4mm; }
+  .destaque strong { color: var(--verde); }
+
+  /* Como começar */
+  .passos { counter-reset: passo; list-style: none; padding: 0; margin: 0 0 12mm; }
+  .passos li { counter-increment: passo; display: grid; grid-template-columns: 16mm 1fr; gap: 5mm; align-items: start; margin-bottom: 8mm; }
+  .passos li::before { content: counter(passo); width: 14mm; height: 14mm; border-radius: 50%; background: var(--verde); color: #fff; display: flex; align-items: center; justify-content: center; font-family: "Barlow Semi Condensed", sans-serif; font-weight: 700; font-size: 20pt; }
+  .passos .titulo { font-size: 17pt; margin-bottom: 1.5mm; }
+  .passos p { margin: 0; font-size: 12.5pt; color: var(--texto-suave); line-height: 1.4; }
+  .configurar { border: 0.5mm solid var(--borda); border-radius: 3mm; padding: 7mm; }
+  .configurar .titulo { font-size: 15pt; margin-bottom: 3mm; }
+  .endereco { margin-top: 14mm; background: var(--verde-escuro); color: #fff; border-radius: 4mm; padding: 10mm; }
+  .endereco .url { font-family: "Barlow Semi Condensed", sans-serif; font-weight: 700; font-size: 26pt; margin: 0 0 3mm; }
+  .endereco .chamada { color: #cfe3d8; margin: 0; }
+  .configurar ul { margin: 0; padding-left: 5mm; font-size: 12pt; line-height: 1.6; color: var(--texto-suave); }
+</style>
+</head>
+<body>
+
+<!-- 1. Capa -->
+<section class="pagina capa">
+  <div class="logo">E</div>
+  <h1>Empresa X</h1>
+  <p class="subtitulo">O sistema do mercado: vendas, caixa, estoque e contas num lugar só — no computador e no celular.</p>
+  <img class="print-capa" src="prints/pc-painel.png" alt="Painel do sistema">
+  <div class="rodape-capa"><span>Apresentação do sistema</span><span>Outubro de 2026</span></div>
+</section>
+
+<!-- 2. Visão geral -->
+<section class="pagina">
+  <span class="etiqueta">Visão geral</span>
+  <h2>Tudo o que o mercado precisa, num lugar só</h2>
+  <p class="chamada">Feito para quem toca o dia a dia da loja: simples para o caixa, completo para o gerente, claro para o dono.</p>
+  <div class="grade-funcoes">
+    <div class="funcao"><div class="titulo">Caixa rápido</div><p>Leitor de código de barras, ofertas aplicadas sozinhas e troco calculado.</p></div>
+    <div class="funcao"><div class="titulo">Painel do dono</div><p>Quanto vendeu, quanto lucrou e o que mais sai — num toque.</p></div>
+    <div class="funcao"><div class="titulo">Estoque sem susto</div><p>Avisa o que está acabando e monta a lista de compra.</p></div>
+    <div class="funcao"><div class="titulo">Compras e contas</div><p>A nota do fornecedor vira estoque e boleto a pagar.</p></div>
+    <div class="funcao"><div class="titulo">Caixa conferido</div><p>Abertura, sangria e fechamento com contagem das cédulas.</p></div>
+    <div class="funcao"><div class="titulo">Equipe organizada</div><p>Cada funcionário vê só o que precisa para o seu trabalho.</p></div>
+  </div>
+  <p class="nota">Os prints deste documento usam dados de demonstração.</p>
+  <span class="marca-rodape">Empresa X</span><span class="numero">2</span>
+</section>
+
+<!-- 3. Caixa -->
+<section class="pagina">
+  <span class="etiqueta">Caixa</span>
+  <h2>Vender é ler, conferir e receber</h2>
+  <p class="chamada">O operador passa os produtos, o sistema faz as contas.</p>
+  <img class="print-largo" src="prints/pc-pdv.png" alt="Tela do caixa">
+  <ul class="pontos">
+    <li><strong>Leitor ou busca pelo nome</strong>Passou o código, o produto entra. Sem código, é só digitar o nome.</li>
+    <li><strong>Ofertas automáticas</strong>Produto em promoção já sai com o preço de oferta, sem o operador lembrar.</li>
+    <li><strong>Dinheiro, cartão ou Pix</strong>O troco aparece na hora, e dá para dividir o pagamento em mais de uma forma.</li>
+  </ul>
+  <span class="marca-rodape">Empresa X</span><span class="numero">3</span>
+</section>
+
+<!-- 4. Painel -->
+<section class="pagina">
+  <span class="etiqueta">Painel do dono</span>
+  <h2>O resultado da loja, sem planilha</h2>
+  <div class="lado-a-lado">
+    <div>
+      <p class="chamada">Abra o celular e saiba como o mercado está indo.</p>
+      <ul class="pontos">
+        <li><strong>Faturamento e lucro</strong>Hoje, na semana, no mês — comparado com o período anterior.</li>
+        <li><strong>O que mais vende</strong>Produtos campeões, horários de pico e formas de pagamento.</li>
+        <li><strong>Dinheiro do dia</strong>Quanto entrou em cada forma de pagamento, caixa por caixa.</li>
+      </ul>
+    </div>
+    <div class="celular"><img src="prints/cel-painel.png" alt="Painel no celular"></div>
+  </div>
+  <span class="marca-rodape">Empresa X</span><span class="numero">4</span>
+</section>
+
+<!-- 5. Estoque -->
+<section class="pagina">
+  <span class="etiqueta">Estoque</span>
+  <h2>Nunca mais faltar o que vende</h2>
+  <div class="lado-a-lado">
+    <div>
+      <p class="chamada">Cada venda baixa o estoque sozinha. Você só decide o que comprar.</p>
+      <ul class="pontos">
+        <li><strong>Reposição sugerida</strong>O sistema mostra o que está abaixo do mínimo e quanto comprar.</li>
+        <li><strong>Lista de compra pronta</strong>Baixe a lista e mande para o fornecedor.</li>
+        <li><strong>Perdas registradas</strong>Vencido, avariado ou furto: tudo anotado, com o valor do prejuízo.</li>
+      </ul>
+    </div>
+    <div class="celular"><img src="prints/cel-reposicao.png" alt="Reposição no celular"></div>
+  </div>
+  <span class="marca-rodape">Empresa X</span><span class="numero">5</span>
+</section>
+
+<!-- 6. Compras e contas -->
+<section class="pagina">
+  <span class="etiqueta">Compras e contas</span>
+  <h2>Contas em dia, sem caderninho</h2>
+  <div class="lado-a-lado">
+    <div>
+      <p class="chamada">A mercadoria que chega e as contas que vencem, no mesmo lugar.</p>
+      <ul class="pontos">
+        <li><strong>Entrada pela nota</strong>A nota do fornecedor dá entrada no estoque e cria o boleto a pagar.</li>
+        <li><strong>Vencidas em destaque</strong>O que está atrasado e o que vence nos próximos 7 dias aparece primeiro.</li>
+        <li><strong>Marcou, pagou</strong>Um toque registra o pagamento com data e responsável.</li>
+      </ul>
+    </div>
+    <div class="celular"><img src="prints/cel-contas.png" alt="Contas a pagar no celular"></div>
+  </div>
+  <span class="marca-rodape">Empresa X</span><span class="numero">6</span>
+</section>
+
+<!-- 7. Conferência de caixa -->
+<section class="pagina">
+  <span class="etiqueta">Conferência de caixa</span>
+  <h2>Caixa fechado e conferido</h2>
+  <div class="lado-a-lado">
+    <div>
+      <p class="chamada">Cada caixa abre com o fundo de troco e fecha com a contagem das cédulas.</p>
+      <ul class="pontos">
+        <li><strong>Esperado × contado</strong>O sistema calcula quanto deveria ter na gaveta e mostra a diferença.</li>
+        <li><strong>Sangria registrada</strong>Retirada para o cofre fica anotada, com valor e horário.</li>
+        <li><strong>Histórico de cada operador</strong>Quem abriu, quem vendeu e quem fechou, dia a dia.</li>
+      </ul>
+    </div>
+    <div class="celular"><img src="prints/cel-caixas.png" alt="Conferência de caixa no celular"></div>
+  </div>
+  <span class="marca-rodape">Empresa X</span><span class="numero">7</span>
+</section>
+
+<!-- 8. Celular -->
+<section class="pagina">
+  <span class="etiqueta">No celular</span>
+  <h2>A loja no bolso</h2>
+  <p class="chamada">Tudo o que funciona no computador funciona no celular, com telas pensadas para o dedo.</p>
+  <div class="dois-celulares">
+    <div><div class="celular"><img src="prints/cel-menu.png" alt="Menu no celular"></div><p class="legenda">Menu completo no ☰</p></div>
+    <div><div class="celular"><img src="prints/cel-pdv-pagamento.png" alt="Pagamento no celular"></div><p class="legenda">Caixa no celular</p></div>
+  </div>
+  <div class="destaque"><strong>Acesso pela internet.</strong> Não precisa instalar nada: é só abrir o endereço do sistema e entrar com e-mail e senha.</div>
+  <span class="marca-rodape">Empresa X</span><span class="numero">8</span>
+</section>
+
+<!-- 9. Como começar -->
+<section class="pagina">
+  <span class="etiqueta">Como começar</span>
+  <h2>Três passos para rodar</h2>
+  <ol class="passos">
+    <li><div><div class="titulo">Cadastrar os produtos</div><p>Um a um, pelo leitor, ou direto pela nota do fornecedor.</p></div></li>
+    <li><div><div class="titulo">Cadastrar a equipe</div><p>Cada funcionário com o seu acesso: caixa, gerente, financeiro.</p></div></li>
+    <li><div><div class="titulo">Abrir o caixa e vender</div><p>Informe o fundo de troco e o caixa está pronto.</p></div></li>
+  </ol>
+  <div class="configurar">
+    <div class="titulo">O que depende de configuração</div>
+    <ul>
+      <li>Emissão da nota fiscal do consumidor (NFC-e): precisa do certificado digital A1 da empresa.</li>
+      <li>Maquininha integrada ao caixa (Mercado Pago Point): precisa da conta e do aparelho.</li>
+      <li>Atendimento e assistente pelo WhatsApp: precisa do número do mercado.</li>
+    </ul>
+  </div>
+  <div class="endereco">
+    <span class="etiqueta">Endereço do sistema</span>
+    <p class="url">systemsuperrmarket.netlify.app</p>
+    <p class="chamada">Abra no computador ou no celular e entre com o seu e-mail e senha.</p>
+  </div>
+  <span class="marca-rodape">Empresa X</span><span class="numero">9</span>
+</section>
+
+</body>
+</html>
