@@ -1,10 +1,5 @@
-/** Mesmo corte do CSS: abaixo disso a barra lateral vira gaveta aberta pelo botão de menu. */
-const TELA_CELULAR = "(max-width: 768px)";
+/** No celular a barra lateral vira gaveta, aberta pelo "Menu" da barra inferior. */
 const CLASSE_MENU_ABERTO = "app-shell--menu-aberto";
-
-export function ehTelaCelular(): boolean {
-  return window.matchMedia(TELA_CELULAR).matches;
-}
 
 export function menuCelularAberto(appShell: HTMLElement): boolean {
   return appShell.classList.contains(CLASSE_MENU_ABERTO);

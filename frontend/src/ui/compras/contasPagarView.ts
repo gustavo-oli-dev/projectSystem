@@ -148,7 +148,8 @@ function criarLista(contas: readonly ContaAPagar[], aoMudar: () => void): HTMLEl
       celulaSituacao(conta),
       celulaComConteudo(criarAcoes(conta, aoMudar))
     )),
-    "conta(s)"
+    "conta(s)",
+    { colunaTitulo: "Descrição" }
   );
 }
 

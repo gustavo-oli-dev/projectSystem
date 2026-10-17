@@ -28,7 +28,8 @@ import { montarContatos } from "../compras/contatosView.js";
 import { criarBotaoAssistente } from "../assistente/assistenteChatView.js";
 import { limparToken } from "../../state/authState.js";
 import { barraLateralRecolhida, lembrarBarraLateralRecolhida } from "./barraLateral.js";
-import { criarFundoMenuCelular, definirMenuCelularAberto, ehTelaCelular, menuCelularAberto } from "./menuCelular.js";
+import { criarFundoMenuCelular, definirMenuCelularAberto, menuCelularAberto } from "./menuCelular.js";
+import { criarNavInferior } from "./navInferior.js";
 import { possui, possuiAlguma, sessaoAtual } from "../../state/sessaoState.js";
 
 interface ItemNav {
@@ -121,10 +122,9 @@ const PERMISSOES_POR_ROTA: Record<Rota, readonly Permissao[]> = {
   contatos: ["CONTATOS_GERENCIAR"],
 };
 
-const ROTULOS_BOTAO_MENU = {
-  celular: { aberto: "Fechar menu", fechado: "Abrir menu" },
-  desktop: { aberto: "Ocultar barra lateral", fechado: "Mostrar barra lateral" },
-} as const;
+/** Ordem de prioridade dos atalhos da barra inferior do celular. */
+const ROTAS_ATALHO_CELULAR: readonly Rota[] = ["painel", "pdv", "pedidos", "produtos", "clientes", "conversas"];
+const MAXIMO_ATALHOS_CELULAR = 4;
 
 const MONTADORES: Record<Rota, Montador> = {
   painel: montarPainel,
@@ -163,20 +163,29 @@ export function montarShell(raiz: HTMLElement): void {
   appShell.className = "app-shell";
   appShell.classList.toggle("app-shell--recolhida", barraLateralRecolhida());
 
-  const botaoMenu = criarBotaoMenu(appShell);
-  const fecharMenuCelular = (): void => {
-    definirMenuCelularAberto(appShell, false);
-    atualizarRotuloBotaoMenu(botaoMenu, appShell);
+  const definirMenuCelular = (aberto: boolean): void => {
+    definirMenuCelularAberto(appShell, aberto);
+    navInferior.marcarMenuAberto(aberto);
+    if (aberto) {
+      // Foco dentro da gaveta: leitor de tela anuncia o menu e o Esc chega ao app (Safari não foca botão tocado).
+      links[0]?.focus({ preventScroll: true });
+    }
   };
+  const fecharMenuCelular = (): void => definirMenuCelular(false);
+  const navInferior = criarNavInferior(
+    atalhosDoCelular(),
+    (rota) => navegarPara(rota),
+    () => definirMenuCelular(!menuCelularAberto(appShell))
+  );
 
   const areaPrincipal = document.createElement("div");
   areaPrincipal.className = "area-principal";
-  areaPrincipal.append(criarTopbar(botaoMenu), conteudo);
-  appShell.append(sidebar, criarFundoMenuCelular(fecharMenuCelular), areaPrincipal);
+  areaPrincipal.append(criarTopbar(criarBotaoRecolher(appShell)), conteudo);
+  appShell.append(sidebar, criarFundoMenuCelular(fecharMenuCelular), areaPrincipal, navInferior.elemento);
   appShell.addEventListener("keydown", (evento) => {
     if (evento.key === "Escape" && menuCelularAberto(appShell)) {
       fecharMenuCelular();
-      botaoMenu.focus();
+      navInferior.focarMenu();
     }
   });
 
@@ -185,7 +194,9 @@ export function montarShell(raiz: HTMLElement): void {
   function renderizarRota(): void {
     fecharMenuCelular();
     const destino = destinoAtual();
-    atualizarLinkAtivo(links, destino.rota === "pedido-detalhe" ? "pedidos" : destino.rota);
+    const rotaAtiva = destino.rota === "pedido-detalhe" ? "pedidos" : destino.rota;
+    atualizarLinkAtivo(links, rotaAtiva);
+    navInferior.marcarAtivo(rotaAtiva);
     renderizarConteudo(conteudo, destino);
   }
 
@@ -195,6 +206,14 @@ export function montarShell(raiz: HTMLElement): void {
 
 function podeAcessar(rota: Rota): boolean {
   return possuiAlguma(PERMISSOES_POR_ROTA[rota]);
+}
+
+/** As primeiras telas da lista de prioridade que o perfil enxerga; o resto fica no menu. */
+function atalhosDoCelular(): ItemNav[] {
+  const todos = GRUPOS_NAV.flatMap((grupo) => grupo.itens);
+  return ROTAS_ATALHO_CELULAR
+    .flatMap((rota) => todos.filter((item) => item.rota === rota && podeAcessar(rota)))
+    .slice(0, MAXIMO_ATALHOS_CELULAR);
 }
 
 function criarSidebar(links: HTMLButtonElement[]): HTMLElement {
@@ -257,10 +276,19 @@ function criarIdentificacaoUsuario(): HTMLElement {
   return bloco;
 }
 
-function criarTopbar(botaoMenu: HTMLButtonElement): HTMLElement {
+/** No celular o botão de recolher some e a marca aparece no lugar (o menu fica na barra inferior). */
+function criarTopbar(botaoRecolher: HTMLButtonElement): HTMLElement {
+  const logo = document.createElement("span");
+  logo.className = "topbar__logo";
+  logo.textContent = "E";
+
+  const marca = document.createElement("div");
+  marca.className = "topbar__marca";
+  marca.append(logo, criarSpan("Empresa X"));
+
   const esquerda = document.createElement("div");
   esquerda.className = "topbar__esquerda";
-  esquerda.append(botaoMenu);
+  esquerda.append(botaoRecolher, marca);
 
   const direita = document.createElement("div");
   direita.className = "topbar__direita";
@@ -277,42 +305,27 @@ function criarTopbar(botaoMenu: HTMLButtonElement): HTMLElement {
   return topbar;
 }
 
-/** Desktop: recolhe a barra lateral para só os ícones. Celular: abre/fecha a gaveta do menu. */
-function criarBotaoMenu(appShell: HTMLElement): HTMLButtonElement {
-  const iconeDesktop = criarIcone("menu");
-  iconeDesktop.classList.add("botao-recolher__icone-desktop");
-  const iconeCelular = criarIcone("menu-celular");
-  iconeCelular.classList.add("botao-recolher__icone-celular");
-
+/** Recolhe a barra lateral para só os ícones (mais espaço para o conteúdo). */
+function criarBotaoRecolher(appShell: HTMLElement): HTMLButtonElement {
   const botao = document.createElement("button");
   botao.type = "button";
   botao.className = "botao-recolher";
-  botao.append(iconeDesktop, iconeCelular);
+  botao.append(criarIcone("menu"));
+
+  const atualizarRotulo = (): void => {
+    const recolhida = appShell.classList.contains("app-shell--recolhida");
+    const rotulo = recolhida ? "Mostrar barra lateral" : "Ocultar barra lateral";
+    botao.title = rotulo;
+    botao.setAttribute("aria-label", rotulo);
+    botao.setAttribute("aria-expanded", String(!recolhida));
+  };
   botao.addEventListener("click", () => {
-    alternarMenu(appShell);
-    atualizarRotuloBotaoMenu(botao, appShell);
+    const recolhida = appShell.classList.toggle("app-shell--recolhida");
+    lembrarBarraLateralRecolhida(recolhida);
+    atualizarRotulo();
   });
-  atualizarRotuloBotaoMenu(botao, appShell);
+  atualizarRotulo();
   return botao;
-}
-
-function alternarMenu(appShell: HTMLElement): void {
-  if (ehTelaCelular()) {
-    definirMenuCelularAberto(appShell, !menuCelularAberto(appShell));
-    return;
-  }
-  const recolhida = appShell.classList.toggle("app-shell--recolhida");
-  lembrarBarraLateralRecolhida(recolhida);
-}
-
-function atualizarRotuloBotaoMenu(botao: HTMLButtonElement, appShell: HTMLElement): void {
-  const celular = ehTelaCelular();
-  const aberto = celular ? menuCelularAberto(appShell) : !appShell.classList.contains("app-shell--recolhida");
-  const rotulos = celular ? ROTULOS_BOTAO_MENU.celular : ROTULOS_BOTAO_MENU.desktop;
-  const rotulo = aberto ? rotulos.aberto : rotulos.fechado;
-  botao.title = rotulo;
-  botao.setAttribute("aria-label", rotulo);
-  botao.setAttribute("aria-expanded", String(aberto));
 }
 
 function criarAvatar(): HTMLElement {

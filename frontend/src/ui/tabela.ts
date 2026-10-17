@@ -3,6 +3,17 @@ import { criarIcone } from "./icones.js";
 /** Abaixo disso a busca não aparece: com poucas linhas ela só ocupa espaço. */
 const MINIMO_LINHAS_PARA_BUSCA = 2;
 
+/** Texto que as telas usam para "sem valor"; no cartão do celular a célula some. */
+const TEXTO_SEM_VALOR = "—";
+
+/** Papel de cada célula quando a linha vira cartão no celular (o CSS lê data-papel). */
+type PapelCelula = "titulo" | "midia" | "selecao" | "acoes" | "dado";
+
+export interface OpcoesTabela {
+  /** Coluna que vira o título do cartão no celular. Padrão: a primeira coluna com nome. */
+  colunaTitulo?: string;
+}
+
 /**
  * Tabela padrão de listagem: barra com contagem + busca, cabeçalho em <thead> e linhas.
  * Compartilhada por todas as telas de lista para manter densidade e aparência iguais. A busca
@@ -11,7 +22,8 @@ const MINIMO_LINHAS_PARA_BUSCA = 2;
 export function criarTabela(
   colunas: readonly string[],
   linhas: HTMLTableRowElement[],
-  rotuloContagem: string
+  rotuloContagem: string,
+  opcoes: OpcoesTabela = {}
 ): HTMLElement {
   const contagem = document.createElement("span");
   contagem.className = "barra-tabela__contagem";
@@ -31,8 +43,9 @@ export function criarTabela(
   const cabecalho = document.createElement("thead");
   cabecalho.append(linhaCabecalho);
 
+  const indiceTitulo = indiceDaColunaTitulo(colunas, opcoes.colunaTitulo);
   for (const linha of linhas) {
-    rotularCelulas(linha, colunas);
+    prepararCelulasParaCartao(linha, colunas, indiceTitulo);
   }
 
   const corpo = document.createElement("tbody");
@@ -66,14 +79,45 @@ export function criarTabela(
   return bloco;
 }
 
-/** No celular a linha vira cartão e cada célula mostra o nome da coluna (CSS lê data-rotulo). */
-function rotularCelulas(linha: HTMLTableRowElement, colunas: readonly string[]): void {
+function indiceDaColunaTitulo(colunas: readonly string[], colunaTitulo: string | undefined): number {
+  if (colunaTitulo !== undefined && colunas.includes(colunaTitulo)) {
+    return colunas.indexOf(colunaTitulo);
+  }
+  return colunas.findIndex((coluna) => coluna !== "");
+}
+
+/** No celular a linha vira cartão: cada célula ganha papel (data-papel) e nome da coluna (data-rotulo). */
+function prepararCelulasParaCartao(linha: HTMLTableRowElement, colunas: readonly string[], indiceTitulo: number): void {
   for (const [indice, celulaDaLinha] of Array.from(linha.cells).entries()) {
+    const papel = indice === indiceTitulo ? "titulo" : papelPeloConteudo(celulaDaLinha);
+    celulaDaLinha.dataset["papel"] = papel;
+
     const rotulo = colunas[indice];
-    if (rotulo !== undefined && rotulo !== "") {
+    if (papel === "dado" && rotulo !== undefined && rotulo !== "") {
       celulaDaLinha.dataset["rotulo"] = rotulo;
     }
+    if (papel === "dado" && semValor(celulaDaLinha)) {
+      celulaDaLinha.dataset["vazia"] = "true";
+    }
   }
+}
+
+function papelPeloConteudo(celulaDaLinha: HTMLTableCellElement): PapelCelula {
+  if (celulaDaLinha.querySelector("img, .sem-foto, .foto-sem-estoque") !== null) {
+    return "midia";
+  }
+  if (celulaDaLinha.querySelector("input[type='checkbox']") !== null) {
+    return "selecao";
+  }
+  if (celulaDaLinha.querySelector("button, a") !== null) {
+    return "acoes";
+  }
+  return "dado";
+}
+
+function semValor(celulaDaLinha: HTMLTableCellElement): boolean {
+  const texto = (celulaDaLinha.textContent ?? "").trim();
+  return celulaDaLinha.children.length === 0 && (texto === "" || texto === TEXTO_SEM_VALOR);
 }
 
 function criarBusca(linhas: HTMLTableRowElement[], aoFiltrar: (visiveis: number) => void): HTMLElement {

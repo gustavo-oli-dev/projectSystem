@@ -77,7 +77,7 @@ function criarSaidas(fluxo: FluxoDeCaixa): HTMLElement {
     : criarTabela(["Dia", "Descrição", "Contato", "Valor"], fluxo.saidas.map((saida) => criarLinha(
       celula(DATA.format(deIso(saida.dia))), celula(saida.descricao), celula(saida.contato ?? "—"),
       celula(formatarMoeda(saida.valor))
-    )), "conta(s)"));
+    )), "conta(s)", { colunaTitulo: "Descrição" }));
 }
 
 /** "+ R$ 5,00" ou "− R$ 10,00". */
